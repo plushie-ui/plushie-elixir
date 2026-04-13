@@ -217,7 +217,7 @@ defmodule Plushie.WidgetOpsTest do
       await_initial_render(runtime)
 
       # This test just verifies the runtime doesn't crash when processing
-      # widget ops -- the bridge is present here, so ops are sent normally.
+      # widget ops. The bridge is present here, so ops are sent normally.
       dispatch_and_wait(runtime, {:do, :focus})
       assert Process.alive?(runtime)
     end

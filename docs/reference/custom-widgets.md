@@ -417,7 +417,7 @@ The `command` macro also works in standalone modules via
 
 ### Rust side
 
-Implement the `PlushieWidget` trait from `plushie_ext::prelude::*`:
+Implement the `PlushieWidget` trait from `plushie_widget_sdk::prelude::*`:
 
 | Method | Phase | Required? |
 |---|---|---|
@@ -488,4 +488,4 @@ separate module provides domain-appropriate naming.
   tutorial
 - [Scoped IDs reference](scoped-ids.md) - widget scope transparency
 - [Testing reference](testing.md) - full test helper API
-- [Rust Widget Guide](https://github.com/plushie-ui/plushie-renderer/blob/main/docs/core-widget-guide.md) - `PlushieWidget` trait and Rust-side lifecycle
+- [Rust Widget Guide](https://github.com/plushie-ui/plushie-rust/blob/main/docs/core-widget-guide.md) - `PlushieWidget` trait and Rust-side lifecycle

@@ -7,14 +7,14 @@ defmodule Plushie.Type.Pointer do
 
   ## Pointer types
 
-  - `:mouse` -- standard mouse input
-  - `:touch` -- touchscreen finger
-  - `:pen` -- stylus or pen tablet
+  - `:mouse` - standard mouse input
+  - `:touch` - touchscreen finger
+  - `:pen` - stylus or pen tablet
 
   ## Buttons
 
-  - `:left`, `:right`, `:middle` -- standard three-button mouse
-  - `:back`, `:forward` -- extended navigation buttons
+  - `:left`, `:right`, `:middle` - standard three-button mouse
+  - `:back`, `:forward` - extended navigation buttons
 
   ## Examples
 

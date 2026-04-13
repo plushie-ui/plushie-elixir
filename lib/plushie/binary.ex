@@ -9,7 +9,7 @@ defmodule Plushie.Binary do
   3. Custom widget build in `_build/<env>/plushie-renderer/target/`
   4. Downloaded binary in `_build/plushie/bin/`
 
-  Steps 1 and 2 are explicit configuration -- if set but pointing to a
+  Steps 1 and 2 are explicit configuration. If set but pointing to a
   missing file, they raise immediately rather than falling through. Steps
   3 and 4 are implicit discovery and silently try the next option.
   """

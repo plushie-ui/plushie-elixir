@@ -46,7 +46,7 @@
       # If you want to enforce a style guide and need a more traditional linting
       # experience, you can change `strict` to `true` below:
       #
-      # CHANGED: strict mode enforced -- all checks run by default.
+      # CHANGED: strict mode enforced; all checks run by default.
       strict: true,
       #
       # To modify the timeout for parsing files, change this value:
@@ -83,7 +83,7 @@
           # You can customize the priority of any check
           # Priority values are: `low, normal, high, higher`
           #
-          # CHANGED: disabled -- widget build/1 and to_node impls use full paths
+          # CHANGED: disabled. Widget build/1 and to_node impls use full paths
           # like Plushie.Widget.Build once per function. Aliasing them would
           # hide the origin and hurt readability in this codebase.
           {Credo.Check.Design.AliasUsage, false},
@@ -92,7 +92,7 @@
           # If you don't want TODO comments to cause `mix credo` to fail, just
           # set this value to 0 (zero).
           #
-          # CHANGED: exit_status 0 -- "Todo" appears as a product name
+          # CHANGED: exit_status 0 because "Todo" appears as a product name
           # (Todo), not a task marker.
           {Credo.Check.Design.TagTODO, [exit_status: 0]},
 
@@ -109,7 +109,7 @@
           {Credo.Check.Readability.ParenthesesInCondition, []},
           {Credo.Check.Readability.ParenthesesOnZeroArityDefs, []},
           {Credo.Check.Readability.PipeIntoAnonymousFunctions, []},
-          # CHANGED: disabled -- is_maximized/is_minimized mirror the iced API.
+          # CHANGED: disabled. is_maximized/is_minimized mirror the iced API.
           # Renaming to maximized?/minimized? would break parity.
           {Credo.Check.Readability.PredicateFunctionNames, false},
           {Credo.Check.Readability.PreferImplicitTry, []},
@@ -126,11 +126,11 @@
           #
           ## Refactoring Opportunities
           #
-          # CHANGED: disabled -- we use apply/3 intentionally for optional deps
+          # CHANGED: disabled. We use apply/3 intentionally for optional deps
           # (FileSystem, :public_key) to avoid compile-time warnings.
           {Credo.Check.Refactor.Apply, false},
           {Credo.Check.Refactor.CondStatements, []},
-          # CHANGED: bumped from 9 to 15 -- mix task run/1 functions do
+          # CHANGED: bumped from 9 to 15. Mix task run/1 functions do
           # unavoidable arg parsing + dispatch in a single function, and the
           # script parser has a flat case with one clause per instruction type.
           {Credo.Check.Refactor.CyclomaticComplexity, [max_complexity: 15]},
@@ -142,7 +142,7 @@
           {Credo.Check.Refactor.MatchInCondition, []},
           {Credo.Check.Refactor.NegatedConditionsInUnless, []},
           {Credo.Check.Refactor.NegatedConditionsWithElse, []},
-          # CHANGED: bumped from 2 to 3 -- GenServer handlers with nested
+          # CHANGED: bumped from 2 to 3. GenServer handlers with nested
           # case/with are idiomatic in OTP code.
           {Credo.Check.Refactor.Nesting, [max_nesting: 3]},
           {Credo.Check.Refactor.RedundantWithClauseResult, []},

@@ -244,7 +244,7 @@ defmodule Plushie.Test.SessionPoolTest do
       # Fill the second slot from the test process.
       _s2 = SessionPool.register(pool)
 
-      # Pool is full -- a third register would fail.
+      # Pool is full; a third register would fail.
       assert_raise RuntimeError, ~r/Session pool is full/, fn ->
         SessionPool.register(pool)
       end
@@ -307,7 +307,7 @@ defmodule Plushie.Test.SessionPoolTest do
       # Wait for the pool to clean up.
       Process.sleep(200)
 
-      # The pool is still alive and functional -- register a new session
+      # The pool is still alive and functional; register a new session
       # and do a round trip to prove it isn't stuck.
       new_id = SessionPool.register(pool)
 

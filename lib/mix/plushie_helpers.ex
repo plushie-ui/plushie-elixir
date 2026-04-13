@@ -45,7 +45,7 @@ defmodule Mix.PlushieHelpers do
     cli_wasm? = opts[:wasm] || opts[:wasm_dir] != nil
 
     if cli_bin? or cli_wasm? do
-      # Explicit CLI flags -- use them directly
+      # Explicit CLI flags: use them directly
       {cli_bin?, cli_wasm?}
     else
       # Fall back to config, then default

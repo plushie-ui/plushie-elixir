@@ -107,13 +107,13 @@ defmodule Plushie.RuntimeRerenderTest do
 
         patches_before = length(Plushie.Test.InternalMockBridge.get_patches(bridge))
 
-        # Force re-render -- model should not change (no update/2 called).
+        # Force re-render; model should not change (no update/2 called).
         force_rerender_and_wait(runtime)
 
         assert Plushie.Runtime.get_model(runtime).count == 2
 
         # Since the model didn't change and the module code is the same,
-        # the tree is identical -- no new patch should be sent.
+        # the tree is identical; no new patch should be sent.
         patches_after = length(Plushie.Test.InternalMockBridge.get_patches(bridge))
         assert patches_after == patches_before
       end)
@@ -143,7 +143,7 @@ defmodule Plushie.RuntimeRerenderTest do
         # Arm the crash.
         dispatch_and_wait(runtime, :arm)
 
-        # Force re-render with a crashing view -- should not kill the runtime.
+        # Force re-render with a crashing view; should not kill the runtime.
         force_rerender_and_wait(runtime)
         assert Process.alive?(runtime)
 

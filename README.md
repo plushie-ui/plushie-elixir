@@ -5,7 +5,7 @@ Build native desktop apps in Elixir. **[Pre-1.0](#status)**
 Write your entire application in Elixir (state, events, UI) and get
 native windows on Linux, macOS, and Windows. Available on
 [Hex](https://hex.pm/packages/plushie) as `:plushie`. The
-[renderer](https://github.com/plushie-ui/plushie-renderer) is built on
+[renderer](https://github.com/plushie-ui/plushie-rust) is built on
 [Iced](https://github.com/iced-rs/iced) and ships as a precompiled
 binary, no Rust toolchain required.
 
@@ -17,7 +17,7 @@ SDKs are also available for
 
 ## Quick start
 
-<!-- test: readme_counter_init_test, readme_counter_increment_test, readme_counter_decrement_test, readme_counter_unknown_event_test, readme_counter_view_structure_test, readme_counter_view_after_increment_test -- keep this code block in sync with the test -->
+<!-- test: readme_counter_init_test, readme_counter_increment_test, readme_counter_decrement_test, readme_counter_unknown_event_test, readme_counter_view_structure_test, readme_counter_view_after_increment_test (keep this code block in sync with the test) -->
 ```elixir
 defmodule Counter do
   use Plushie.App

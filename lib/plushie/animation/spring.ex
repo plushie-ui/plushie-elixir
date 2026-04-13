@@ -3,7 +3,7 @@ defmodule Plushie.Animation.Spring do
   Renderer-side physics-based spring descriptor.
 
   Springs animate using a damped harmonic oscillator simulation.
-  Unlike timed transitions, springs have no fixed duration -- they
+  Unlike timed transitions, springs have no fixed duration; they
   settle naturally based on stiffness, damping, and mass. This
   makes them ideal for interactive animations where the target
   changes frequently (drag, scroll, hover) because interruption
@@ -30,11 +30,11 @@ defmodule Plushie.Animation.Spring do
 
   ## Presets
 
-  - `:gentle` -- slow, smooth, no overshoot
-  - `:snappy` -- quick, minimal overshoot
-  - `:bouncy` -- quick with visible overshoot
-  - `:stiff` -- very quick, crisp stop
-  - `:molasses` -- slow, heavy, deliberate
+  - `:gentle` - slow, smooth, no overshoot
+  - `:snappy` - quick, minimal overshoot
+  - `:bouncy` - quick with visible overshoot
+  - `:stiff` - very quick, crisp stop
+  - `:molasses` - slow, heavy, deliberate
 
   ## When to use springs vs transitions
 

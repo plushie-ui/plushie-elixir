@@ -2,7 +2,7 @@ defmodule Plushie.Command do
   @moduledoc """
   Commands describe side effects that `update/2` wants the runtime to perform.
 
-  They are plain data -- inspectable, testable, serializable. The runtime
+  They are plain data: inspectable, testable, serializable. The runtime
   interprets them after `update/2` returns. Nothing executes inside `update`.
 
   ## Categories
@@ -530,7 +530,7 @@ defmodule Plushie.Command do
   Issue multiple commands. Commands in the batch execute sequentially
   in list order, with state threaded through each.
 
-  Accepts a single command, a list of commands, or a nested list -- anything
+  Accepts a single command, a list of commands, or a nested list; anything
   `List.wrap/1` can normalize.
   """
   @spec batch(commands :: t() | [t()]) :: %__MODULE__{}
@@ -539,7 +539,7 @@ defmodule Plushie.Command do
   end
 
   # ---------------------------------------------------------------------------
-  # use Plushie.Command -- standalone command DSL
+  # use Plushie.Command (standalone command DSL)
   # ---------------------------------------------------------------------------
 
   @doc """

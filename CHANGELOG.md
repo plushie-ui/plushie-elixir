@@ -112,15 +112,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
   `mix plushie.build`, matching the existing options on
   `mix plushie.download`. Override output locations for both stock and
   extension builds.
-- **Canvas group redesign** -- groups now support `role` and
+- **Canvas group redesign** - groups now support `role` and
   `arrow_mode` props for accessible tree/list patterns in canvas.
-- **Block-form options on Canvas widget** -- `role` and `arrow_mode`
+- **Block-form options on Canvas widget** - `role` and `arrow_mode`
   can be set via the DSL block form.
-- **Focus ring support** -- `focus_ring_radius` on canvas groups,
+- **Focus ring support** - `focus_ring_radius` on canvas groups,
   focus ring padding on interactive canvas widgets.
-- **Expanded test helpers** -- additional utility functions for test
+- **Expanded test helpers** - additional utility functions for test
   sessions.
-- **Demo project links** in docs -- extensions guide, testing guide,
+- **Demo project links** in docs - extensions guide, testing guide,
   running guide, getting-started guide, and examples README all link
   to the [plushie-demos](https://github.com/plushie-ui/plushie-demos/tree/main/elixir)
   repo.
@@ -211,7 +211,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
   ```
 - **`interactive` directive** with id-first syntax, keyword form, block
   form, and pipe form for canvas shape interactivity.
-- **`Plushie.DSL.Buildable` behaviour** -- formal contract for types
+- **`Plushie.DSL.Buildable` behaviour** - formal contract for types
   participating in the DSL block-form pattern (`from_opts/1`,
   `__field_keys__/0`, `__field_types__/0`).
 - **Compile-time validation everywhere.** All widget block forms validate
@@ -224,22 +224,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - **Context-aware `container_scope` walker** validates container options.
   Using an option on the wrong container lists which containers support
   it.
-- **New value structs** -- `ShapeStyle` (hover/pressed overrides),
+- **New value structs** - `ShapeStyle` (hover/pressed overrides),
   `DragBounds`, `HitRect`, `Dash`, plus `Padding` and `Font` converted
   from utility types to proper structs.
-- **Extension DSL integration** -- extension widgets automatically
+- **Extension DSL integration** - extension widgets automatically
   generate `Buildable` callbacks and option metadata from `prop`
   declarations.
-- **Tree normalizer leak detection** -- shape structs and DSL metadata
+- **Tree normalizer leak detection** - shape structs and DSL metadata
   tuples in the widget tree produce clear error messages.
-- **Event coalescing** -- `max_rate` on subscriptions, `event_rate` on
+- **Event coalescing** - `max_rate` on subscriptions, `event_rate` on
   widgets, host-side pending coalesce buffer for mouse moves and sensor
   resizes.
-- **Three transport modes** -- `:spawn` (default), `:stdio` (for
+- **Three transport modes** - `:spawn` (default), `:stdio` (for
   `plushie --exec`), and `{:iostream, pid}` (for SSH/TCP/custom).
-- **Canvas interactive shapes** -- renderer-side hit testing with click,
+- **Canvas interactive shapes** - renderer-side hit testing with click,
   hover, drag, focus events via the `interactive` field on shapes.
-- **`docs/dsl-internals.md`** -- maintainer guide for the DSL
+- **`docs/dsl-internals.md`** - maintainer guide for the DSL
   architecture, Buildable behaviour, and scope walkers.
 - **`--wasm` flag** for `mix plushie.download` and `mix plushie.build`.
 - **`bin/plushie` symlink** created by `mix plushie.download` for
@@ -281,53 +281,53 @@ Initial public release.
 
 ### Added
 
-- **Elm architecture** -- `init/1`, `update/2`, `view/1`, optional
+- **Elm architecture** - `init/1`, `update/2`, `view/1`, optional
   `subscribe/1` callbacks via the `Plushie.App` behaviour.
-- **38 built-in widget types** -- layout (column, row, container,
+- **38 built-in widget types** - layout (column, row, container,
   scrollable, stack, grid, pane_grid), display (text, rich_text,
   markdown, image, svg, progress_bar, qr_code, rule, canvas),
   input (button, text_input, text_editor, checkbox, radio, toggler,
   slider, vertical_slider, pick_list, combo_box, table), and
   wrappers (tooltip, pointer_area, sensor, overlay, responsive, themer,
   keyed_column, space, floating, pin, window).
-- **22 built-in themes** -- light, dark, dracula, nord, solarized,
+- **22 built-in themes** - light, dark, dracula, nord, solarized,
   gruvbox, catppuccin, tokyo night, kanagawa, moonfly, nightfly,
   oxocarbon, ferra. Custom palettes and per-widget style overrides
   via `Plushie.Type.StyleMap`.
-- **Multi-window** -- declare window nodes in the widget tree; the
+- **Multi-window** - declare window nodes in the widget tree; the
   framework manages open/close/update automatically.
-- **Platform effects** -- native file dialogs, clipboard (text, HTML,
+- **Platform effects** - native file dialogs, clipboard (text, HTML,
   primary selection), OS notifications.
-- **Accessibility** -- screen reader support via accesskit on all
+- **Accessibility** - screen reader support via accesskit on all
   platforms. A11y props on all widgets.
-- **Commands** -- async work, streaming, timers, widget ops (focus,
+- **Commands** - async work, streaming, timers, widget ops (focus,
   scroll, select), window management (25+ operations), image
   management, platform effects, extension commands.
-- **Subscriptions** -- timers, keyboard, mouse, touch, IME, window
+- **Subscriptions** - timers, keyboard, mouse, touch, IME, window
   lifecycle, animation frames, system theme changes.
-- **16 typed event structs** -- Widget, Key, Mouse, Touch, Ime,
+- **16 typed event structs** - Widget, Key, Mouse, Touch, Ime,
   Window, Canvas, PointerArea, Pane, Sensor, Effect, System, Timer,
   Async, Stream, Modifiers.
-- **Scoped widget IDs** -- containers namespace children's IDs
+- **Scoped widget IDs** - containers namespace children's IDs
   automatically. Pattern match on local ID or scope chain.
-- **Three-backend test framework** -- mocked (fast, no display),
+- **Three-backend test framework** - mocked (fast, no display),
   headless (real rendering via tiny-skia, screenshots), windowed
   (real GPU windows). Same API across all three.
-- **Extension system** -- pure Elixir composite widgets or Rust-backed
+- **Extension system** - pure Elixir composite widgets or Rust-backed
   native widgets via `Plushie.Extension` macro DSL.
-- **Live reload** -- file watching in dev mode, enabled by default
+- **Live reload** - file watching in dev mode, enabled by default
   via `mix plushie.gui`. State preserved across reloads.
-- **Daemon mode** -- `Plushie.start_link(MyApp, daemon: true)` keeps
+- **Daemon mode** - `Plushie.start_link(MyApp, daemon: true)` keeps
   the process running after the last window closes.
-- **Precompiled binaries** -- `mix plushie.download` fetches
+- **Precompiled binaries** - `mix plushie.download` fetches
   platform-specific binaries with mandatory SHA256 verification.
-- **Build from source** -- `mix plushie.build` compiles the plushie
+- **Build from source** - `mix plushie.build` compiles the plushie
   binary, with optional extension workspace generation.
-- **State helpers** -- `Plushie.State` (revision tracking),
+- **State helpers** - `Plushie.State` (revision tracking),
   `Plushie.Undo` (undo/redo), `Plushie.Selection` (single/multi/range),
   `Plushie.Route` (navigation), `Plushie.Data` (query pipeline),
   `Plushie.Animation` (easing functions).
-- **Canvas drawing** -- shape primitives (rect, circle, arc, path,
+- **Canvas drawing** - shape primitives (rect, circle, arc, path,
   text, image) with layers, gradients, opacity, and caching.
-- **8 example apps** -- Counter, Todo, Notes, Clock, Shortcuts,
+- **8 example apps** - Counter, Todo, Notes, Clock, Shortcuts,
   AsyncFetch, ColorPicker, Catalog.

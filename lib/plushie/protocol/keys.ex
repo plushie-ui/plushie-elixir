@@ -309,7 +309,7 @@ defmodule Plushie.Protocol.Keys do
     "Unidentified" => :unidentified
   }
 
-  # Physical key codes -- Rust KeyCode Debug format -> Elixir atoms.
+  # Physical key codes: Rust KeyCode Debug format -> Elixir atoms.
   # Covers all standard US keyboard physical keys. Unknown codes pass through
   # as strings.
   @physical_keys %{

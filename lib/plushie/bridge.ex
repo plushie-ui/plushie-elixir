@@ -11,13 +11,13 @@ defmodule Plushie.Bridge do
   Transport I/O is delegated to modules implementing `Plushie.Transport`.
   Controlled by the `:transport` option:
 
-  - `:spawn` (default) -- spawns the renderer binary as a child process
+  - `:spawn` (default) - spawns the renderer binary as a child process
     using an Erlang Port (`Plushie.Transport.Port`).
 
-  - `:stdio` -- reads/writes the BEAM's own stdin/stdout. Used when the
+  - `:stdio` - reads/writes the BEAM's own stdin/stdout. Used when the
     renderer spawns the Elixir process (`Plushie.Transport.Port`).
 
-  - `{:iostream, pid}` -- sends and receives protocol messages via an
+  - `{:iostream, pid}` - sends and receives protocol messages via an
     external process (`Plushie.Transport.IOStream`). See that module for
     the adapter protocol.
 
@@ -25,8 +25,8 @@ defmodule Plushie.Bridge do
 
   Controlled by the `:format` option:
 
-  - `:json` -- JSONL over stdio. Opt-in for debugging and observability.
-  - `:msgpack` (default) -- MessagePack with 4-byte length-prefixed framing.
+  - `:json` - JSONL over stdio. Opt-in for debugging and observability.
+  - `:msgpack` (default) - MessagePack with 4-byte length-prefixed framing.
 
   On unexpected exit the bridge applies exponential back-off and attempts
   to restart the renderer up to `max_restarts` times. If the limit is
@@ -204,17 +204,17 @@ defmodule Plushie.Bridge do
 
   ## Parameters
 
-  - `id` -- unique request identifier, used to correlate responses.
-  - `action` -- the interaction verb. One of: `"click"`, `"toggle"`,
+  - `id` - unique request identifier, used to correlate responses.
+  - `action` - the interaction verb. One of: `"click"`, `"toggle"`,
     `"select"`, `"type_text"`, `"submit"`, `"press"`, `"release"`,
     `"type_key"`, `"slide"`, `"paste"`, `"scroll"`, `"move_to"`,
     `"sort"`, `"canvas_press"`, `"canvas_release"`, `"canvas_move"`,
     `"pane_focus_cycle"`.
-  - `selector` -- a map identifying the target widget. Keys are
+  - `selector` - a map identifying the target widget. Keys are
     optional and include `"by"` (e.g. `"id"`, `"text"`, `"role"`,
     `"label"`, `"focused"`) and `"value"` (the lookup value). An
     empty map targets the focused widget or the window root.
-  - `payload` -- action-specific data. Examples:
+  - `payload` - action-specific data. Examples:
     - `%{text: "hello"}` for `"type_text"` / `"paste"`
     - `%{value: "option"}` for `"select"`
     - `%{value: 0.5}` for `"slide"`
@@ -523,7 +523,7 @@ defmodule Plushie.Bridge do
   end
 
   # Intentional restart (e.g. after Rust rebuild in dev mode).
-  # No backoff, no restart counting -- the renderer is being replaced
+  # No backoff, no restart counting: the renderer is being replaced
   # with a freshly built binary, not recovering from a crash.
   @impl GenServer
   def handle_cast(:dev_restart, state) do
@@ -725,7 +725,7 @@ defmodule Plushie.Bridge do
 
                 if protocol != expected do
                   Logger.error(
-                    "plushie bridge: protocol mismatch -- renderer reports protocol #{protocol}, " <>
+                    "plushie bridge: protocol mismatch: renderer reports protocol #{protocol}, " <>
                       "expected #{expected}. Stopping bridge."
                   )
 

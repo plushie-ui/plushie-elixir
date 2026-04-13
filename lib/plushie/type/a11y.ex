@@ -60,35 +60,35 @@ defmodule Plushie.Type.A11y do
 
   ## Fields
 
-  - `role` -- overrides the inferred accesskit role (e.g. `:heading`, `:alert`)
-  - `label` -- accessible name announced by screen readers
-  - `description` -- longer description (maps to accesskit description)
-  - `live` -- live region semantics: `:polite` or `:assertive`
-  - `hidden` -- if true, node is excluded from the accessibility tree
-  - `expanded` -- expanded/collapsed state for disclosure widgets
-  - `required` -- marks a form field as required
-  - `level` -- heading level (1-6)
-  - `busy` -- suppresses AT announcements until cleared (auto-managed
+  - `role` - overrides the inferred accesskit role (e.g. `:heading`, `:alert`)
+  - `label` - accessible name announced by screen readers
+  - `description` - longer description (maps to accesskit description)
+  - `live` - live region semantics: `:polite` or `:assertive`
+  - `hidden` - if true, node is excluded from the accessibility tree
+  - `expanded` - expanded/collapsed state for disclosure widgets
+  - `required` - marks a form field as required
+  - `level` - heading level (1-6)
+  - `busy` - suppresses AT announcements until cleared (auto-managed
     by sliders during drag; set explicitly for custom continuous
     interactions)
-  - `invalid` -- form validation failure
-  - `modal` -- dialog is modal
-  - `read_only` -- can be read but not edited
-  - `mnemonic` -- Alt+letter keyboard shortcut (single character)
-  - `toggled` -- toggled/checked state (for custom toggle widgets)
-  - `selected` -- selected state (for custom selectable widgets)
-  - `value` -- current value as a string (for custom value-displaying widgets)
-  - `orientation` -- `:horizontal` or `:vertical` (for custom oriented widgets)
-  - `labelled_by` -- ID of the widget that labels this one
-  - `described_by` -- ID of the widget that describes this one
-  - `error_message` -- ID of the widget showing the error message for this one
-  - `disabled` -- override disabled state for AT
-  - `position_in_set` -- 1-based position within a set (lists, radio groups, tabs)
-  - `size_of_set` -- total items in the set
-  - `active_descendant` -- ID of the currently active child in a composite widget
-  - `radio_group` -- list of IDs of all radio buttons in a group
-  - `label_from` -- (build-time only) prop name to derive label from
-  - `has_popup` -- popup type: `"listbox"`, `"menu"`, `"dialog"`, `"tree"`, `"grid"`
+  - `invalid` - form validation failure
+  - `modal` - dialog is modal
+  - `read_only` - can be read but not edited
+  - `mnemonic` - Alt+letter keyboard shortcut (single character)
+  - `toggled` - toggled/checked state (for custom toggle widgets)
+  - `selected` - selected state (for custom selectable widgets)
+  - `value` - current value as a string (for custom value-displaying widgets)
+  - `orientation` - `:horizontal` or `:vertical` (for custom oriented widgets)
+  - `labelled_by` - ID of the widget that labels this one
+  - `described_by` - ID of the widget that describes this one
+  - `error_message` - ID of the widget showing the error message for this one
+  - `disabled` - override disabled state for AT
+  - `position_in_set` - 1-based position within a set (lists, radio groups, tabs)
+  - `size_of_set` - total items in the set
+  - `active_descendant` - ID of the currently active child in a composite widget
+  - `radio_group` - list of IDs of all radio buttons in a group
+  - `label_from` - (build-time only) prop name to derive label from
+  - `has_popup` - popup type: `"listbox"`, `"menu"`, `"dialog"`, `"tree"`, `"grid"`
   """
 
   @known_keys ~w(role label label_from description live hidden expanded required level busy invalid modal read_only mnemonic toggled selected value orientation labelled_by described_by error_message disabled position_in_set size_of_set has_popup active_descendant radio_group)a
@@ -404,7 +404,7 @@ defmodule Plushie.Type.A11y do
     end
 
     # Filter nils so that `label: if(cond, do: "Name")` doesn't crash
-    # the guard when cond is false -- nil means "don't set" (struct default).
+    # the guard when cond is false. nil means "don't set" (struct default).
     opts
     |> Enum.reject(fn {_, v} -> is_nil(v) end)
     |> Enum.reduce(new(), fn

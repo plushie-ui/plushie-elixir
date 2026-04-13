@@ -57,7 +57,7 @@ defmodule Plushie.Test do
   Starts the shared renderer session pool and configures backend-based
   test exclusions.
 
-  Returns the ExUnit exclusion options -- pass them to `ExUnit.start/1`:
+  Returns the ExUnit exclusion options. Pass them to `ExUnit.start/1`:
 
       # test/test_helper.exs
       plushie_opts = Plushie.Test.setup!()

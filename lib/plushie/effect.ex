@@ -3,7 +3,7 @@ defmodule Plushie.Effect do
   Native platform effect requests.
 
   Effects are asynchronous I/O operations that require the renderer to
-  interact with the OS on behalf of the Elixir app -- file dialogs,
+  interact with the OS on behalf of the Elixir app: file dialogs,
   clipboard access, notifications, and similar.
 
   Each function takes an atom `tag` as the first argument and returns a
@@ -75,7 +75,7 @@ defmodule Plushie.Effect do
   @doc """
   Generic effect request. Returns a command struct.
 
-  `tag` is an atom that identifies this effect -- it appears in the
+  `tag` is an atom that identifies this effect. It appears in the
   `%EffectEvent{tag: tag}` result event. `kind` must be one of the supported
   effect types. `opts` is a keyword list of parameters sent as the effect
   payload.

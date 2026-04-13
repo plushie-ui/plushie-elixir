@@ -4,9 +4,9 @@ defmodule Plushie.Protocol do
 
   Supports two wire formats:
 
-  * `:json` -- newline-delimited JSON. Opt-in for debugging and observability.
+  * `:json` - newline-delimited JSON. Opt-in for debugging and observability.
     Each encode function returns a JSON string with a trailing newline.
-  * `:msgpack` -- MessagePack via `Msgpax` (default). Returns iodata with no
+  * `:msgpack` - MessagePack via `Msgpax` (default). Returns iodata with no
     length prefix (Erlang's `{:packet, 4}` Port driver handles framing).
 
   `decode_message/2` returns a safe tagged result for tests and diagnostics.
@@ -15,10 +15,10 @@ defmodule Plushie.Protocol do
 
   Implementation is split across internal submodules:
 
-  * Protocol.Encode -- all `encode_*` functions and serialization
-  * Protocol.Decode -- `decode/2`, `decode_message/2`, `decode_message!/2`, and dispatch
-  * Protocol.Keys -- named/physical key maps and `parse_key/1`
-  * Protocol.Parsers -- strict enum parsers and widget-family checks
+  * Protocol.Encode - all `encode_*` functions and serialization
+  * Protocol.Decode - `decode/2`, `decode_message/2`, `decode_message!/2`, and dispatch
+  * Protocol.Keys - named/physical key maps and `parse_key/1`
+  * Protocol.Parsers - strict enum parsers and widget-family checks
   """
 
   @protocol_version 1
@@ -92,14 +92,14 @@ defmodule Plushie.Protocol do
   def protocol_version, do: @protocol_version
 
   # ---------------------------------------------------------------------------
-  # Encoding -- delegated to Protocol.Encode
+  # Encoding (delegated to Protocol.Encode)
   # ---------------------------------------------------------------------------
 
   @doc """
   Encodes an arbitrary map as wire-format iodata.
 
   For `:json`, returns a JSON string with a trailing newline.
-  For `:msgpack`, returns msgpack iodata (no length prefix -- the Erlang
+  For `:msgpack`, returns msgpack iodata (no length prefix; the Erlang
   `{:packet, 4}` Port driver handles framing).
   """
   @spec encode(message :: map(), format :: format()) :: iodata()
@@ -215,8 +215,8 @@ defmodule Plushie.Protocol do
   map contains the op-specific fields (handle, data/pixels, width, height).
 
   Binary fields (`data`, `pixels`) are encoded based on the wire format:
-  - `:msgpack` -- wrapped in `Msgpax.Bin` for native msgpack binary type (zero overhead)
-  - `:json` -- base64-encoded strings (JSON has no binary type)
+  - `:msgpack` - wrapped in `Msgpax.Bin` for native msgpack binary type (zero overhead)
+  - `:json` - base64-encoded strings (JSON has no binary type)
 
   ## Example
 
@@ -310,7 +310,7 @@ defmodule Plushie.Protocol do
     to: Plushie.Protocol.Encode
 
   # ---------------------------------------------------------------------------
-  # Decoding -- delegated to Protocol.Decode
+  # Decoding (delegated to Protocol.Decode)
   # ---------------------------------------------------------------------------
 
   @doc """
@@ -361,7 +361,7 @@ defmodule Plushie.Protocol do
   defdelegate decode_message!(data, format \\ :msgpack), to: Plushie.Protocol.Decode
 
   # ---------------------------------------------------------------------------
-  # Key name conversion -- delegated to Protocol.Keys
+  # Key name conversion (delegated to Protocol.Keys)
   # ---------------------------------------------------------------------------
 
   @doc """

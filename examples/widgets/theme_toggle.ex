@@ -16,7 +16,7 @@ defmodule ThemeToggle do
 
   widget :theme_toggle
 
-  # Emits built-in :toggle -- no custom event declaration needed.
+  # Emits built-in :toggle; no custom event declaration needed.
   # The BuiltinSpecs registry provides the spec (value: :boolean).
 
   state progress: 0.0, target: 0.0
@@ -41,7 +41,7 @@ defmodule ThemeToggle do
     {:update_state, %{state | progress: new_progress}}
   end
 
-  # All other events consumed -- ThemeToggle only surfaces :toggle.
+  # All other events consumed. ThemeToggle only surfaces :toggle.
   def handle_event(_, _state), do: :consumed
 
   # -- Widget-scoped subscriptions ---------------------------------------------

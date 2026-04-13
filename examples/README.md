@@ -15,13 +15,13 @@ running and the window updates instantly.
 
 The examples deliberately use different DSL styles so you can compare:
 
-- **Keyword opts on the call line** -- `column(spacing: 8, padding: 16, children: [...])`
+- **Keyword opts on the call line** - `column(spacing: 8, padding: 16, children: [...])`
   Used by: Counter, Clock, Shortcuts, AsyncFetch, and most widget calls.
-- **Container inline props** -- options declared inside the do-block, mixed with children.
+- **Container inline props** - options declared inside the do-block, mixed with children.
   Used by: Todo, Notes, Catalog (Layout tab), RatePlushie.
-- **Nested struct do-blocks** -- `border do width 1; rounded 8 end` for complex options.
+- **Nested struct do-blocks** - `border do width 1; rounded 8 end` for complex options.
   Used by: RatePlushie, ColorPicker app.
-- **Canvas widget modules** -- reusable canvas components in `widgets/`.
+- **Canvas widget modules** - reusable canvas components in `widgets/`.
   Used by: ColorPicker (ColorPickerWidget), RatePlushie (StarRating, ThemeToggle).
 
 All styles are interchangeable. Pick whichever reads best for your use case.
@@ -161,7 +161,7 @@ mix plushie.gui Catalog
 
 App rating page with custom canvas-drawn widgets composed into a styled UI.
 Features a 5-star rating built from path-drawn star geometry and an animated
-emoji theme toggle -- a smiley that slides, rotates upside down, and becomes
+emoji theme toggle: a smiley that slides, rotates upside down, and becomes
 a smiling imp when "Dark humor" is enabled. The entire page theme flips at
 the animation midpoint.
 
@@ -181,13 +181,13 @@ repo has larger self-contained projects with their own mix.exs, tests,
 and build configuration:
 
 - [**gauge-demo**](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/gauge-demo)
-  -- native Rust widget with commands, widget events, and
+  - native Rust widget with commands, widget events, and
   optimistic updates (Tier C)
 - [**sparkline-dashboard**](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/sparkline-dashboard)
-  -- render-only Rust canvas widget with timer subscriptions and
+  - render-only Rust canvas widget with timer subscriptions and
   multiple widget instances (Tier A)
 - [**notes**](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/notes)
-  -- pure Elixir widgets + state helpers (Route, Selection, Undo, Data)
-  with keyboard shortcuts -- no Rust required
+  - pure Elixir widgets + state helpers (Route, Selection, Undo, Data)
+  with keyboard shortcuts; no Rust required
 - [**collab**](https://github.com/plushie-ui/plushie-demos/tree/main/elixir/collab)
-  -- collaborative scratchpad over native, WebSocket, and SSH transports
+  - collaborative scratchpad over native, WebSocket, and SSH transports

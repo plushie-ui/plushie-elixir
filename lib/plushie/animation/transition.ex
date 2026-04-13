@@ -2,7 +2,7 @@ defmodule Plushie.Animation.Transition do
   @moduledoc """
   Renderer-side timed transition descriptor.
 
-  Declares animation intent in the view -- the renderer handles
+  Declares animation intent in the view. The renderer handles
   interpolation locally with zero wire traffic during animation.
 
   ## Three forms

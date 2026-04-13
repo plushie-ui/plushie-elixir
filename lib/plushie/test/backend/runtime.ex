@@ -27,9 +27,9 @@ defmodule Plushie.Test.Backend.Runtime do
 
   Passed through from `start/2`:
 
-  - `:pool` -- the SessionPool server (default: `Plushie.TestPool`)
-  - `:format` -- wire format (default: `:msgpack`)
-  - `:init_arg` -- argument passed to the app's `init/1` callback
+  - `:pool` - the SessionPool server (default: `Plushie.TestPool`)
+  - `:format` - wire format (default: `:msgpack`)
+  - `:init_arg` - argument passed to the app's `init/1` callback
 
   ## Example
 

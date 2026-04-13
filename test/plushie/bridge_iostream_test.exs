@@ -343,7 +343,7 @@ defmodule Plushie.BridgeIostreamTest do
           # alive on second invocation.
           assert_receive :renderer_restarted, 1_000
 
-          # Complete the resync -- this flushes queued messages.
+          # Complete the resync; this flushes queued messages.
           Plushie.Bridge.send_resync_complete(bridge)
 
           # The bridge should still be alive and functioning.

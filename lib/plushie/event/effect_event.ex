@@ -3,19 +3,19 @@ defmodule Plushie.Event.EffectEvent do
   Platform effect responses (file dialogs, clipboard, etc.).
 
   Returned asynchronously after a platform effect command completes. The
-  `tag` identifies which effect this response belongs to -- it matches
+  `tag` identifies which effect this response belongs to; it matches
   the tag you provided when creating the effect command.
 
   ## Fields
 
     * `tag` - the atom tag from the originating effect command
     * `result` - one of:
-      * `{:ok, value}` -- success. For file dialogs, the value is a map
+      * `{:ok, value}` - success. For file dialogs, the value is a map
         with a file path or list of paths. For clipboard reads, it contains
         the clipboard text.
-      * `:cancelled` -- the user dismissed a dialog without selecting.
+      * `:cancelled` - the user dismissed a dialog without selecting.
         This is a normal outcome, not an error.
-      * `{:error, reason}` -- a platform error (e.g. clipboard unavailable).
+      * `{:error, reason}` - a platform error (e.g. clipboard unavailable).
 
   ## Pattern matching
 

@@ -10,13 +10,13 @@ defmodule Mix.Tasks.Plushie.Gui do
 
   ## Options
 
-  - `--build` -- Build the plushie binary before starting
-  - `--release` -- Use the release build
-  - `--json` -- Use JSON wire protocol (debugging)
-  - `--watch` -- Enable file watching and live reload
-  - `--no-watch` -- Disable file watching
-  - `--debounce` -- File watch debounce interval in ms (default: 100)
-  - `--daemon` -- Keep running after the last window closes
+  - `--build` - Build the plushie binary before starting
+  - `--release` - Use the release build
+  - `--json` - Use JSON wire protocol (debugging)
+  - `--watch` - Enable file watching and live reload
+  - `--no-watch` - Disable file watching
+  - `--debounce` - File watch debounce interval in ms (default: 100)
+  - `--daemon` - Keep running after the last window closes
 
   ## File watching
 

@@ -158,7 +158,7 @@ defmodule Plushie.Docs.RunningTest do
       {:noreply, state}
     end
 
-    # TCP data arrived -- decode frames and forward complete messages
+    # TCP data arrived: decode frames and forward complete messages
     def handle_info({:tcp, _socket, data}, state) do
       {messages, buffer} =
         Plushie.Transport.Framing.decode_packets(state.buffer <> data)
@@ -167,7 +167,7 @@ defmodule Plushie.Docs.RunningTest do
       {:noreply, %{state | buffer: buffer}}
     end
 
-    # TCP closed -- tell the Bridge
+    # TCP closed: tell the Bridge
     def handle_info({:tcp_closed, _socket}, state) do
       if state.bridge, do: send(state.bridge, {:iostream_closed, :tcp_closed})
       {:stop, :normal, state}
@@ -183,7 +183,7 @@ defmodule Plushie.Docs.RunningTest do
   end
 
   # ============================================================================
-  # Transport option shapes -- verify iostream tuple is accepted
+  # Transport option shapes: verify iostream tuple is accepted
   # ============================================================================
 
   test "running_iostream_transport_option_shape_test" do

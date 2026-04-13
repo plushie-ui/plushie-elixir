@@ -66,7 +66,7 @@ defmodule Plushie.Runtime.Subscriptions do
 
     # Short-circuit: if the sorted key list hasn't changed, the subscription
     # set is identical and we can skip the full diff. But max_rate may have
-    # changed on existing subscriptions -- check and re-send if needed.
+    # changed on existing subscriptions; check and re-send if needed.
     if new_sorted_keys == state.subscription_keys do
       update_max_rates(state, new_by_key)
     else

@@ -10,7 +10,7 @@ defmodule Plushie.Protocol.Encode do
   Encodes an arbitrary map as wire-format iodata.
 
   For `:json`, returns a JSON string with a trailing newline.
-  For `:msgpack`, returns msgpack iodata (no length prefix -- the Erlang
+  For `:msgpack`, returns msgpack iodata (no length prefix; the Erlang
   `{:packet, 4}` Port driver handles framing).
   """
   @spec encode(message :: map(), format :: Plushie.Protocol.format()) :: iodata()
@@ -151,8 +151,8 @@ defmodule Plushie.Protocol.Encode do
   map contains the op-specific fields (handle, data/pixels, width, height).
 
   Binary fields (`data`, `pixels`) are encoded based on the wire format:
-  - `:msgpack` -- wrapped in `Msgpax.Bin` for native msgpack binary type (zero overhead)
-  - `:json` -- base64-encoded strings (JSON has no binary type)
+  - `:msgpack` - wrapped in `Msgpax.Bin` for native msgpack binary type (zero overhead)
+  - `:json` - base64-encoded strings (JSON has no binary type)
 
   ## Example
 
@@ -253,12 +253,12 @@ defmodule Plushie.Protocol.Encode do
 
   ## Parameters
 
-  - `id` -- unique request identifier for correlating responses.
-  - `action` -- the interaction verb (e.g. `"click"`, `"type_text"`).
+  - `id` - unique request identifier for correlating responses.
+  - `action` - the interaction verb (e.g. `"click"`, `"type_text"`).
     See `Plushie.Bridge.send_interact/5` for the full list.
-  - `selector` -- target widget lookup map. Example:
+  - `selector` - target widget lookup map. Example:
     `%{"by" => "id", "value" => "form/email"}`.
-  - `payload` -- action-specific data map. Example:
+  - `payload` - action-specific data map. Example:
     `%{"text" => "hello"}` for `"type_text"`.
 
   ## Examples
@@ -427,7 +427,7 @@ defmodule Plushie.Protocol.Encode do
     end)
   end
 
-  # Structs must be encoded before key stringification -- otherwise they
+  # Structs must be encoded before key stringification. Otherwise they
   # match the bare map clause and get destructured into raw struct fields.
   defp stringify_value(%_{} = v), do: Plushie.Type.encode_value(v)
 

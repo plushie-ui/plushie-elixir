@@ -15,9 +15,9 @@ defmodule Mix.Tasks.Plushie.Build do
   ## Prerequisites
 
   - **Rust toolchain** #{elem(@min_rust_version, 0)}.#{elem(@min_rust_version, 1)}+ (install via https://rustup.rs)
-  - **Plushie Rust source** (optional) -- set `PLUSHIE_SOURCE_PATH` or
+  - **Plushie Rust source** (optional): set `PLUSHIE_SOURCE_PATH` or
     `config :plushie, :source_path` to use local sources instead of crates.io
-  - **wasm-pack** (for `--wasm` only) -- install via https://rustwasm.github.io/wasm-pack/
+  - **wasm-pack** (for `--wasm` only): install via https://rustwasm.github.io/wasm-pack/
 
   ## Usage
 
@@ -29,13 +29,13 @@ defmodule Mix.Tasks.Plushie.Build do
 
   ## Options
 
-  - `--bin` -- Build the native binary
-  - `--wasm` -- Build the WASM renderer via wasm-pack
-  - `--bin-file PATH` -- Override native binary destination
-  - `--wasm-dir PATH` -- Override WASM output directory
-  - `--release` -- Build with optimizations (also implied by `MIX_ENV=prod`)
-  - `--verbose` -- Print full cargo output on successful builds
-  - `--update` -- Force dependency re-resolution (deletes the tracked lock file)
+  - `--bin`: Build the native binary
+  - `--wasm`: Build the WASM renderer via wasm-pack
+  - `--bin-file PATH`: Override native binary destination
+  - `--wasm-dir PATH`: Override WASM output directory
+  - `--release`: Build with optimizations (also implied by `MIX_ENV=prod`)
+  - `--verbose`: Print full cargo output on successful builds
+  - `--update`: Force dependency re-resolution (deletes the tracked lock file)
 
   ## Config
 
@@ -525,7 +525,7 @@ defmodule Mix.Tasks.Plushie.Build do
           check_version_compatible!(mod, dep_version, expected)
 
         {:path, dep_path} ->
-          # Path dependency -- read the version from the target Cargo.toml.
+          # Path dependency: read the version from the target Cargo.toml.
           target_toml = Path.join(Path.expand(dep_path, crate_path), "Cargo.toml")
 
           case read_package_version(target_toml) do
@@ -625,8 +625,8 @@ defmodule Mix.Tasks.Plushie.Build do
 
     # Use local source paths if available, otherwise pull from crates.io.
     # The plushie-renderer workspace has two crates native widgets need:
-    #   plushie-widget-sdk       -- core library (widget types, protocols, widget API)
-    #   plushie-renderer  -- binary entry point (run function)
+    #   plushie-widget-sdk       - core library (widget types, protocols, widget API)
+    #   plushie-renderer  - binary entry point (run function)
     if source_path && !File.dir?(source_path) do
       Mix.raise(
         "PLUSHIE_SOURCE_PATH is set to #{inspect(source_path)} but the directory does not exist. " <>
@@ -775,10 +775,10 @@ defmodule Mix.Tasks.Plushie.Build do
   end
 
   # Validates Rust constructor expressions. Matches:
-  #   gauge::GaugeWidget::new()      -- module path with call
-  #   MyExt::<Config>::new()            -- turbofish generics
-  #   MyExt::new                        -- path without parens
-  #   create_widget()                   -- bare function call
+  #   gauge::GaugeWidget::new()      - module path with call
+  #   MyExt::<Config>::new()            - turbofish generics
+  #   MyExt::new                        - path without parens
+  #   create_widget()                   - bare function call
   @rust_constructor_pattern ~r/^[A-Za-z_][A-Za-z0-9_:<>, ]*(\([^)]*\))?$/
 
   defp validate_rust_constructor!(mod, constructor) do

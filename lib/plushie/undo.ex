@@ -200,7 +200,7 @@ defmodule Plushie.Undo do
     end
   end
 
-  # Seam for testing -- allows tests to control time via process dictionary.
+  # Seam for testing: allows tests to control time via process dictionary.
   defp timestamp do
     case Process.get(:plushie_undo_timestamp) do
       nil -> System.monotonic_time(:millisecond)

@@ -99,7 +99,7 @@ defmodule Plushie.UI do
       end
 
   Options and children can be freely mixed. Options are validated at
-  compile time -- using an option that doesn't belong to the container
+  compile time. Using an option that doesn't belong to the container
   produces a helpful error.
 
   Struct-typed options support nested do-blocks:
@@ -188,7 +188,7 @@ defmodule Plushie.UI do
   declaration specify the same option, the block value wins:
 
       column spacing: 8 do
-        spacing 16         # overrides -- spacing is 16
+        spacing 16         # overrides; spacing is 16
         text("hello")
       end
 
@@ -252,7 +252,7 @@ defmodule Plushie.UI do
   @all_container_option_names Map.keys(@all_container_option_owners)
 
   # ---------------------------------------------------------------------------
-  # Core build helpers (public -- macro-generated code calls these at runtime)
+  # Core build helpers (public; macro-generated code calls these at runtime)
   # ---------------------------------------------------------------------------
 
   @doc false
@@ -425,8 +425,8 @@ defmodule Plushie.UI do
 
   ## Arguments
 
-  - `id`   -- stable string identifier for this window
-  - `opts` -- keyword list; common option: `:title`
+  - `id`   - stable string identifier for this window
+  - `opts` - keyword list; common option: `:title`
 
   ## Example
 
@@ -636,12 +636,12 @@ defmodule Plushie.UI do
 
     ## Options
 
-    - `:spacing` -- gap between children
-    - `:padding` -- padding around children
-    - `:width` / `:height` -- `:fill`, `:shrink`, or number
-    - `:align_x` -- `:left`, `:center`, `:right`
-    - `:id` -- explicit ID (otherwise auto-generated from call site)
-    - `:children` -- child nodes (function-form shorthand)
+    - `:spacing` - gap between children
+    - `:padding` - padding around children
+    - `:width` / `:height` - `:fill`, `:shrink`, or number
+    - `:align_x` - `:left`, `:center`, `:right`
+    - `:id` - explicit ID (otherwise auto-generated from call site)
+    - `:children` - child nodes (function-form shorthand)
 
     ## Example
 
@@ -681,13 +681,13 @@ defmodule Plushie.UI do
 
     ## Options
 
-    - `:columns` -- number of columns
-    - `:column_width` -- width of each column
-    - `:row_height` -- height of each row
-    - `:spacing` -- gap between cells
-    - `:padding` -- padding around grid
-    - `:width` / `:height` -- dimensions
-    - `:id` -- explicit ID (otherwise auto-generated from call site)
+    - `:columns` - number of columns
+    - `:column_width` - width of each column
+    - `:row_height` - height of each row
+    - `:spacing` - gap between cells
+    - `:padding` - padding around grid
+    - `:width` / `:height` - dimensions
+    - `:id` - explicit ID (otherwise auto-generated from call site)
 
     ## Example
 
@@ -717,8 +717,8 @@ defmodule Plushie.UI do
 
     ## Options
 
-    - `:width` / `:height` -- dimensions
-    - `:id` -- explicit ID (otherwise auto-generated from call site)
+    - `:width` / `:height` - dimensions
+    - `:id` - explicit ID (otherwise auto-generated from call site)
 
     ## Example
 
@@ -785,10 +785,10 @@ defmodule Plushie.UI do
 
     ## Options
 
-    - `:position` -- `:below`, `:above`, `:left`, `:right`
-    - `:gap` -- space between anchor and overlay in pixels
-    - `:offset_x` -- horizontal offset in pixels
-    - `:offset_y` -- vertical offset in pixels
+    - `:position` - `:below`, `:above`, `:left`, `:right`
+    - `:gap` - space between anchor and overlay in pixels
+    - `:offset_x` - horizontal offset in pixels
+    - `:offset_y` - vertical offset in pixels
 
     ## Example
 
@@ -860,7 +860,7 @@ defmodule Plushie.UI do
 
     ## Options
 
-    - `:theme` -- theme name string or custom palette map
+    - `:theme` - theme name string or custom palette map
 
     ## Example
 
@@ -918,8 +918,8 @@ defmodule Plushie.UI do
 
   ## Options
 
-  - `:width` -- `:fill`, `:shrink`, or number
-  - `:height` -- `:fill`, `:shrink`, or number
+  - `:width` - `:fill`, `:shrink`, or number
+  - `:height` - `:fill`, `:shrink`, or number
 
   ## Example
 
@@ -1097,15 +1097,15 @@ defmodule Plushie.UI do
 
     ## Arguments
 
-    - `id` -- unique identifier
-    - `data` -- the string to encode
+    - `id` - unique identifier
+    - `data` - the string to encode
 
     ## Options
 
-    - `:cell_size` -- size of each QR module in pixels (default 4.0)
-    - `:cell_color` -- color of dark modules
-    - `:background` -- color of light modules
-    - `:error_correction` -- `:low`, `:medium` (default), `:quartile`, `:high`
+    - `:cell_size` - size of each QR module in pixels (default 4.0)
+    - `:cell_color` - color of dark modules
+    - `:background` - color of light modules
+    - `:error_correction` - `:low`, `:medium` (default), `:quartile`, `:high`
 
     ## Example
 
@@ -1180,9 +1180,9 @@ defmodule Plushie.UI do
 
   ## Forms
 
-  - `text(content)` -- auto-generated ID (sugar for quick labels)
-  - `text(id, content)` -- explicit ID
-  - `text(id, content, opts)` -- explicit ID with options
+  - `text(content)` - auto-generated ID (sugar for quick labels)
+  - `text(id, content)` - explicit ID
+  - `text(id, content, opts)` - explicit ID with options
 
   ## Example
 
@@ -1302,14 +1302,14 @@ defmodule Plushie.UI do
 
   ## Forms
 
-  - `progress_bar(range, value)` -- auto-generated ID (sugar)
-  - `progress_bar(id, range, value)` -- explicit ID
-  - `progress_bar(id, range, value, opts)` -- explicit ID with options
+  - `progress_bar(range, value)` - auto-generated ID (sugar)
+  - `progress_bar(id, range, value)` - explicit ID
+  - `progress_bar(id, range, value, opts)` - explicit ID with options
 
   ## Arguments
 
-  - `range` -- `{min, max}` tuple defining the full range
-  - `value` -- current value within the range
+  - `range` - `{min, max}` tuple defining the full range
+  - `value` - current value within the range
 
   ## Example
 
@@ -1450,8 +1450,8 @@ defmodule Plushie.UI do
 
   ## Arguments
 
-  - `range` -- `{min, max}` tuple or `min..max` Range
-  - `value` -- current value
+  - `range` - `{min, max}` tuple or `min..max` Range
+  - `value` - current value
 
   ## Example
 
@@ -1701,9 +1701,9 @@ defmodule Plushie.UI do
 
   ## Forms
 
-  - `markdown(content)` -- auto-generated ID
-  - `markdown(id, content)` -- explicit ID
-  - `markdown(id, content, opts)` -- explicit ID with options
+  - `markdown(content)` - auto-generated ID
+  - `markdown(id, content)` - explicit ID
+  - `markdown(id, content, opts)` - explicit ID with options
 
   ## Example
 
@@ -1769,8 +1769,8 @@ defmodule Plushie.UI do
 
   ## Forms
 
-  - `tooltip(id, tip, do: block)` -- with children
-  - `tooltip(id, tip, opts, do: block)` -- with children and options
+  - `tooltip(id, tip, do: block)` - with children
+  - `tooltip(id, tip, opts, do: block)` - with children and options
 
   ## Example
 
@@ -1874,7 +1874,7 @@ defmodule Plushie.UI do
   end
 
   # ---------------------------------------------------------------------------
-  # Canvas (macro -- supports do-block with layers)
+  # Canvas (macro; supports do-block with layers)
   # ---------------------------------------------------------------------------
 
   @doc """
@@ -1981,11 +1981,11 @@ defmodule Plushie.UI do
 
   ## Options
 
-  - `:spacing` -- gap between panes
-  - `:min_size` -- minimum pane size
-  - `:on_resize` -- resize event tag
-  - `:on_drag` -- drag event tag
-  - `:on_click` -- click event tag
+  - `:spacing` - gap between panes
+  - `:min_size` - minimum pane size
+  - `:on_resize` - resize event tag
+  - `:on_drag` - drag event tag
+  - `:on_click` - click event tag
 
   Children are pane content keyed by ID.
 
@@ -2062,8 +2062,8 @@ defmodule Plushie.UI do
 
   ## Options
 
-  - `:spans` -- list of span descriptors
-  - `:width` -- width
+  - `:spans` - list of span descriptors
+  - `:width` - width
 
   ## Example
 
@@ -2136,7 +2136,7 @@ defmodule Plushie.UI do
 
     case id_or_opts do
       id when is_binary(id) ->
-        # table("users") -- explicit ID, no opts
+        # table("users"): explicit ID, no opts
         quote do
           Plushie.UI.__build_container__(
             Plushie.Widget.Table,
@@ -2148,7 +2148,7 @@ defmodule Plushie.UI do
         end
 
       [do: block] ->
-        # table do ... end -- auto-ID with block
+        # table do ... end: auto-ID with block
         option_keys = Plushie.Widget.Table.__field_keys__()
         option_types = Plushie.Widget.Table.__field_types__()
         block = container_scope(block, option_keys, option_types, "table")
@@ -2171,7 +2171,7 @@ defmodule Plushie.UI do
         end
 
       opts ->
-        # table(columns: cols, rows: data) -- auto-ID with opts
+        # table(columns: cols, rows: data): auto-ID with opts
         quote do
           Plushie.UI.__build_container__(
             Plushie.Widget.Table,
@@ -2310,7 +2310,7 @@ defmodule Plushie.UI do
     end
   end
 
-  # __build_fixed_node__ removed -- use __build_container__
+  # __build_fixed_node__ removed; use __build_container__
 
   # ---------------------------------------------------------------------------
   # Canvas group and layer macros
@@ -2611,7 +2611,7 @@ defmodule Plushie.UI do
   @doc """
   Creates a timed transition descriptor for animated prop values.
 
-  The renderer handles interpolation locally -- zero wire traffic
+  The renderer handles interpolation locally, with zero wire traffic
   during animation. Duration can be a positional argument or a
   keyword.
 
@@ -2701,7 +2701,7 @@ defmodule Plushie.UI do
   @doc """
   Creates a physics-based spring descriptor.
 
-  Springs have no fixed duration -- they settle naturally based
+  Springs have no fixed duration; they settle naturally based
   on stiffness and damping.
 
   ## Examples
@@ -2780,7 +2780,7 @@ defmodule Plushie.UI do
   def __build_sequence__(steps), do: Plushie.Animation.Sequence.new(steps)
 
   # ---------------------------------------------------------------------------
-  # QR Code (function -- no children)
+  # QR Code (function; no children)
   # ---------------------------------------------------------------------------
 
   @doc false
@@ -2937,10 +2937,10 @@ defmodule Plushie.UI do
   defp container_scope(expr, _ok, _ot, _wn) when not is_tuple(expr), do: expr
   defp container_scope(expr, _ok, _ot, _wn) when tuple_size(expr) != 3, do: expr
 
-  # Fully qualified calls -- skip
+  # Fully qualified calls: skip
   defp container_scope({{:., _, _}, _, _} = node, _ok, _ot, _wn), do: node
 
-  # Bare name (no args) -- could be a boolean option or wrong-container error
+  # Bare name (no args): could be a boolean option or wrong-container error
   defp container_scope({name, meta, context} = node, option_keys, _option_types, widget_name)
        when is_atom(name) and (context == nil or is_atom(context)) do
     if name in option_keys do
@@ -2955,7 +2955,7 @@ defmodule Plushie.UI do
     end
   end
 
-  # Control flow -- recurse (must be before the general {name, meta, args} clause)
+  # Control flow: recurse (must be before the general {name, meta, args} clause)
 
   defp container_scope({:for, meta, args}, ok, ot, wn) do
     {:for, meta,
@@ -3055,7 +3055,7 @@ defmodule Plushie.UI do
      end)}
   end
 
-  # Name with args -- could be an option key, wrong-container, or child
+  # Name with args: could be an option key, wrong-container, or child
   defp container_scope({name, meta, args} = node, option_keys, option_types, widget_name)
        when is_atom(name) and is_list(args) do
     if name in option_keys do
@@ -3091,7 +3091,7 @@ defmodule Plushie.UI do
     end
   end
 
-  # Default -- pass through
+  # Default: pass through
   defp container_scope(other, _ok, _ot, _wn), do: other
 
   # Helper to build {:__widget_prop__, name, value} AST
@@ -3134,7 +3134,7 @@ defmodule Plushie.UI do
   defp canvas_scope(expr, _context, _caller_mod) when not is_tuple(expr), do: expr
   defp canvas_scope(expr, _context, _caller_mod) when tuple_size(expr) != 3, do: expr
 
-  # Fully qualified calls -- skip
+  # Fully qualified calls: skip
   defp canvas_scope({{:., _, _}, _, _} = node, _context, _caller_mod), do: node
 
   # --- Canvas container calls (don't recurse into their blocks) ---

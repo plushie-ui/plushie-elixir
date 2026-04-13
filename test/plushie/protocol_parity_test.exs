@@ -1,7 +1,7 @@
 defmodule Plushie.ProtocolParityTest do
   @moduledoc """
   Tests for all new protocol event decoders added in the iced parity pass.
-  Does not duplicate tests from protocol_test.exs -- only covers new events.
+  Does not duplicate tests from protocol_test.exs; only covers new events.
   """
   use ExUnit.Case, async: true
 

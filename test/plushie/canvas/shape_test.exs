@@ -303,7 +303,7 @@ defmodule Plushie.Canvas.ShapeTest do
 
   # -- Clipping commands ------------------------------------------------------
 
-  # Standalone push_clip/pop_clip tests removed -- clips are now a
+  # Standalone push_clip/pop_clip tests removed. Clips are now a
   # group-level field. See Group struct.
 
   # -- Per-shape opacity ------------------------------------------------------

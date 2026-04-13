@@ -526,7 +526,7 @@ defmodule Plushie.Runtime do
         {:reply, {:error, :await_in_progress}, state}
 
       Map.has_key?(state.async_tasks, tag) ->
-        # Task still running -- store caller and reply when it completes.
+        # Task still running; store caller and reply when it completes.
         {:noreply, %{state | pending_await_async: Map.put(state.pending_await_async, tag, from)}}
 
       true ->
@@ -639,7 +639,7 @@ defmodule Plushie.Runtime do
     check_renderer_version(hello)
 
     Logger.info(
-      "plushie runtime: renderer connected -- #{hello.name} v#{hello.version} (#{hello.mode}, #{hello.backend}, #{hello.transport})"
+      "plushie runtime: renderer connected: #{hello.name} v#{hello.version} (#{hello.mode}, #{hello.backend}, #{hello.transport})"
     )
 
     {:noreply, state}
@@ -658,7 +658,7 @@ defmodule Plushie.Runtime do
     {:stop, :normal, state}
   end
 
-  # Coalescable events -- high-frequency events (mouse moves, sensor resizes)
+  # Coalescable events: high-frequency events (mouse moves, sensor resizes)
   # are stored and deferred until the next message boundary. A zero-delay timer
   # ensures they flush before the GenServer processes non-coalescable messages,
   # while consecutive coalescable events for the same source collapse into the
@@ -816,7 +816,7 @@ defmodule Plushie.Runtime do
 
   @impl GenServer
   def handle_info(:renderer_restarted, state) do
-    Logger.info("plushie runtime: renderer restarted -- re-sending settings and snapshot")
+    Logger.info("plushie runtime: renderer restarted, re-sending settings and snapshot")
 
     # Discard stale coalescable events from the old renderer.
     if state.coalesce_timer, do: Process.cancel_timer(state.coalesce_timer)
@@ -836,7 +836,7 @@ defmodule Plushie.Runtime do
     # Clear widget status tracking (old renderer state is stale).
     state = %{state | widget_statuses: %{}, focused_widget_id: nil}
 
-    # Flush all pending effect requests -- the renderer that would have
+    # Flush all pending effect requests. The renderer that would have
     # responded is gone.
     state = flush_pending_effects(state, :renderer_restarted)
 
@@ -931,7 +931,7 @@ defmodule Plushie.Runtime do
         {:noreply, state}
 
       _ ->
-        # Stale or unknown -- discard.
+        # Stale or unknown; discard.
         {:noreply, state}
     end
   end
@@ -940,12 +940,12 @@ defmodule Plushie.Runtime do
   def handle_info({:stream_value, tag, nonce, value}, state) do
     case Map.get(state.async_tasks, tag) do
       {_pid, ^nonce} ->
-        # Nonce matches -- this is from the current stream task.
+        # Nonce matches: this is from the current stream task.
         state = run_update(state, %StreamEvent{tag: tag, value: value})
         {:noreply, state}
 
       _ ->
-        # Stale or unknown -- discard.
+        # Stale or unknown; discard.
         {:noreply, state}
     end
   end
@@ -1022,7 +1022,7 @@ defmodule Plushie.Runtime do
   def handle_info({:effect_timeout, id}, state) do
     case Map.pop(state.pending_effects, id) do
       {nil, _} ->
-        # Already resolved or flushed -- ignore.
+        # Already resolved or flushed; ignore.
         {:noreply, state}
 
       {%{tag: tag}, pending_effects} ->
@@ -1034,7 +1034,7 @@ defmodule Plushie.Runtime do
   end
 
   # ---------------------------------------------------------------------------
-  # Exit trapping -- bridge or linked process crashes
+  # Exit trapping: bridge or linked process crashes
   # ---------------------------------------------------------------------------
 
   # Task death via link (:EXIT from Task.start_link fallback or other
@@ -1119,13 +1119,13 @@ defmodule Plushie.Runtime do
           {:noreply, state}
 
         :not_routed ->
-          # Standard app timer -- dispatch to update/2.
+          # Standard app timer; dispatch to update/2.
           now = System.monotonic_time(:millisecond)
           state = run_update(state, %TimerEvent{tag: tag, timestamp: now})
           {:noreply, state}
       end
     else
-      # Subscription was cancelled -- discard stale tick.
+      # Subscription was cancelled; discard stale tick.
       {:noreply, state}
     end
   end
@@ -1264,7 +1264,7 @@ defmodule Plushie.Runtime do
 
   # Send to the active bridge. In a future multi-renderer mode, this will
   # fan out to all connected bridges. Commands.ex, subscriptions.ex, and
-  # windows.ex still access state.bridge directly -- they'll be updated
+  # windows.ex still access state.bridge directly; they'll be updated
   # when multi-renderer support is actually needed.
   defp notify_bridge(%{bridge: nil}, _fun), do: :ok
   defp notify_bridge(%{bridge: bridge}, fun), do: fun.(bridge)
@@ -1467,7 +1467,7 @@ defmodule Plushie.Runtime do
   end
 
   # Renders the view and normalizes the tree. Canvas widget stored state
-  # is injected during normalization via the context map -- the
+  # is injected during normalization via the context map. The
   # normalizer detects stateful widget nodes and re-renders them with
   # stored state before normalizing the output. This eliminates the need
   # for post-processing (the old apply_widget_handler_state approach).
@@ -1587,7 +1587,7 @@ defmodule Plushie.Runtime do
   #
   # Note on sequencing: commands execute BEFORE view/1 is called. This means
   # a fast async completion would queue its result for the NEXT cycle, not
-  # the current one. This is intentional -- commands are side effects that
+  # the current one. This is intentional: commands are side effects that
   # happen between the model update and the re-render. Their results arrive
   # as separate events in subsequent cycles.
   @spec run_update(state(), term()) :: state()
@@ -1782,7 +1782,7 @@ defmodule Plushie.Runtime do
 
         count == 101 ->
           Logger.warning(
-            "plushie runtime: 100 consecutive update errors -- suppressing further logs"
+            "plushie runtime: 100 consecutive update errors; suppressing further logs"
           )
 
         rem(count, 1000) == 0 ->

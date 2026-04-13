@@ -140,7 +140,7 @@ defmodule NotesTest do
       model = Notes.update(model, %WidgetEvent{type: :click, id: "note:1"})
       assert Plushie.Undo.current(model.undo).title == "Hello"
       assert Plushie.Undo.current(model.undo).text == "World"
-      # Fresh undo stack -- no history from previous edit session
+      # Fresh undo stack; no history from previous edit session
       refute Plushie.Undo.can_undo?(model.undo)
     end
 

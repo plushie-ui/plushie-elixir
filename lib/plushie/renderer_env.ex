@@ -26,18 +26,18 @@ defmodule Plushie.RendererEnv do
 
   The whitelist covers:
 
-    * **Display** -- `DISPLAY`, `WAYLAND_DISPLAY`, `WAYLAND_SOCKET`,
+    * **Display** - `DISPLAY`, `WAYLAND_DISPLAY`, `WAYLAND_SOCKET`,
       `WINIT_UNIX_BACKEND`, `XDG_RUNTIME_DIR`
-    * **Rendering** -- `WGPU_BACKEND`, `MESA_*`, `LIBGL_*`, `__GLX_*`,
+    * **Rendering** - `WGPU_BACKEND`, `MESA_*`, `LIBGL_*`, `__GLX_*`,
       `VK_*`, `GALLIUM_*`
-    * **Library loading** -- `PATH`, `LD_LIBRARY_PATH`, `DYLD_LIBRARY_PATH`,
+    * **Library loading** - `PATH`, `LD_LIBRARY_PATH`, `DYLD_LIBRARY_PATH`,
       `DYLD_FALLBACK_LIBRARY_PATH`
-    * **Locale** -- `LANG`, `LANGUAGE`, `LC_*`
-    * **Accessibility** -- `DBUS_SESSION_BUS_ADDRESS`, `AT_SPI_*`,
+    * **Locale** - `LANG`, `LANGUAGE`, `LC_*`
+    * **Accessibility** - `DBUS_SESSION_BUS_ADDRESS`, `AT_SPI_*`,
       `GTK_MODULES`, `NO_AT_BRIDGE`
-    * **Font** -- `FONTCONFIG_*`, `XDG_DATA_DIRS`, `XDG_DATA_HOME`
-    * **Renderer** -- `RUST_LOG`, `RUST_BACKTRACE`
-    * **Home** -- `HOME`, `USER`
+    * **Font** - `FONTCONFIG_*`, `XDG_DATA_DIRS`, `XDG_DATA_HOME`
+    * **Renderer** - `RUST_LOG`, `RUST_BACKTRACE`
+    * **Home** - `HOME`, `USER`
   """
 
   @typedoc "A single entry for the `:env` option of `Port.open/2`."
@@ -68,7 +68,7 @@ defmodule Plushie.RendererEnv do
     USER
   ])
 
-  # Prefixes -- any variable starting with one of these is forwarded.
+  # Prefixes: any variable starting with one of these is forwarded.
   @prefixes ~w[
     LC_
     MESA_
@@ -89,9 +89,9 @@ defmodule Plushie.RendererEnv do
 
   ## Options
 
-    * `:rust_log` -- sets `RUST_LOG`. When provided, overrides any inherited
+    * `:rust_log` - sets `RUST_LOG`. When provided, overrides any inherited
       value. When `nil`, the parent's `RUST_LOG` is forwarded if present.
-    * `:extra` -- additional `{charlist_name, charlist_value | false}` pairs
+    * `:extra` - additional `{charlist_name, charlist_value | false}` pairs
       to merge (e.g. for tests that need to unset specific variables).
   """
   @spec build(keyword()) :: [env_entry()]

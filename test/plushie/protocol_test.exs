@@ -92,7 +92,7 @@ defmodule Plushie.ProtocolTest do
   end
 
   # ---------------------------------------------------------------------------
-  # decode_message/1 -- event families
+  # decode_message/1: event families
   # ---------------------------------------------------------------------------
 
   describe "decode_message/1 -- click events" do
@@ -968,7 +968,7 @@ defmodule Plushie.ProtocolTest do
   end
 
   # ---------------------------------------------------------------------------
-  # decode_message/1 -- pointer press events (mouse area)
+  # decode_message/1: pointer press events (mouse area)
   # ---------------------------------------------------------------------------
 
   describe "decode_message/1 -- pointer press (middle button)" do
@@ -1019,7 +1019,7 @@ defmodule Plushie.ProtocolTest do
   end
 
   # ---------------------------------------------------------------------------
-  # decode_message/1 -- key_release events (if supported)
+  # decode_message/1: key_release events (if supported)
   # ---------------------------------------------------------------------------
 
   describe "decode_message/1 -- edge cases" do

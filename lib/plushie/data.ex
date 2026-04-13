@@ -49,14 +49,14 @@ defmodule Plushie.Data do
 
   ## Options
 
-  - `:filter` -- a function `(record -> boolean)` to filter records.
-  - `:search` -- a `{fields, query_string}` tuple. `fields` is a list of
+  - `:filter` - a function `(record -> boolean)` to filter records.
+  - `:search` - a `{fields, query_string}` tuple. `fields` is a list of
     map keys to search; `query_string` is case-insensitive substring-matched.
-  - `:sort` -- a `{direction, field}` tuple or list of tuples.
+  - `:sort` - a `{direction, field}` tuple or list of tuples.
     Direction is `:asc` or `:desc`. Field is a map key.
-  - `:group` -- a map key to group paginated results by.
-  - `:page` -- page number (1-based). Default: 1.
-  - `:page_size` -- records per page. Default: 25.
+  - `:group` - a map key to group paginated results by.
+  - `:page` - page number (1-based). Default: 1.
+  - `:page_size` - records per page. Default: 25.
 
   Returns a result map with `:entries`, `:total`, `:page`, and `:page_size`.
   If `:group` is specified, `:groups` is also included.

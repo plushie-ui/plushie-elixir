@@ -174,7 +174,7 @@ defmodule Plushie.MultiWindowTest do
   end
 
   # ---------------------------------------------------------------------------
-  # Helpers -- we call the private functions via the module's internal logic
+  # Helpers: we call the private functions via the module's internal logic
   # by reimplementing the same algorithm here for testing.
   # ---------------------------------------------------------------------------
 

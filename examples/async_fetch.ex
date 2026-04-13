@@ -1,6 +1,6 @@
 defmodule AsyncFetch do
   @moduledoc """
-  Async command example -- a button that triggers background work.
+  Async command example: a button that triggers background work.
 
   Demonstrates:
   - `Plushie.Command.async/2` for off-thread work

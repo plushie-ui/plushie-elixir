@@ -76,7 +76,7 @@ defmodule Plushie.Runtime.Windows do
       end
     end)
 
-    # Diff window props for windows that are still open -- send update ops
+    # Diff window props for windows that are still open; send update ops
     # for any changed props (title, size, position, etc.).
     surviving = MapSet.intersection(current_windows, new_windows)
 

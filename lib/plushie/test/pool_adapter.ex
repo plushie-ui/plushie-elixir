@@ -25,8 +25,8 @@ defmodule Plushie.Test.PoolAdapter do
 
   ## Options
 
-  - `:pool` -- the SessionPool server (required)
-  - `:format` -- wire format, `:msgpack` (default) or `:json`
+  - `:pool` - the SessionPool server (required)
+  - `:format` - wire format, `:msgpack` (default) or `:json`
   """
   @spec start_link(keyword()) :: {:ok, pid(), String.t()} | {:error, term()}
   def start_link(opts) do

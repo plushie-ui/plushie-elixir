@@ -105,9 +105,9 @@ defmodule Plushie.SnapshotTest do
       path = tmp_snapshot_path(ctx, "match.json")
       tree = simple_tree()
 
-      # First run -- writes
+      # First run: writes
       assert :ok = Plushie.Test.assert_tree_snapshot(tree, path)
-      # Second run -- compares
+      # Second run: compares
       assert :ok = Plushie.Test.assert_tree_snapshot(tree, path)
     end
 
@@ -131,7 +131,7 @@ defmodule Plushie.SnapshotTest do
       # Write the original
       assert :ok = Plushie.Test.assert_tree_snapshot(original, path)
 
-      # Compare with the changed tree -- should blow up
+      # Compare with the changed tree; should blow up
       error =
         assert_raise ExUnit.AssertionError, fn ->
           Plushie.Test.assert_tree_snapshot(changed, path)
@@ -178,7 +178,7 @@ defmodule Plushie.SnapshotTest do
       # Enable update mode
       System.put_env("PLUSHIE_UPDATE_SNAPSHOTS", "1")
 
-      # Should not raise -- should overwrite
+      # Should not raise; should overwrite
       assert :ok = Plushie.Test.assert_tree_snapshot(changed, path)
 
       updated_contents = File.read!(path)

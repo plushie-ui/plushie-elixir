@@ -9,9 +9,9 @@ defmodule Plushie.Animation do
   Declare animation intent in `view/1` and the renderer handles
   interpolation at full frame rate with zero wire traffic:
 
-  - `Plushie.Animation.Transition` -- timed transitions with easing
-  - `Plushie.Animation.Spring` -- physics-based spring animations
-  - `Plushie.Animation.Sequence` -- chained animation steps
+  - `Plushie.Animation.Transition` - timed transitions with easing
+  - `Plushie.Animation.Spring` - physics-based spring animations
+  - `Plushie.Animation.Sequence` - chained animation steps
 
   These are the right choice for animating widget properties (opacity,
   size, position, colour). No model state, no subscriptions needed.

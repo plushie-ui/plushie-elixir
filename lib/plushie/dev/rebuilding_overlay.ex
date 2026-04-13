@@ -50,9 +50,9 @@ defmodule Plushie.Dev.RebuildingOverlay do
   Handles an overlay user action (toggle, dismiss).
 
   Returns:
-  - `{:updated, overlay}` -- overlay state changed, re-render needed
-  - `:dismissed` -- overlay should be removed
-  - `:noop` -- no change
+  - `{:updated, overlay}` - overlay state changed, re-render needed
+  - `:dismissed` - overlay should be removed
+  - `:noop` - no change
   """
   @spec handle_action(action :: String.t(), overlay :: t()) ::
           {:updated, t()} | :dismissed | :noop

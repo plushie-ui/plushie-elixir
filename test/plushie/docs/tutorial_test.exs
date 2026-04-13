@@ -93,7 +93,7 @@ defmodule Plushie.Docs.TutorialTest do
       end
     end
 
-    # Full view (step 6 -- filters + extracted helpers)
+    # Full view (step 6: filters + extracted helpers)
     def view(model) do
       import Plushie.UI
 

@@ -159,7 +159,7 @@ defmodule Plushie.BridgeMsgpackTest do
         assert is_integer(size) and size > 0
 
         # The receive event may or may not fire depending on whether the
-        # renderer sent data before crashing. Don't assert on it -- just
+        # renderer sent data before crashing. Don't assert on it; just
         # verify the handler was attached without error.
 
         :telemetry.detach(send_id)
@@ -201,7 +201,7 @@ defmodule Plushie.BridgeMsgpackTest do
       Port.command(port, <<0xC1, 0xFF, 0x00, 0xDE, 0xAD>>)
 
       # In headless mode, the renderer logs a decode error but stays alive.
-      # Verify it doesn't crash or hang -- we can still close the port cleanly.
+      # Verify it doesn't crash or hang; we can still close the port cleanly.
       messages = collect_port_messages(port, [], 500)
       close_port(port)
 
@@ -211,7 +211,7 @@ defmodule Plushie.BridgeMsgpackTest do
     end
 
     test "binary data round-trips through msgpack encoding" do
-      # Pure Elixir test -- no renderer needed.
+      # Pure Elixir test; no renderer needed.
       raw_bytes = :crypto.strong_rand_bytes(256)
       base64 = Base.encode64(raw_bytes)
 

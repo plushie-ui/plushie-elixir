@@ -29,7 +29,7 @@ defmodule Plushie.Canvas.Shape do
       end
 
   Inside `Plushie.UI` canvas/layer/group blocks, all shape functions
-  are already in scope via `import Plushie.UI` -- no extra import
+  are already in scope via `import Plushie.UI`. No extra import
   needed.
 
   ## Basic shapes
@@ -68,7 +68,7 @@ defmodule Plushie.Canvas.Shape do
         pop_clip()
       ]
 
-  Clip regions nest -- inner clips are intersected with outer clips.
+  Clip regions nest: inner clips are intersected with outer clips.
 
   ## Per-shape opacity
 
@@ -425,8 +425,8 @@ defmodule Plushie.Canvas.Shape do
 
   ## Options
 
-  - `:rotation` -- rotation angle in degrees (or `{value, :rad}` for radians).
-  - `:opacity` -- opacity multiplier (0.0-1.0).
+  - `:rotation` - rotation angle in degrees (or `{value, :rad}` for radians).
+  - `:opacity` - opacity multiplier (0.0-1.0).
   """
   @spec image(
           source :: String.t(),
@@ -461,9 +461,9 @@ defmodule Plushie.Canvas.Shape do
 
   ## Options
 
-  - `:cap` -- line cap: `"butt"`, `"round"`, or `"square"`. Default: `"butt"`.
-  - `:join` -- line join: `"miter"`, `"round"`, or `"bevel"`. Default: `"miter"`.
-  - `:dash` -- dash pattern as `{segments, offset}` where segments is a list
+  - `:cap` - line cap: `"butt"`, `"round"`, or `"square"`. Default: `"butt"`.
+  - `:join` - line join: `"miter"`, `"round"`, or `"bevel"`. Default: `"miter"`.
+  - `:dash` - dash pattern as `{segments, offset}` where segments is a list
     of numbers and offset is the starting offset.
   """
   @spec stroke(color :: String.t(), width :: number(), opts :: keyword()) :: Stroke.t()

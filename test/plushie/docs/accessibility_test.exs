@@ -13,7 +13,7 @@ defmodule Plushie.Docs.AccessibilityTest do
   # Booleans, integers, and strings pass through unchanged.
 
   # ---------------------------------------------------------------------------
-  # Using the a11y prop -- UI builder syntax
+  # Using the a11y prop (UI builder syntax)
   # ---------------------------------------------------------------------------
 
   test "accessibility_heading_level_1_test" do

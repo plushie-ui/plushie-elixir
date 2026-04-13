@@ -4,9 +4,9 @@ defmodule Plushie.Event.BuiltinSpecs do
 
   Each spec describes what data the event carries and where it goes:
 
-  - `%{carrier: :none}` -- no payload (just id/scope)
-  - `%{carrier: :value, type: type}` -- scalar in `WidgetEvent.value`
-  - `%{carrier: :value, fields: [field: type]}` -- map in `WidgetEvent.value`
+  - `%{carrier: :none}` - no payload (just id/scope)
+  - `%{carrier: :value, type: type}` - scalar in `WidgetEvent.value`
+  - `%{carrier: :value, fields: [field: type]}` - map in `WidgetEvent.value`
 
   Type identifiers are either built-in atoms (`:float`, `:string`,
   `:boolean`, `:any`) or modules implementing `Plushie.Type`.
@@ -25,9 +25,9 @@ defmodule Plushie.Event.BuiltinSpecs do
   @typedoc """
   Event spec describing the payload shape.
 
-  - `:none` -- no payload
-  - `:value` -- scalar value, stored in `WidgetEvent.value`
-  - `:value` with `:fields` -- structured map, stored in `WidgetEvent.value` with atom keys
+  - `:none` - no payload
+  - `:value` - scalar value, stored in `WidgetEvent.value`
+  - `:value` with `:fields` - structured map, stored in `WidgetEvent.value` with atom keys
   """
   @type t ::
           %{

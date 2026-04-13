@@ -185,19 +185,19 @@ the `BINARY_VERSION` file at the project root. For development against a
 local renderer checkout, clone it as a sibling directory:
 
 ```bash
-git clone https://github.com/plushie-ui/plushie-renderer ../plushie-renderer
+git clone https://github.com/plushie-ui/plushie-rust ../plushie-rust
 ```
 
 Then point the build at it:
 
 ```bash
-PLUSHIE_SOURCE_PATH=../plushie-renderer mix plushie.build
+PLUSHIE_SOURCE_PATH=../plushie-rust mix plushie.build
 ```
 
 Or permanently in config:
 
 ```elixir
-config :plushie, source_path: "../plushie-renderer"
+config :plushie, source_path: "../plushie-rust"
 ```
 
 This adds `[patch.crates-io]` to the generated Cargo workspace,
@@ -208,8 +208,8 @@ mix crates.io types with local types, causing Rust compilation errors.
 To build against the latest renderer `main` branch:
 
 ```bash
-cd ../plushie-renderer && git pull
-cd ../plushie-elixir && PLUSHIE_SOURCE_PATH=../plushie-renderer mix plushie.build
+cd ../plushie-rust && git pull
+cd ../plushie-elixir && PLUSHIE_SOURCE_PATH=../plushie-rust mix plushie.build
 ```
 
 ### WASM builds

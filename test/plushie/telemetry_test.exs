@@ -97,7 +97,7 @@ defmodule Plushie.TelemetryTest do
         stop_id = attach([:plushie, :update, :stop], self())
 
         Plushie.Runtime.dispatch(runtime, %WidgetEvent{type: :click, id: "inc"})
-        # Synchronise -- ensures the event has been processed.
+        # Synchronise; ensures the event has been processed.
         Plushie.Runtime.sync(runtime)
 
         assert_receive {:telemetry_event, [:plushie, :update, :stop], measurements}

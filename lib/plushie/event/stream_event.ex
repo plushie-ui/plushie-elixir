@@ -4,8 +4,8 @@ defmodule Plushie.Event.StreamEvent do
 
   ## Fields
 
-  - `tag` -- the user-defined atom tag from the command
-  - `value` -- the intermediate value emitted by the stream
+  - `tag` - the user-defined atom tag from the command
+  - `value` - the intermediate value emitted by the stream
 
   ## Pattern matching
 

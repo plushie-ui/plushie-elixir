@@ -4,8 +4,8 @@ defmodule Plushie.Event.TimerEvent do
 
   ## Fields
 
-  - `tag` -- the user-defined atom tag from the subscription registration
-  - `timestamp` -- monotonic timestamp in milliseconds
+  - `tag` - the user-defined atom tag from the subscription registration
+  - `timestamp` - monotonic timestamp in milliseconds
 
   ## Pattern matching
 

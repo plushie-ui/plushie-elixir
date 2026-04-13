@@ -44,9 +44,9 @@ defmodule Plushie.Test.WidgetCase do
 
   ## Widget-specific helpers
 
-  - `last_event/0` -- returns the most recent `%WidgetEvent{}` event
+  - `last_event/0` - returns the most recent `%WidgetEvent{}` event
     emitted by the widget, or `nil` if none
-  - `events/0` -- returns all emitted events (newest first)
+  - `events/0` - returns all emitted events (newest first)
   """
 
   use ExUnit.CaseTemplate

@@ -3,7 +3,7 @@ defmodule Plushie.AppTest do
 
   # ---------------------------------------------------------------------------
   # Inline test module that uses the Plushie.App behaviour with only the
-  # required callbacks -- subscribe/1 and handle_renderer_exit/2 are left to
+  # required callbacks. subscribe/1 and handle_renderer_exit/2 are left to
   # the defaults injected by `use Plushie.App`.
   # ---------------------------------------------------------------------------
 

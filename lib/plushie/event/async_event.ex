@@ -4,8 +4,8 @@ defmodule Plushie.Event.AsyncEvent do
 
   ## Fields
 
-  - `tag` -- the user-defined atom tag from the command
-  - `result` -- `{:ok, value}` on success, `{:error, reason}` on failure
+  - `tag` - the user-defined atom tag from the command
+  - `result` - `{:ok, value}` on success, `{:error, reason}` on failure
 
   ## Pattern matching
 

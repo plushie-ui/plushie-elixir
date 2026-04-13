@@ -49,9 +49,9 @@ defmodule Plushie.Tree do
   Normalizes a UI tree into the canonical node shape.
 
   Accepts:
-  - `nil` -- returns an empty root container
-  - a single node map -- normalizes and returns it
-  - a list of node maps -- wraps them in a synthetic root container
+  - `nil` - returns an empty root container
+  - a single node map - normalizes and returns it
+  - a list of node maps - wraps them in a synthetic root container
 
   Every normalized node has `:id`, `:type`, `:props`, and `:children`.
   Prop values are encoded for the wire format. Missing `:props` and
@@ -77,7 +77,7 @@ defmodule Plushie.Tree do
 
   def normalize([_ | _] = nodes, widget_states) do
     ctx = %{@default_ctx | widget_states: widget_states}
-    # Synthetic root wrapper -- does not create a scope boundary
+    # Synthetic root wrapper; does not create a scope boundary
     {children, _ctx} = normalize_children_with_ctx(nodes, ctx)
 
     %{
@@ -346,7 +346,7 @@ defmodule Plushie.Tree do
   #
   # The rendered output is normalized at the same scope position. Since
   # view/3 produces a plain canvas node (no __widget__ tags in
-  # its props), normalization processes it as a regular widget -- no
+  # its props), normalization processes it as a regular widget. No
   # recursion is possible. Widget handler and event registry entries
   # are accumulated into the context during rendering.
   @spec render_widget_placeholder(map(), String.t(), String.t(), normalize_ctx()) ::
@@ -364,7 +364,7 @@ defmodule Plushie.Tree do
               {cached_node, ctx}
 
             {:miss, ctx} ->
-              # View with local ID -- normalization applies scoping.
+              # View with local ID; normalization applies scoping.
               # State is always a map (empty for stateless widgets).
               # Children are in props[:children] for container widgets.
               rendered = module.view(local_id, widget_props, widget_state)
@@ -562,12 +562,12 @@ defmodule Plushie.Tree do
 
       String.contains?(id, "/") ->
         raise ArgumentError,
-              "widget ID #{inspect(id)} cannot contain \"/\" -- " <>
+              "widget ID #{inspect(id)} cannot contain \"/\": " <>
                 "scoped paths are built automatically by named containers"
 
       String.contains?(id, "#") ->
         raise ArgumentError,
-              "widget ID #{inspect(id)} cannot contain \"#\" -- " <>
+              "widget ID #{inspect(id)} cannot contain \"#\": " <>
                 "\"#\" is reserved for window-qualified paths (e.g., \"window#widget\")"
 
       byte_size(id) > 1024 ->
@@ -576,7 +576,7 @@ defmodule Plushie.Tree do
 
       not Regex.match?(@valid_id_pattern, id) ->
         raise ArgumentError,
-              "widget ID #{inspect(id)} contains invalid characters -- " <>
+              "widget ID #{inspect(id)} contains invalid characters: " <>
                 "IDs must contain only printable ASCII (0x21-0x7E)"
 
       true ->
@@ -682,10 +682,10 @@ defmodule Plushie.Tree do
   Compares two normalized trees and returns a list of patch operations.
 
   Patch operations:
-    - `%{op: "replace_node", path: [int], node: map}` -- replace entire subtree
-    - `%{op: "update_props", path: [int], props: map}` -- merge props at path
-    - `%{op: "insert_child", path: [int], index: int, node: map}` -- insert child
-    - `%{op: "remove_child", path: [int], index: int}` -- remove child at index
+    - `%{op: "replace_node", path: [int], node: map}` - replace entire subtree
+    - `%{op: "update_props", path: [int], props: map}` - merge props at path
+    - `%{op: "insert_child", path: [int], index: int, node: map}` - insert child
+    - `%{op: "remove_child", path: [int], index: int}` - remove child at index
 
   Path is a list of child indices from the root. An empty path `[]` means the root node.
   """

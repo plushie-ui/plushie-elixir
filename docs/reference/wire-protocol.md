@@ -7,7 +7,7 @@ the SDK encodes, decodes, and manages the protocol lifecycle.
 
 For the complete message format specification (every field, every patch
 operation, every event family), see the
-[Renderer Protocol Spec](https://github.com/plushie-ui/plushie-renderer/blob/main/docs/protocol.md).
+[Renderer Protocol Spec](https://github.com/plushie-ui/plushie-rust/blob/main/docs/protocol.md).
 
 ## Wire formats
 
@@ -167,7 +167,7 @@ Patches are more efficient for large trees with small changes. The
 renderer preserves widget caches (layer tessellation, text layout) for
 unchanged subtrees.
 
-See the [Renderer Protocol Spec](https://github.com/plushie-ui/plushie-renderer/blob/main/docs/protocol.md)
+See the [Renderer Protocol Spec](https://github.com/plushie-ui/plushie-rust/blob/main/docs/protocol.md)
 for the complete patch operation format.
 
 ## Session multiplexing
@@ -224,6 +224,6 @@ framing (JSON).
 - `Plushie.Bridge` - transport management, Port lifecycle, restart
 - [Configuration reference](configuration.md) - transport modes and
   iostream adapter contract
-- [Renderer Protocol Spec](https://github.com/plushie-ui/plushie-renderer/blob/main/docs/protocol.md)
+- [Renderer Protocol Spec](https://github.com/plushie-ui/plushie-rust/blob/main/docs/protocol.md)
   - the authoritative message format reference with every field,
   patch operation, event family, and widget prop

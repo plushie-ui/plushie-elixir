@@ -610,7 +610,7 @@ defmodule Plushie.RuntimeTest do
 
         assert Plushie.Runtime.get_model(runtime).status == :crashed
 
-        # renderer_exit does NOT produce a new snapshot -- it only updates the model
+        # renderer_exit does NOT produce a new snapshot; it only updates the model
         # so it is ready when the renderer restarts.
         snapshots = Plushie.Test.InternalMockBridge.get_snapshots(bridge)
         assert length(snapshots) == 1
@@ -1021,7 +1021,7 @@ defmodule Plushie.RuntimeTest do
         {runtime, _bridge} = start_runtime(CrashViewApp)
         await_initial_render(runtime)
 
-        # Trigger the crashing view -- runtime should survive.
+        # Trigger the crashing view; runtime should survive.
         dispatch_and_wait(runtime, :crash_view)
         assert Process.alive?(runtime)
 
@@ -1851,7 +1851,7 @@ defmodule Plushie.RuntimeTest do
       {runtime, _bridge} = start_runtime(SimpleApp)
       await_initial_render(runtime)
 
-      # First registration -- will block waiting for the bridge ack.
+      # First registration; will block waiting for the bridge ack.
       first =
         Task.async(fn ->
           Plushie.Runtime.register_effect_stub(runtime, :clipboard_read, "stub_value")
@@ -1906,7 +1906,7 @@ defmodule Plushie.RuntimeTest do
       # Start a slow async task.
       dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "start"})
 
-      # First await -- will block until the slow task completes.
+      # First await; will block until the slow task completes.
       first =
         Task.async(fn ->
           Plushie.Runtime.await_async(runtime, :slow_task)

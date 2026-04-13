@@ -6,11 +6,11 @@ defmodule Plushie.KeyModifiers do
 
   ## Fields
 
-  - `ctrl` -- Control key (Ctrl on Windows/Linux).
-  - `shift` -- Shift key.
-  - `alt` -- Alt key (Option on macOS).
-  - `logo` -- Logo/Super key (Windows key, Command symbol on macOS).
-  - `command` -- Platform command key (Ctrl on Windows/Linux, Cmd on macOS).
+  - `ctrl` - Control key (Ctrl on Windows/Linux).
+  - `shift` - Shift key.
+  - `alt` - Alt key (Option on macOS).
+  - `logo` - Logo/Super key (Windows key, Command symbol on macOS).
+  - `command` - Platform command key (Ctrl on Windows/Linux, Cmd on macOS).
 
   ## Example
 

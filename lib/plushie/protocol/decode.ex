@@ -1221,7 +1221,7 @@ defmodule Plushie.Protocol.Decode do
 
   # -- Generic element events --
 
-  # Focus/blur -- simple passthrough with no data payload.
+  # Focus/blur: simple passthrough with no data payload.
   defp dispatch(%{"type" => "event", "family" => "focused", "id" => _id} = msg) do
     {local, scope, window_id, _family} = event_identity!(msg)
     %WidgetEvent{type: :focused, id: local, scope: scope, window_id: window_id}
@@ -1238,7 +1238,7 @@ defmodule Plushie.Protocol.Decode do
     %WidgetEvent{type: :status, id: local, scope: scope, window_id: window_id, value: value}
   end
 
-  # Drag -- coordinates and deltas.
+  # Drag: coordinates and deltas.
   defp dispatch(
          %{
            "type" => "event",
@@ -1258,7 +1258,7 @@ defmodule Plushie.Protocol.Decode do
     }
   end
 
-  # Drag end -- final coordinates.
+  # Drag end: final coordinates.
   defp dispatch(
          %{
            "type" => "event",
@@ -1278,7 +1278,7 @@ defmodule Plushie.Protocol.Decode do
     }
   end
 
-  # Key press/release -- parse key and modifiers using type modules.
+  # Key press/release: parse key and modifiers using type modules.
   defp dispatch(
          %{
            "type" => "event",
@@ -1450,7 +1450,7 @@ defmodule Plushie.Protocol.Decode do
   end
 
   defp decode_key_event(%{"value" => %{} = data} = msg, type) do
-    # Modifiers at top level missing -- use data-level or empty.
+    # Modifiers at top level missing; use data-level or empty.
     decode_key_event(Map.put(msg, "modifiers", data["modifiers"] || %{}), type)
   end
 

@@ -2,7 +2,7 @@ defmodule Plushie.Animation.Tween do
   @moduledoc """
   SDK-side stateful interpolator for model-level animation.
 
-  Pure functions operating on structs -- no processes, no state
+  Pure functions operating on structs. No processes, no state
   management beyond what lives in your app model. Use this for
   complex animations that need frame-by-frame control: canvas
   animations, physics simulations, custom interpolation logic.
@@ -97,16 +97,16 @@ defmodule Plushie.Animation.Tween do
 
   ## Required options
 
-  - `from:` -- start value
-  - `to:` -- end value
-  - `duration:` -- duration in milliseconds
+  - `from:` - start value
+  - `to:` - end value
+  - `duration:` - duration in milliseconds
 
   ## Optional
 
-  - `easing:` -- easing atom or `{:cubic_bezier, ...}`. Default: `:ease_in_out`
-  - `delay:` -- delay before start in ms. Default: 0
-  - `repeat:` -- repeat count or `:forever`
-  - `auto_reverse:` -- reverse on each repeat cycle
+  - `easing:` - easing atom or `{:cubic_bezier, ...}`. Default: `:ease_in_out`
+  - `delay:` - delay before start in ms. Default: 0
+  - `repeat:` - repeat count or `:forever`
+  - `auto_reverse:` - reverse on each repeat cycle
 
   ## Example
 
@@ -164,15 +164,15 @@ defmodule Plushie.Animation.Tween do
 
   ## Required options
 
-  - `from:` -- start value
-  - `to:` -- end value
+  - `from:` - start value
+  - `to:` - end value
 
   ## Optional
 
-  - `stiffness:` -- spring constant. Default: 100
-  - `damping:` -- friction. Default: 10
-  - `mass:` -- mass. Default: 1.0
-  - `velocity:` -- initial velocity. Default: 0.0
+  - `stiffness:` - spring constant. Default: 100
+  - `damping:` - friction. Default: 10
+  - `mass:` - mass. Default: 1.0
+  - `velocity:` - initial velocity. Default: 0.0
 
   ## Example
 
@@ -244,15 +244,15 @@ defmodule Plushie.Animation.Tween do
   Redirects the animation to a new target, starting from the
   current interpolated value. Resets the timer.
 
-  Use this for smooth interruption -- the animation continues
+  Use this for smooth interruption: the animation continues
   from where it is rather than jumping.
 
   ## Options
 
-  - `to:` -- new target value (required)
-  - `at:` -- current timestamp (required)
-  - `easing:` -- optionally change easing
-  - `duration:` -- optionally change duration
+  - `to:` - new target value (required)
+  - `at:` - current timestamp (required)
+  - `easing:` - optionally change easing
+  - `duration:` - optionally change duration
   """
   @spec redirect(animation :: t(), opts :: keyword()) :: t()
   def redirect(%__MODULE__{} = anim, opts) when is_list(opts) do

@@ -13,9 +13,9 @@ defmodule Plushie.Runtime.WidgetHandlers do
   registered widget_handlers, the runtime builds a handler chain
   (innermost to outermost) and walks it:
 
-  - `:ignored` -- handler didn't capture; continue to next handler
-  - `:consumed` / `{:update_state, ...}` -- captured, no output; stop
-  - `{:emit, ...}` -- captured with output; replace event and continue
+  - `:ignored` - handler didn't capture; continue to next handler
+  - `:consumed` / `{:update_state, ...}` - captured, no output; stop
+  - `{:emit, ...}` - captured with output; replace event and continue
 
   If no handler captures, the event reaches `app.update/2` unchanged.
   This mirrors iced's `Status::Captured` / `Status::Ignored` model.
@@ -226,8 +226,8 @@ defmodule Plushie.Runtime.WidgetHandlers do
   scope chain of parent widget_handlers.
 
   Returns:
-  - `{:handled, event_or_nil, new_registry}` -- timer was for a widget handler
-  - `:not_routed` -- not a widget handler timer
+  - `{:handled, event_or_nil, new_registry}` - timer was for a widget handler
+  - `:not_routed` - not a widget handler timer
   """
   @spec maybe_handle_timer(registry :: %{String.t() => map()}, tag :: term()) ::
           {:handled, struct() | nil, map()} | :not_routed
@@ -458,9 +458,9 @@ defmodule Plushie.Runtime.WidgetHandlers do
   Builds an ordered list of widget handlers from the event's
   scope (innermost to outermost), then walks the chain:
 
-  - `:ignored` -- not captured, continue to next handler
-  - `:consumed` / `{:update_state, ...}` -- captured, stop
-  - `{:emit, family, data}` -- captured, replace event, continue
+  - `:ignored` - not captured, continue to next handler
+  - `:consumed` / `{:update_state, ...}` - captured, stop
+  - `{:emit, family, data}` - captured, replace event, continue
 
   Returns `{event_or_nil, updated_registry}`. If no handler captures,
   returns the original event unchanged. If a handler consumes, returns
@@ -491,7 +491,7 @@ defmodule Plushie.Runtime.WidgetHandlers do
     walk_chain(registry, event, chain)
   end
 
-  # Non-map events (tuples, atoms) can't have scope -- pass through.
+  # Non-map events (tuples, atoms) can't have scope; pass through.
   def dispatch_event(registry, event), do: {event, registry}
 
   # Build an ordered list of {canonical_id, registry_entry} for all
@@ -544,7 +544,7 @@ defmodule Plushie.Runtime.WidgetHandlers do
   # until one captures it or the chain is exhausted.
   @spec walk_chain(map(), struct(), [{String.t(), map()}]) :: {struct() | nil, map()}
   defp walk_chain(registry, event, []) do
-    # No handler captured -- event reaches app.update/2.
+    # No handler captured; event reaches app.update/2.
     {event, registry}
   end
 

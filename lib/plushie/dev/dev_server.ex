@@ -114,7 +114,7 @@ defmodule Plushie.Dev.DevServer do
   def handle_info({:file_event, watcher, {path, _events}}, %{rust_watcher: watcher} = state)
       when watcher != nil do
     if watchable_rust?(path) do
-      # Kill any running build -- it's already outdated.
+      # Kill any running build; it's already outdated.
       state = kill_rust_build(state)
 
       # Cancel pending debounce and start a new one.
@@ -220,7 +220,7 @@ defmodule Plushie.Dev.DevServer do
     state = send_overlay(state, :failed, all_build_output(state))
     state = %{state | rust_build_output: "", wasm_build_output: ""}
 
-    # Native build succeeded even though WASM failed -- still restart renderer.
+    # Native build succeeded even though WASM failed; still restart renderer.
     if state.bridge, do: Plushie.Bridge.restart_renderer(state.bridge)
 
     {:noreply, state}
@@ -266,7 +266,7 @@ defmodule Plushie.Dev.DevServer do
     # Snapshot widget impls before recompilation to detect new widgets.
     prev_widget_impls = protocol_impl_set()
 
-    # Suppress "redefining module" warnings -- we're intentionally
+    # Suppress "redefining module" warnings. We're intentionally
     # reloading modules that are already loaded from _build.
     prev = Code.get_compiler_option(:ignore_module_conflict)
     Code.put_compiler_option(:ignore_module_conflict, true)

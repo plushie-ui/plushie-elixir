@@ -36,9 +36,9 @@ defmodule Plushie.Automation.Session do
   Attaches to a running Plushie app.
 
   Accepted options:
-  - `:instance` -- Plushie instance name; resolves runtime and bridge automatically
-  - `:runtime` -- runtime pid or registered name
-  - `:bridge` -- bridge pid or registered name
+  - `:instance` - Plushie instance name; resolves runtime and bridge automatically
+  - `:runtime` - runtime pid or registered name
+  - `:bridge` - bridge pid or registered name
   """
   @spec attach(opts :: keyword()) :: t()
   def attach(opts) do

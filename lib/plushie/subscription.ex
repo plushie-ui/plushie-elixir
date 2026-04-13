@@ -379,10 +379,10 @@ defmodule Plushie.Subscription do
 
   Delivers one of:
 
-  * `%ImeEvent{type: :opened, captured: bool}` -- the IME session started
+  * `%ImeEvent{type: :opened, captured: bool}` - the IME session started
   * `%ImeEvent{type: :preedit, text: str, cursor: {start, end_pos} | nil, captured: bool}`
-  * `%ImeEvent{type: :commit, text: str, captured: bool}` -- final text committed
-  * `%ImeEvent{type: :closed, captured: bool}` -- the IME session ended
+  * `%ImeEvent{type: :commit, text: str, captured: bool}` - final text committed
+  * `%ImeEvent{type: :closed, captured: bool}` - the IME session ended
   """
   @spec on_ime(opts :: keyword()) :: t()
   def on_ime(opts \\ []) do

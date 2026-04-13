@@ -52,7 +52,7 @@ defmodule StarRating do
     {:update_state, %{state | hover: nil}}
   end
 
-  # All other events (focus, key, etc.) are consumed -- StarRating only
+  # All other events (focus, key, etc.) are consumed. StarRating only
   # surfaces :select to the parent app.
   def handle_event(_, _state), do: :consumed
 

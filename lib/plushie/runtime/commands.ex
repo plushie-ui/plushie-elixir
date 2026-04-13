@@ -187,7 +187,7 @@ defmodule Plushie.Runtime.Commands do
   end
 
   defp execute_command(%Plushie.Command{type: :exit, payload: _payload}, state) do
-    Logger.info("plushie runtime: exit command received -- stopping")
+    Logger.info("plushie runtime: exit command received, stopping")
     send(self(), {:renderer_exit, :normal})
     state
   end
@@ -269,7 +269,7 @@ defmodule Plushie.Runtime.Commands do
   # Kills an existing async task with the given tag, if one is running.
   # Used before starting a replacement task to avoid orphaned processes.
   #
-  # Uses `:kill` for immediate, guaranteed cancellation -- the task process
+  # Uses `:kill` for immediate, guaranteed cancellation. The task process
   # terminates unconditionally regardless of what it's doing. The trade-off
   # is that `:kill` bypasses both normal cleanup logic and trapped exits in
   # the user's async function, so external resources (HTTP connections, DB
@@ -277,7 +277,7 @@ defmodule Plushie.Runtime.Commands do
   #
   # If cleanup is needed, users should handle it outside the async function
   # (e.g. in update/2 when receiving the cancellation event). Note that
-  # trapping exits does NOT help here -- `:kill` cannot be trapped.
+  # trapping exits does NOT help here; `:kill` cannot be trapped.
   #
   # The alternative `:shutdown` signal would allow cleanup via trapped exits,
   # but isn't guaranteed to terminate misbehaving or blocked tasks, which

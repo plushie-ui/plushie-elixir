@@ -22,27 +22,27 @@ defmodule Plushie do
 
   ## Options
 
-  - `:app`        -- (required) the app module implementing `Plushie.App`
-  - `:app_opts`   -- opts forwarded to `app.init/1` (default: `[]`)
-  - `:binary`     -- path to the plushie binary (default: auto-resolved)
-  - `:name`       -- supervisor registration name (default: `Plushie`)
-  - `:daemon`     -- if `true`, keep running after the last window closes
+  - `:app`: (required) the app module implementing `Plushie.App`
+  - `:app_opts`: opts forwarded to `app.init/1` (default: `[]`)
+  - `:binary`: path to the plushie binary (default: auto-resolved)
+  - `:name`: supervisor registration name (default: `Plushie`)
+  - `:daemon`: if `true`, keep running after the last window closes
                       (default: `false`). In daemon mode, `all_windows_closed`
                       is delivered to `update/2` instead of triggering shutdown.
-  - `:code_reloader` -- enable dev-mode live reloading. `false` (default),
+  - `:code_reloader`: enable dev-mode live reloading. `false` (default),
                       `true`, or a keyword list of reloader options
                       (`:debounce_ms`, `:rebuild_artifacts`). Can also be set
                       via `config :plushie, code_reloader: true`.
-  - `:transport`   -- `:spawn` (default, spawns the renderer as a child
+  - `:transport`: `:spawn` (default, spawns the renderer as a child
                       process), `:stdio` (reads/writes the BEAM's own
                       stdin/stdout, for use with `plushie --exec`), or
                       `{:iostream, pid}` (custom transport via iostream
-                      adapter -- see `Plushie.Bridge` for the protocol)
-  - `:format`      -- wire format, `:msgpack` (default) or `:json`
-  - `:log_level`   -- plushie binary log level (`:off`, `:error`, `:warning`, `:info`, `:debug`).
+                      adapter, see `Plushie.Bridge` for the protocol)
+  - `:format`: wire format, `:msgpack` (default) or `:json`
+  - `:log_level`: plushie binary log level (`:off`, `:error`, `:warning`, `:info`, `:debug`).
                       Default: `:error`.
-  - `:renderer_args` -- extra CLI args passed to the renderer process
-  - `:heartbeat_interval` -- maximum time (ms) between renderer messages
+  - `:renderer_args`: extra CLI args passed to the renderer process
+  - `:heartbeat_interval`: maximum time (ms) between renderer messages
                       before the bridge considers it unresponsive and restarts
                       the renderer. `nil` disables the watchdog. Default: `30_000`.
 
@@ -280,11 +280,11 @@ defmodule Plushie do
         children
       end
 
-    # :rest_for_one -- if Bridge crashes, Runtime restarts too (fresh start).
+    # :rest_for_one - if Bridge crashes, Runtime restarts too (fresh start).
     # If Runtime crashes alone, only Runtime restarts; it re-sends settings
     # and snapshot to the still-running Bridge/renderer.
-    # :transient -- don't restart children that exit normally (clean window close).
-    # :auto_shutdown -- when any significant child exits normally, tear down the tree.
+    # :transient - don't restart children that exit normally (clean window close).
+    # :auto_shutdown - when any significant child exits normally, tear down the tree.
     Supervisor.init(children,
       strategy: :rest_for_one,
       auto_shutdown: :any_significant

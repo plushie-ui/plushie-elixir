@@ -36,7 +36,7 @@ defmodule Plushie.Test.Helpers do
 
   ## Options
 
-  - `window:` -- target window ID for multi-window apps
+  - `window:` - target window ID for multi-window apps
   """
   @spec find(selector :: Session.selector(), opts :: keyword()) :: Element.t() | nil
   def find(selector, opts \\ []), do: Session.find(session(), selector, opts)
@@ -46,7 +46,7 @@ defmodule Plushie.Test.Helpers do
 
   ## Options
 
-  - `window:` -- target window ID for multi-window apps
+  - `window:` - target window ID for multi-window apps
   """
   @spec find!(selector :: Session.selector(), opts :: keyword()) :: Element.t()
   def find!(selector, opts \\ []) do
@@ -74,7 +74,7 @@ defmodule Plushie.Test.Helpers do
 
   ## Options
 
-  - `window:` -- target window ID for multi-window apps
+  - `window:` - target window ID for multi-window apps
   """
   @spec click(selector :: Session.selector(), opts :: keyword()) :: :ok
   def click(selector, opts \\ []), do: Session.click(session(), selector, opts)
@@ -84,7 +84,7 @@ defmodule Plushie.Test.Helpers do
 
   ## Options
 
-  - `window:` -- target window ID for multi-window apps
+  - `window:` - target window ID for multi-window apps
   """
   @spec type_text(selector :: Session.selector(), text :: String.t(), opts :: keyword()) :: :ok
   def type_text(selector, text, opts \\ []),
@@ -95,7 +95,7 @@ defmodule Plushie.Test.Helpers do
 
   ## Options
 
-  - `window:` -- target window ID for multi-window apps
+  - `window:` - target window ID for multi-window apps
   """
   @spec submit(selector :: Session.selector(), opts :: keyword()) :: :ok
   def submit(selector, opts \\ []), do: Session.submit(session(), selector, opts)
@@ -112,7 +112,7 @@ defmodule Plushie.Test.Helpers do
 
   ## Options
 
-  - `window:` -- target window ID for multi-window apps
+  - `window:` - target window ID for multi-window apps
   """
   @spec toggle(selector :: Session.selector(), value :: boolean() | nil, opts :: keyword()) :: :ok
   def toggle(selector, value \\ nil, opts \\ []),
@@ -123,7 +123,7 @@ defmodule Plushie.Test.Helpers do
 
   ## Options
 
-  - `window:` -- target window ID for multi-window apps
+  - `window:` - target window ID for multi-window apps
   """
   @spec select(selector :: Session.selector(), value :: term(), opts :: keyword()) :: :ok
   def select(selector, value, opts \\ []), do: Session.select(session(), selector, value, opts)
@@ -133,7 +133,7 @@ defmodule Plushie.Test.Helpers do
 
   ## Options
 
-  - `window:` -- target window ID for multi-window apps
+  - `window:` - target window ID for multi-window apps
   """
   @spec slide(selector :: Session.selector(), value :: number(), opts :: keyword()) :: :ok
   def slide(selector, value, opts \\ []), do: Session.slide(session(), selector, value, opts)
@@ -366,7 +366,7 @@ defmodule Plushie.Test.Helpers do
 
   ## Options
 
-  - `window:` -- target window ID for multi-window apps
+  - `window:` - target window ID for multi-window apps
   """
   @spec scroll(
           selector :: Session.selector(),
@@ -382,7 +382,7 @@ defmodule Plushie.Test.Helpers do
 
   ## Options
 
-  - `window:` -- target window ID for multi-window apps
+  - `window:` - target window ID for multi-window apps
   """
   @spec paste(selector :: Session.selector(), text :: String.t(), opts :: keyword()) :: :ok
   def paste(selector, text, opts \\ []), do: Session.paste(session(), selector, text, opts)
@@ -392,7 +392,7 @@ defmodule Plushie.Test.Helpers do
 
   ## Options
 
-  - `window:` -- target window ID for multi-window apps
+  - `window:` - target window ID for multi-window apps
   """
   @spec sort(
           selector :: Session.selector(),
@@ -408,7 +408,7 @@ defmodule Plushie.Test.Helpers do
 
   ## Options
 
-  - `window:` -- target window ID for multi-window apps
+  - `window:` - target window ID for multi-window apps
   """
   @spec canvas_press(
           selector :: Session.selector(),
@@ -425,7 +425,7 @@ defmodule Plushie.Test.Helpers do
 
   ## Options
 
-  - `window:` -- target window ID for multi-window apps
+  - `window:` - target window ID for multi-window apps
   """
   @spec canvas_release(
           selector :: Session.selector(),
@@ -442,7 +442,7 @@ defmodule Plushie.Test.Helpers do
 
   ## Options
 
-  - `window:` -- target window ID for multi-window apps
+  - `window:` - target window ID for multi-window apps
   """
   @spec canvas_move(
           selector :: Session.selector(),
@@ -458,7 +458,7 @@ defmodule Plushie.Test.Helpers do
 
   ## Options
 
-  - `window:` -- target window ID for multi-window apps
+  - `window:` - target window ID for multi-window apps
   """
   @spec pane_focus_cycle(selector :: Session.selector(), opts :: keyword()) :: :ok
   def pane_focus_cycle(selector, opts \\ []),

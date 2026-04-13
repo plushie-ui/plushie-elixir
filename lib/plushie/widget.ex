@@ -4,10 +4,10 @@ defmodule Plushie.Widget do
 
   Supports two kinds of widget:
 
-  - `:native_widget` -- backed by a Rust crate implementing the
+  - `:native_widget` - backed by a Rust crate implementing the
     `PlushieWidget` trait. Requires `rust_crate` and `rust_constructor`
     declarations.
-  - `:widget` -- pure Elixir widget. Features are detected at compile
+  - `:widget` - pure Elixir widget. Features are detected at compile
     time based on what callbacks are defined:
     - Has `state` declarations -> stateful (deferred view, state
       persistence via the runtime).
@@ -40,16 +40,16 @@ defmodule Plushie.Widget do
 
   The macro generates:
 
-  - `type_names/0` -- returns `[:gauge]` (from the `widget` declaration)
-  - `native_crate/0` -- returns the `rust_crate` path (native_widget only)
-  - `rust_constructor/0` -- returns the Rust expression (native_widget only)
-  - `new/2` -- creates a `%Module{}` struct ()
+  - `type_names/0` - returns `[:gauge]` (from the `widget` declaration)
+  - `native_crate/0` - returns the `rust_crate` path (native_widget only)
+  - `rust_constructor/0` - returns the Rust expression (native_widget only)
+  - `new/2` - creates a `%Module{}` struct ()
   - Setter functions per field for pipeline composition
-  - `with_options/2` -- applies keyword options via setters
-  - `build/1` -- converts the struct to a `ui_node()` map
-  - `@type t`, `@type option` -- typespecs for dialyzer
+  - `with_options/2` - applies keyword options via setters
+  - `build/1` - converts the struct to a `ui_node()` map
+  - `@type t`, `@type option` - typespecs for dialyzer
   - `Plushie.Widget` protocol implementation
-  - `__event_specs__/0`, `__event_spec__/1` -- typed event metadata
+  - `__event_specs__/0`, `__event_spec__/1` - typed event metadata
   - Command functions (native_widget only) that wrap
     `Plushie.Command.widget_command/3`
 
@@ -103,10 +103,10 @@ defmodule Plushie.Widget do
   Widgets that support accessibility or event rate limiting declare
   these as normal fields:
 
-  - `field :a11y, Plushie.Type.A11y, merge: true` -- accessibility
+  - `field :a11y, Plushie.Type.A11y, merge: true` - accessibility
     overrides (see `Plushie.Type.A11y`). The `merge: true` option
     makes the setter merge user values with widget defaults.
-  - `field :event_rate, :integer` -- maximum events per second for
+  - `field :event_rate, :integer` - maximum events per second for
     coalescable events from this widget.
   """
 

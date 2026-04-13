@@ -5,9 +5,9 @@ defmodule Plushie.Selection do
 
   ## Modes
 
-  - `:single` -- at most one item selected at a time.
-  - `:multi` -- multiple items selectable; `extend: true` adds to the set.
-  - `:range` -- like multi, but `range_select/2` selects a contiguous
+  - `:single` - at most one item selected at a time.
+  - `:multi` - multiple items selectable; `extend: true` adds to the set.
+  - `:range` - like multi, but `range_select/2` selects a contiguous
     slice of the `order` list between the anchor and the target.
 
   ## Example
@@ -33,8 +33,8 @@ defmodule Plushie.Selection do
 
   ## Options
 
-  - `:mode` -- selection mode: `:single` (default), `:multi`, or `:range`.
-  - `:order` -- ordered list of item IDs for range selection.
+  - `:mode` - selection mode: `:single` (default), `:multi`, or `:range`.
+  - `:order` - ordered list of item IDs for range selection.
   """
   @spec new(opts :: keyword()) :: t()
   def new(opts \\ []) do

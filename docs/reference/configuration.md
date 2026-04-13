@@ -11,7 +11,7 @@ binary and go.
 | Variable | Purpose |
 |---|---|
 | `PLUSHIE_BINARY_PATH` | Explicit path to the renderer binary. Overrides all other binary resolution. |
-| `PLUSHIE_SOURCE_PATH` | Path to a local [plushie-renderer](https://github.com/plushie-ui/plushie-renderer) checkout for source builds. |
+| `PLUSHIE_SOURCE_PATH` | Path to a local [plushie-rust](https://github.com/plushie-ui/plushie-rust) checkout for source builds. |
 | `PLUSHIE_TEST_BACKEND` | Test backend: `mock` (default), `headless`, or `windowed`. |
 | `PLUSHIE_UPDATE_SCREENSHOTS` | When set to any value, update screenshot golden files instead of comparing. |
 | `PLUSHIE_UPDATE_SNAPSHOTS` | When set to any value, update tree-hash snapshot files instead of comparing. |
@@ -28,14 +28,14 @@ through to other paths.
 ### PLUSHIE_SOURCE_PATH
 
 Points to a local checkout of the
-[plushie-renderer](https://github.com/plushie-ui/plushie-renderer)
+[plushie-rust](https://github.com/plushie-ui/plushie-rust)
 repository. When set, `mix plushie.build` uses local path dependencies
 instead of crates.io, and the dev server watches `.rs` files for hot
 reload. The typical setup is a sibling directory:
 
 ```bash
-git clone https://github.com/plushie-ui/plushie-renderer ../plushie-renderer
-PLUSHIE_SOURCE_PATH=../plushie-renderer mix plushie.build
+git clone https://github.com/plushie-ui/plushie-rust ../plushie-rust
+PLUSHIE_SOURCE_PATH=../plushie-rust mix plushie.build
 ```
 
 ### RUST_LOG

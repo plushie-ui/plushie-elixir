@@ -16,7 +16,7 @@ defmodule Plushie.Widget.Handler do
   3. During `Tree.normalize`, the placeholder is detected and rendered
      with the best available state (stored from a previous cycle, or
      initial defaults for new widgets)
-  4. The rendered output is normalized in place -- no post-processing
+  4. The rendered output is normalized in place. No post-processing
 
   The tree carries widget state in `:meta` (via `%Meta.Composite{}`),
   making it the single source of truth. The runtime derives a registry
@@ -29,11 +29,11 @@ defmodule Plushie.Widget.Handler do
   `handle_event/2` and interprets the return value using iced's
   captured/ignored model:
 
-  - `{:emit, family, data}` -- captured, emit semantic event
-  - `{:emit, family, data, new_state}` -- captured, emit + update state
-  - `{:update_state, new_state}` -- captured, internal state change only
-  - `:consumed` -- captured, suppress event
-  - `:ignored` -- not captured, continue to next handler in scope chain
+  - `{:emit, family, data}` - captured, emit semantic event
+  - `{:emit, family, data, new_state}` - captured, emit + update state
+  - `{:update_state, new_state}` - captured, internal state change only
+  - `:consumed` - captured, suppress event
+  - `:ignored` - not captured, continue to next handler in scope chain
 
   Events are dispatched through the scope chain (innermost to outermost).
   `:ignored` continues to the next widget handler in the chain. Captured
@@ -72,9 +72,9 @@ defmodule Plushie.Widget.Handler do
   Invokes a widget's handle_event/2 and interprets the result.
 
   Returns `{action, new_state}` where action is one of:
-  - `{:emit, %WidgetEvent{}}` -- captured with transformed event
-  - `:consumed` -- captured, no output
-  - `:ignored` -- not captured, continue to next handler
+  - `{:emit, %WidgetEvent{}}` - captured with transformed event
+  - `:consumed` - captured, no output
+  - `:ignored` - not captured, continue to next handler
   """
   @spec invoke_handler(
           module :: module(),
@@ -171,7 +171,7 @@ defmodule Plushie.Widget.Handler do
 
   # Resolve the ID and scope for emitted events. For pointer events
   # (press, release, move, etc.) the event's id IS the canvas/widget
-  # id and scope is the parent scope -- pass through as-is.
+  # id and scope is the parent scope; pass through as-is.
   # For other widget events (click on a child element inside a
   # stateful widget), the widget's ID is the first scope element
   # and the remaining scope becomes the parent scope. For non-widget
@@ -222,7 +222,7 @@ defmodule Plushie.Widget.Handler do
   end
 
   defp resolve_emit_identity(_event, widget_id, fallback_window_id) do
-    # Timer or other non-widget event -- use the registered widget ID.
+    # Timer or other non-widget event: use the registered widget ID.
     # Split scoped ID: "form/stars" -> {id: "stars", scope: ["form"]}
     case String.split(widget_id, "/") do
       [single] ->

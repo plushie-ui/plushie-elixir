@@ -71,11 +71,11 @@ defmodule Plushie.Test.SessionPool do
 
   ## Options
 
-  - `:renderer` -- path to the plushie binary (required)
-  - `:mode` -- `:mock` (default), `:headless`, or `:windowed`
-  - `:format` -- `:msgpack` (default) or `:json`
-  - `:max_sessions` -- maximum concurrent sessions (default 8)
-  - `:name` -- optional registered name for the pool
+  - `:renderer` - path to the plushie binary (required)
+  - `:mode` - `:mock` (default), `:headless`, or `:windowed`
+  - `:format` - `:msgpack` (default) or `:json`
+  - `:max_sessions` - maximum concurrent sessions (default 8)
+  - `:name` - optional registered name for the pool
   """
   @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(opts \\ []) do
@@ -124,7 +124,7 @@ defmodule Plushie.Test.SessionPool do
   @doc """
   Send a message to the renderer for the given session.
 
-  The `session` field is injected automatically. Synchronous -- waits
+  The `session` field is injected automatically. Synchronous: waits
   for the matching response if `expect_response` is a response type
   string (e.g. `"query_response"`). For fire-and-forget messages
   (snapshot, patch, subscription), pass `nil`.

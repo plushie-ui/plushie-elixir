@@ -29,7 +29,7 @@ defmodule Mix.Tasks.Plushie.Connect do
   1. `--token` CLI flag
   2. `PLUSHIE_TOKEN` environment variable
   3. JSON line from stdin (1 second timeout): `{"token":"...","protocol":1}`
-  4. No token (connect without -- renderer decides if that's OK)
+  4. No token (connect without; renderer decides if that's OK)
 
   If the token is resolved from steps 1 or 2, stdin is not read.
 
@@ -41,9 +41,9 @@ defmodule Mix.Tasks.Plushie.Connect do
 
   ## Options
 
-    * `--token TOKEN` -- shared token for authentication
-    * `--json` -- use JSON wire format instead of MessagePack
-    * `--daemon` -- keep running after all windows close
+    * `--token TOKEN`: shared token for authentication
+    * `--json`: use JSON wire format instead of MessagePack
+    * `--daemon`: keep running after all windows close
   """
 
   use Mix.Task

@@ -10,11 +10,11 @@ defmodule Mix.Tasks.Plushie.Download do
 
   ## Options
 
-  - `--bin` -- Download the native binary
-  - `--wasm` -- Download the WASM renderer
-  - `--bin-file PATH` -- Override native binary destination
-  - `--wasm-dir PATH` -- Override WASM output directory
-  - `--force` -- Re-download even if files already exist
+  - `--bin` - Download the native binary
+  - `--wasm` - Download the WASM renderer
+  - `--bin-file PATH` - Override native binary destination
+  - `--wasm-dir PATH` - Override WASM output directory
+  - `--force` - Re-download even if files already exist
 
   ## Config
 
@@ -59,7 +59,7 @@ defmodule Mix.Tasks.Plushie.Download do
   end
 
   # Refuse to download a precompiled binary when native widgets are
-  # detected -- the stock binary won't have them registered.
+  # detected; the stock binary won't have them registered.
   defp check_native_widgets! do
     Mix.Task.run("compile", [])
 

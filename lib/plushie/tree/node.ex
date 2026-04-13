@@ -15,7 +15,7 @@ defprotocol Plushie.Tree.Node do
 
       alias Plushie.Widget.Button
 
-      # Builder pattern -- struct returned, runtime converts automatically
+      # Builder pattern: struct returned, runtime converts automatically
       Button.new("btn", "Click me")
       |> Button.style(:primary)
       |> Button.width(:fill)
