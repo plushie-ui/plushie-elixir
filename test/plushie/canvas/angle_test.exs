@@ -37,20 +37,34 @@ defmodule Plushie.Canvas.AngleTest do
     end
   end
 
+  describe "to_degrees/1" do
+    test "passes through bare number (already degrees)" do
+      assert Angle.to_degrees(45) == 45.0
+    end
+
+    test "passes through degree tuple" do
+      assert Angle.to_degrees({90, :deg}) == 90.0
+    end
+
+    test "converts radian tuple to degrees" do
+      assert_in_delta Angle.to_degrees({:math.pi(), :rad}), 180.0, 0.0001
+    end
+  end
+
   describe "cast/1" do
-    test "casts bare number to radians" do
-      assert {:ok, rad} = Angle.cast(180)
-      assert_in_delta rad, :math.pi(), 0.0001
+    test "casts bare number to degrees" do
+      assert {:ok, deg} = Angle.cast(180)
+      assert_in_delta deg, 180.0, 0.0001
     end
 
-    test "casts degree tuple to radians" do
-      assert {:ok, rad} = Angle.cast({90, :deg})
-      assert_in_delta rad, :math.pi() / 2, 0.0001
+    test "casts degree tuple to degrees" do
+      assert {:ok, deg} = Angle.cast({90, :deg})
+      assert_in_delta deg, 90.0, 0.0001
     end
 
-    test "casts radian tuple, keeping value" do
-      assert {:ok, rad} = Angle.cast({:math.pi(), :rad})
-      assert_in_delta rad, :math.pi(), 0.0001
+    test "casts radian tuple to degrees" do
+      assert {:ok, deg} = Angle.cast({:math.pi(), :rad})
+      assert_in_delta deg, 180.0, 0.0001
     end
 
     test "rejects non-numeric values" do

@@ -316,7 +316,7 @@ defmodule Plushie.Canvas.Shape do
   def arc(cx, cy, r, start_angle, end_angle) do
     alias Plushie.Canvas.Angle
 
-    ["arc", cx, cy, r, Angle.to_radians(start_angle), Angle.to_radians(end_angle)]
+    ["arc", cx, cy, r, Angle.to_degrees(start_angle), Angle.to_degrees(end_angle)]
   end
 
   @doc "Tangent arc path command."
@@ -348,9 +348,9 @@ defmodule Plushie.Canvas.Shape do
       cy,
       rx,
       ry,
-      Angle.to_radians(rotation),
-      Angle.to_radians(start_angle),
-      Angle.to_radians(end_angle)
+      Angle.to_degrees(rotation),
+      Angle.to_degrees(start_angle),
+      Angle.to_degrees(end_angle)
     ]
   end
 
@@ -385,7 +385,7 @@ defmodule Plushie.Canvas.Shape do
   """
   @spec rotate(angle :: Plushie.Canvas.Angle.t()) :: Rotate.t()
   def rotate(angle) do
-    %Rotate{angle: Plushie.Canvas.Angle.to_radians(angle)}
+    %Rotate{angle: Plushie.Canvas.Angle.to_degrees(angle)}
   end
 
   @doc "Create a uniform scale transform."
@@ -537,7 +537,7 @@ defmodule Plushie.Canvas.Shape do
   defp maybe_put_angle(shape, opts, key, field) do
     case Keyword.get(opts, key) do
       nil -> shape
-      val -> %{shape | field => Plushie.Canvas.Angle.to_radians(val)}
+      val -> %{shape | field => Plushie.Canvas.Angle.to_degrees(val)}
     end
   end
 

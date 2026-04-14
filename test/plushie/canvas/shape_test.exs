@@ -15,7 +15,7 @@ defmodule Plushie.Canvas.ShapeTest do
     Text
   }
 
-  alias Plushie.Canvas.Transform.{Rotate, Scale, Translate}
+  alias Plushie.Canvas.Transform.{Scale, Translate}
 
   # -- Basic shapes -----------------------------------------------------------
 
@@ -126,14 +126,16 @@ defmodule Plushie.Canvas.ShapeTest do
       assert result == ["quadratic_to", 10, 20, 30, 40]
     end
 
-    test "arc/5 produces a tagged list with angles converted to radians" do
+    test "arc/5 produces a tagged list with angles in degrees" do
       result = Shape.arc(50, 50, 25, 0, 180)
-      assert result == ["arc", 50, 50, 25, 0.0, :math.pi()]
+      assert result == ["arc", 50, 50, 25, 0.0, 180.0]
     end
 
-    test "arc/5 accepts explicit radian tuples" do
+    test "arc/5 accepts explicit radian tuples (converted to degrees)" do
       result = Shape.arc(50, 50, 25, {0, :rad}, {:math.pi(), :rad})
-      assert result == ["arc", 50, 50, 25, 0.0, :math.pi()]
+      ["arc", 50, 50, 25, start, stop] = result
+      assert_in_delta start, 0.0, 0.0001
+      assert_in_delta stop, 180.0, 0.0001
     end
 
     test "arc_to/5 produces a tagged list with two tangent points and radius" do
@@ -141,12 +143,9 @@ defmodule Plushie.Canvas.ShapeTest do
       assert result == ["arc_to", 0, 0, 100, 0, 10]
     end
 
-    test "ellipse/7 produces a tagged list with angles converted to radians" do
+    test "ellipse/7 produces a tagged list with angles in degrees" do
       result = Shape.ellipse(50, 50, 30, 20, 0, 0, 360)
-      ["ellipse", 50, 50, 30, 20, rotation, start_angle, end_angle] = result
-      assert_in_delta rotation, 0.0, 0.0001
-      assert_in_delta start_angle, 0.0, 0.0001
-      assert_in_delta end_angle, :math.pi() * 2, 0.0001
+      assert result == ["ellipse", 50, 50, 30, 20, 0.0, 0.0, 360.0]
     end
 
     test "rounded_rect/5 produces a tagged list with position, size, and corner radius" do
@@ -167,16 +166,15 @@ defmodule Plushie.Canvas.ShapeTest do
     end
 
     test "rotate/1 accepts degrees by default" do
-      assert_in_delta Shape.rotate(45).angle, :math.pi() / 4, 0.0001
+      assert_in_delta Shape.rotate(45).angle, 45.0, 0.0001
     end
 
-    test "rotate/1 accepts explicit radian tuples" do
-      angle = :math.pi() / 4
-      assert Shape.rotate({angle, :rad}) == %Rotate{angle: angle}
+    test "rotate/1 accepts explicit radian tuples (converted to degrees)" do
+      assert_in_delta Shape.rotate({:math.pi() / 4, :rad}).angle, 45.0, 0.0001
     end
 
     test "rotate/1 accepts explicit degree tuples" do
-      assert_in_delta Shape.rotate({90, :deg}).angle, :math.pi() / 2, 0.0001
+      assert_in_delta Shape.rotate({90, :deg}).angle, 90.0, 0.0001
     end
 
     test "scale/2 produces a Scale struct with per-axis factors" do
