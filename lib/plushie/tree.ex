@@ -602,6 +602,10 @@ defmodule Plushie.Tree do
   #   - scope-rewrite :active_descendant and :radio_group references
   #   - populate implicit :a11y.radio_group when radios share :group
   #   - validate all cross-widget refs and emit diagnostics
+  #   - flow :placeholder into :a11y.description for text-entry widgets
+  #   - flow :required / :validation widget props into a11y fields
+  #   - set :a11y.described_by on a tooltip's trigger child pointing at
+  #     the tooltip's scoped ID so AT announces the tip text
   @spec rewrite_a11y(
           tree_node(),
           String.t(),
@@ -609,21 +613,51 @@ defmodule Plushie.Tree do
           %{{String.t(), String.t()} => [String.t()]}
         ) :: tree_node()
   defp rewrite_a11y(node, scope, declared, radio_groups) do
+    rewrite_a11y(node, scope, declared, radio_groups, nil)
+  end
+
+  defp rewrite_a11y(node, scope, declared, radio_groups, tooltip_parent_id) do
     %{type: type, id: id, props: props, children: children} = node
 
     child_scope = child_scope_of(id, type, scope)
+    # Tooltip children carry described_by pointing at the tooltip's ID.
+    # Only the first (trigger) child is relevant in iced tooltips but we
+    # apply to all children for simplicity; extras are rare and the
+    # described_by ref is harmless if multiple share it.
+    tooltip_for_children = if type == "tooltip", do: id, else: nil
 
     children =
       Enum.map(children, fn child ->
-        rewrite_a11y(child, child_scope, declared, radio_groups)
+        rewrite_a11y(child, child_scope, declared, radio_groups, tooltip_for_children)
       end)
 
     a11y_in = Map.get(props, :a11y)
-    props = apply_a11y_rewrites(props, a11y_in, type, id, scope, declared, radio_groups)
+
+    props =
+      apply_a11y_rewrites(
+        props,
+        a11y_in,
+        type,
+        id,
+        scope,
+        declared,
+        radio_groups,
+        tooltip_parent_id
+      )
+
     %{node | props: props, children: children}
   end
 
-  defp apply_a11y_rewrites(props, a11y_in, type, id, scope, declared, radio_groups) do
+  defp apply_a11y_rewrites(
+         props,
+         a11y_in,
+         type,
+         id,
+         scope,
+         declared,
+         radio_groups,
+         tooltip_parent_id
+       ) do
     role_default = widget_type_to_role(type)
 
     radio_ids =
@@ -634,12 +668,21 @@ defmodule Plushie.Tree do
         end
       end
 
+    placeholder_desc = placeholder_description(type, props)
+    required_prop = required_from_props_for(type, props)
+    {invalid_prop, error_text} = invalid_from_props_for(type, props)
+
     a11y_map = to_a11y_map(a11y_in)
 
     needs_update? =
       (role_default != nil and not has_role?(a11y_map)) or
         radio_ids != nil or
-        has_any_ref?(a11y_map)
+        has_any_ref?(a11y_map) or
+        placeholder_desc != nil or
+        required_prop != nil or
+        invalid_prop != nil or
+        error_text != nil or
+        tooltip_parent_id != nil
 
     if a11y_map == nil and not needs_update? do
       props
@@ -663,9 +706,152 @@ defmodule Plushie.Tree do
           a11y_map
         end
 
+      a11y_map =
+        if placeholder_desc != nil and
+             not Map.has_key?(a11y_map, :description) and
+             not Map.has_key?(a11y_map, "description") do
+          Map.put(a11y_map, :description, placeholder_desc)
+        else
+          a11y_map
+        end
+
+      a11y_map =
+        if required_prop == true and
+             not Map.has_key?(a11y_map, :required) and
+             not Map.has_key?(a11y_map, "required") do
+          Map.put(a11y_map, :required, true)
+        else
+          a11y_map
+        end
+
+      a11y_map =
+        if invalid_prop != nil and
+             not Map.has_key?(a11y_map, :invalid) and
+             not Map.has_key?(a11y_map, "invalid") do
+          Map.put(a11y_map, :invalid, invalid_prop)
+        else
+          a11y_map
+        end
+
+      a11y_map =
+        if error_text != nil and
+             not Map.has_key?(a11y_map, :error_message) and
+             not Map.has_key?(a11y_map, "error_message") do
+          Map.put(a11y_map, :error_message, error_text)
+        else
+          a11y_map
+        end
+
+      a11y_map =
+        if tooltip_parent_id != nil and
+             not Map.has_key?(a11y_map, :described_by) and
+             not Map.has_key?(a11y_map, "described_by") do
+          Map.put(a11y_map, :described_by, tooltip_parent_id)
+        else
+          a11y_map
+        end
+
       Map.put(props, :a11y, a11y_map)
     end
   end
+
+  # Widget types for which `:placeholder` seeds `:a11y.description`.
+  @placeholder_widgets ~w(text_input text_editor combo_box pick_list)
+
+  defp placeholder_description(type, props) when type in @placeholder_widgets do
+    case Map.get(props, :placeholder) || Map.get(props, "placeholder") do
+      s when is_binary(s) and s != "" -> s
+      _ -> nil
+    end
+  end
+
+  defp placeholder_description(_type, _props), do: nil
+
+  # Widget types that accept :required / :validation props and project
+  # them onto the a11y map.
+  @validatable_widgets ~w(text_input text_editor checkbox pick_list combo_box)
+
+  defp required_from_props(props) do
+    case Map.get(props, :required) || Map.get(props, "required") do
+      b when is_boolean(b) -> b
+      _ -> nil
+    end
+  end
+
+  # Projects a :validation prop onto {a11y.invalid, a11y.error_message}.
+  #
+  # Accepted shapes (author-facing plus wire-encoded forms; atoms encode
+  # to strings and tuples encode to lists in `encode_prop_values`, so we
+  # match both):
+  #
+  #   :valid | "valid"                             -> {false, nil}
+  #   :pending | "pending"                         -> {nil, nil}
+  #   {:invalid, message} | ["invalid", message]   -> {true, message}
+  #   %{state: :invalid, message: m}               -> {true, m}
+  #   %{state: :valid}                             -> {false, nil}
+  defp invalid_from_props(props) do
+    case Map.get(props, :validation) || Map.get(props, "validation") do
+      nil ->
+        {nil, nil}
+
+      :valid ->
+        {false, nil}
+
+      "valid" ->
+        {false, nil}
+
+      :pending ->
+        {nil, nil}
+
+      "pending" ->
+        {nil, nil}
+
+      {:invalid, msg} when is_binary(msg) ->
+        {true, msg}
+
+      ["invalid", msg] when is_binary(msg) ->
+        {true, msg}
+
+      %{state: :valid} ->
+        {false, nil}
+
+      %{state: :pending} ->
+        {nil, nil}
+
+      %{state: :invalid, message: msg} when is_binary(msg) ->
+        {true, msg}
+
+      %{state: :invalid} ->
+        {true, nil}
+
+      %{"state" => "valid"} ->
+        {false, nil}
+
+      %{"state" => "pending"} ->
+        {nil, nil}
+
+      %{"state" => "invalid", "message" => msg} when is_binary(msg) ->
+        {true, msg}
+
+      %{"state" => "invalid"} ->
+        {true, nil}
+
+      _ ->
+        {nil, nil}
+    end
+  end
+
+  # Guard validation/required projections to validatable widget types.
+  # Any widget outside the list ignores these props for a11y purposes.
+  defp required_from_props_for(type, props) when type in @validatable_widgets,
+    do: required_from_props(props)
+
+  defp required_from_props_for(_type, _props), do: nil
+
+  defp invalid_from_props_for(type, props) when type in @validatable_widgets,
+    do: invalid_from_props(props)
+
+  defp invalid_from_props_for(_type, _props), do: {nil, nil}
 
   # Normalize the existing a11y prop into a plain map for further processing.
   # Accepts an A11y struct (already encoded to a map earlier), a map with

@@ -54,6 +54,14 @@ defmodule Plushie.Widget.ComboBox do
 
     field :menu_style, :map, doc: "Inline style for the dropdown menu."
     field :style, Plushie.Type.Style, doc: "Named preset or custom `StyleMap`."
+    field :required, :boolean,
+      doc: "Marks the field as required. Flows into `a11y.required` automatically."
+
+    field :validation, :any,
+      doc:
+        "Form validation state. Accepts `:valid`, `:pending`, or `{:invalid, message}`. " <>
+          "Flows into `a11y.invalid` and `a11y.error_message` automatically."
+
     field :event_rate, :integer, doc: "Max events per second for coalescable events."
     field :a11y, Plushie.Type.A11y, default: @a11y_defaults, doc: "Accessibility annotations."
 

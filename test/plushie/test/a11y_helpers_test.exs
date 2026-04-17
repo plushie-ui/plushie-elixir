@@ -79,4 +79,69 @@ defmodule Plushie.Test.A11yHelpersTest do
       assert Element.inferred_role(el) == "switch"
     end
   end
+
+  describe "Element.resolved_a11y/1" do
+    test "text_input placeholder flows into description when unset" do
+      el = %Element{
+        id: "search",
+        type: "text_input",
+        props: %{placeholder: "Search..."},
+        children: []
+      }
+
+      assert Element.resolved_a11y(el) == %{description: "Search..."}
+    end
+
+    test "image alt flows into label when unset" do
+      el = %Element{
+        id: "photo",
+        type: "image",
+        props: %{alt: "A tree"},
+        children: []
+      }
+
+      assert Element.resolved_a11y(el) == %{label: "A tree"}
+    end
+
+    test "explicit a11y composes with inferred values" do
+      el = %Element{
+        id: "search",
+        type: "text_input",
+        props: %{
+          placeholder: "Search...",
+          a11y: %{label: "Search box", required: true}
+        },
+        children: []
+      }
+
+      resolved = Element.resolved_a11y(el)
+      assert resolved[:description] == "Search..."
+      assert resolved[:label] == "Search box"
+      assert resolved[:required] == true
+    end
+
+    test "explicit description overrides inferred" do
+      el = %Element{
+        id: "search",
+        type: "text_input",
+        props: %{
+          placeholder: "Search...",
+          a11y: %{description: "Enter a query"}
+        },
+        children: []
+      }
+
+      assert Element.resolved_a11y(el)[:description] == "Enter a query"
+    end
+
+    test "returns empty map for widgets the normalizer left untouched" do
+      el = %Element{id: "x", type: "text", props: %{content: "hi"}, children: []}
+      assert Element.resolved_a11y(el) == %{}
+    end
+
+    test "blank placeholder is treated as absent" do
+      el = %Element{id: "x", type: "text_input", props: %{placeholder: ""}, children: []}
+      assert Element.resolved_a11y(el) == %{}
+    end
+  end
 end

@@ -1339,5 +1339,114 @@ defmodule Plushie.TreeTest do
       diagnostics = Plushie.Test.DiagnosticCollector.flush()
       refute Enum.any?(diagnostics, &(&1.code == "missing_accessible_name"))
     end
+
+    test "placeholder flows into a11y.description for text_input" do
+      tree = %{
+        id: "form",
+        type: "container",
+        props: %{},
+        children: [
+          %{id: "email", type: "text_input", props: %{placeholder: "Your email"}, children: []}
+        ]
+      }
+
+      result = Tree.normalize(tree)
+      [input] = result.children
+      assert input.props.a11y.description == "Your email"
+    end
+
+    test "explicit a11y.description wins over placeholder-derived default" do
+      tree = %{
+        id: "form",
+        type: "container",
+        props: %{},
+        children: [
+          %{
+            id: "email",
+            type: "text_input",
+            props: %{placeholder: "Your email", a11y: %{description: "Primary email"}},
+            children: []
+          }
+        ]
+      }
+
+      result = Tree.normalize(tree)
+      [input] = result.children
+      assert input.props.a11y.description == "Primary email"
+    end
+
+    test ":required prop flows into a11y.required" do
+      tree = %{
+        id: "form",
+        type: "container",
+        props: %{},
+        children: [
+          %{id: "email", type: "text_input", props: %{required: true}, children: []}
+        ]
+      }
+
+      result = Tree.normalize(tree)
+      [input] = result.children
+      assert input.props.a11y.required == true
+    end
+
+    test ":validation {:invalid, msg} flows into a11y.invalid + a11y.error_message" do
+      tree = %{
+        id: "form",
+        type: "container",
+        props: %{},
+        children: [
+          %{
+            id: "email",
+            type: "text_input",
+            props: %{validation: {:invalid, "Email is not valid"}},
+            children: []
+          }
+        ]
+      }
+
+      result = Tree.normalize(tree)
+      [input] = result.children
+      assert input.props.a11y.invalid == true
+      assert input.props.a11y.error_message == "Email is not valid"
+    end
+
+    test ":validation :valid flows into a11y.invalid = false" do
+      tree = %{
+        id: "form",
+        type: "container",
+        props: %{},
+        children: [
+          %{id: "email", type: "text_input", props: %{validation: :valid}, children: []}
+        ]
+      }
+
+      result = Tree.normalize(tree)
+      [input] = result.children
+      assert input.props.a11y.invalid == false
+    end
+
+    test "tooltip scopes described_by onto its trigger child" do
+      tree = %{
+        id: "form",
+        type: "container",
+        props: %{},
+        children: [
+          %{
+            id: "help",
+            type: "tooltip",
+            props: %{tip: "Enter your email"},
+            children: [
+              %{id: "email", type: "text_input", props: %{}, children: []}
+            ]
+          }
+        ]
+      }
+
+      result = Tree.normalize(tree)
+      [tip] = result.children
+      [trigger] = tip.children
+      assert trigger.props.a11y.described_by == "form/help"
+    end
   end
 end

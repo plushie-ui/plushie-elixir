@@ -222,25 +222,36 @@ defmodule Plushie.Test.Helpers do
   end
 
   @doc """
+  Returns the resolved a11y map for the widget matching `selector`.
+
+  Unlike reading the raw `:a11y` prop, this runs the same inference
+  the render pipeline applies: placeholder flows into `:description`
+  for text inputs and related widgets, `alt` flows into `:label` for
+  media widgets. The normalizer has already populated cross-widget
+  defaults (role, implicit `radio_group`), so the returned map is
+  what assistive technology will see.
+
+  Raises if the selector doesn't match any widget.
+  """
+  @spec resolved_a11y(selector :: Session.selector(), opts :: keyword()) :: map()
+  def resolved_a11y(selector, opts \\ []) do
+    element = find!(selector, opts)
+    Element.resolved_a11y(element)
+  end
+
+  @doc """
   Asserts that a widget has the expected accessibility attributes.
 
-  Finds the widget by selector and checks that its `a11y` prop map
-  contains all the expected key-value pairs.
+  Finds the widget by selector and checks that its resolved a11y map
+  (via `resolved_a11y/2`, which layers widget-level inference like
+  placeholder -> description) contains all the expected key-value
+  pairs.
 
       assert_a11y("#heading", %{role: :heading, level: 1})
   """
   defmacro assert_a11y(selector, expected) do
     quote do
-      element = Plushie.Test.Helpers.find!(unquote(selector))
-      raw_a11y = Plushie.Automation.Element.a11y(element)
-
-      if is_nil(raw_a11y) do
-        raise ExUnit.AssertionError,
-          message:
-            "Expected a11y props on element #{inspect(unquote(selector))}, but no a11y prop was set"
-      end
-
-      actual_a11y = raw_a11y
+      actual_a11y = Plushie.Test.Helpers.resolved_a11y(unquote(selector))
 
       for {key, expected_value} <- unquote(expected) do
         actual_value = Map.get(actual_a11y, key)

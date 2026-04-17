@@ -67,6 +67,54 @@ defmodule Plushie.Automation.Element do
   end
 
   @doc """
+  Returns the resolved accessibility map for this element.
+
+  The normalized tree already carries the author's explicit `a11y`
+  values plus any tree-authored defaults (role from the widget-type
+  table, implicit `radio_group` wiring). This helper layers in the
+  widget-level fallbacks the render pipeline would apply:
+
+  - `text_input` / `text_editor` / `combo_box` / `pick_list`:
+    `placeholder` flows into `description` when unset.
+  - `image` / `svg` / `qr_code`: `alt` flows into `label` when unset.
+
+  Returns an empty map (`%{}`) for elements the normalizer left
+  untouched, so tests can match on individual keys without having
+  to special-case `nil`.
+  """
+  @spec resolved_a11y(element :: t()) :: map()
+  def resolved_a11y(%__MODULE__{type: type, props: props}) do
+    explicit = props[:a11y] || %{}
+    inferred = infer_a11y(type, props)
+    Map.merge(inferred, explicit)
+  end
+
+  # Widget-sdk-equivalent infer_a11y fallbacks. Keep aligned with the
+  # Rust SDK's `resolve_a11y_for_node` so parity holds across SDKs.
+  defp infer_a11y(type, props) when type in ~w(text_input text_editor combo_box pick_list) do
+    case fetch_str(props, :placeholder) do
+      nil -> %{}
+      ph -> %{description: ph}
+    end
+  end
+
+  defp infer_a11y(type, props) when type in ~w(image svg qr_code) do
+    case fetch_str(props, :alt) do
+      nil -> %{}
+      alt -> %{label: alt}
+    end
+  end
+
+  defp infer_a11y(_type, _props), do: %{}
+
+  defp fetch_str(props, key) do
+    case props[key] do
+      v when is_binary(v) and v != "" -> v
+      _ -> nil
+    end
+  end
+
+  @doc """
   Returns the accessibility role for this element.
 
   Reads the role from the element's a11y props first. Falls back
