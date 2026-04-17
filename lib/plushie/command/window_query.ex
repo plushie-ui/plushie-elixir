@@ -11,9 +11,9 @@ defmodule Plushie.Command.WindowQuery do
   Result arrives as `%Plushie.Event.SystemEvent{tag: tag, value: data}`
   where `data` is `%{width: width, height: height}`.
   """
-  @spec get_window_size(window_id :: Command.window_id(), tag :: Command.event_tag()) ::
+  @spec window_size(window_id :: Command.window_id(), tag :: Command.event_tag()) ::
           Command.t()
-  def get_window_size(window_id, tag) do
+  def window_size(window_id, tag) do
     %Command{
       type: :window_query,
       payload: %{op: "get_size", window_id: window_id, tag: to_string(tag)}
@@ -26,9 +26,9 @@ defmodule Plushie.Command.WindowQuery do
   Result arrives as `%Plushie.Event.SystemEvent{tag: tag, value: data}`
   where `data` is `%{x: x, y: y}` or `nil` if unavailable.
   """
-  @spec get_window_position(window_id :: Command.window_id(), tag :: Command.event_tag()) ::
+  @spec window_position(window_id :: Command.window_id(), tag :: Command.event_tag()) ::
           Command.t()
-  def get_window_position(window_id, tag) do
+  def window_position(window_id, tag) do
     %Command{
       type: :window_query,
       payload: %{op: "get_position", window_id: window_id, tag: to_string(tag)}
@@ -66,8 +66,8 @@ defmodule Plushie.Command.WindowQuery do
 
   Result arrives as `%Plushie.Event.SystemEvent{tag: tag, value: mode}`.
   """
-  @spec get_mode(window_id :: Command.window_id(), tag :: Command.event_tag()) :: Command.t()
-  def get_mode(window_id, tag) do
+  @spec window_mode(window_id :: Command.window_id(), tag :: Command.event_tag()) :: Command.t()
+  def window_mode(window_id, tag) do
     %Command{
       type: :window_query,
       payload: %{op: "get_mode", window_id: window_id, tag: to_string(tag)}
@@ -79,9 +79,9 @@ defmodule Plushie.Command.WindowQuery do
 
   Result arrives as `%Plushie.Event.SystemEvent{tag: tag, value: factor}`.
   """
-  @spec get_scale_factor(window_id :: Command.window_id(), tag :: Command.event_tag()) ::
+  @spec scale_factor(window_id :: Command.window_id(), tag :: Command.event_tag()) ::
           Command.t()
-  def get_scale_factor(window_id, tag) do
+  def scale_factor(window_id, tag) do
     %Command{
       type: :window_query,
       payload: %{op: "get_scale_factor", window_id: window_id, tag: to_string(tag)}

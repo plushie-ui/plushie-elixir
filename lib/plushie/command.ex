@@ -21,11 +21,11 @@ defmodule Plushie.Command do
     `set_min_size/3`, `set_max_size/3`, `enable_mouse_passthrough/1`,
     `disable_mouse_passthrough/1`, `show_system_menu/1`, `set_icon/4`,
     `set_resize_increments/3` (see `Command.Window`)
-  - **Window queries**: `get_window_size/2`, `get_window_position/2`,
-    `is_maximized/2`, `is_minimized/2`, `get_mode/2`, `get_scale_factor/2`,
+  - **Window queries**: `window_size/2`, `window_position/2`,
+    `is_maximized/2`, `is_minimized/2`, `window_mode/2`, `scale_factor/2`,
     `raw_id/2`, `monitor_size/2` (see `Command.WindowQuery`)
   - **System ops**: `allow_automatic_tabbing/1`
-  - **System queries**: `get_system_theme/1`, `get_system_info/1`
+  - **System queries**: `system_theme/1`, `system_info/1`
   - **PaneGrid ops**: `pane_split/4`, `pane_close/2`, `pane_swap/3`,
     `pane_maximize/2`, `pane_restore/1`
   - **Image ops**: `create_image/2`, `create_image/4`, `update_image/2`,
@@ -44,10 +44,10 @@ defmodule Plushie.Command do
 
   - **Async/Stream**: `async/2` delivers `%Plushie.Event.AsyncEvent{tag: tag, result: result}`.
     `stream/2` delivers `%Plushie.Event.StreamEvent{tag: tag, value: value}` for each chunk.
-  - **Window and system queries**: `get_window_size/2`, `get_mode/2`, etc. deliver
+  - **Window and system queries**: `window_size/2`, `window_mode/2`, etc. deliver
     `%Plushie.Event.SystemEvent{}` structs through `update/2`. The `type` field identifies the
     query kind, `tag` holds the stringified event tag, and `value` holds the result payload.
-    For example, `get_system_theme(:my_tag)` delivers
+    For example, `system_theme(:my_tag)` delivers
     `%SystemEvent{type: :system_theme, tag: "my_tag", value: "dark"}`.
   - **Platform effects**: `Plushie.Effect` functions deliver
     `%Plushie.Event.EffectEvent{tag: tag, result: result}`. The `tag` matches the
@@ -207,12 +207,12 @@ defmodule Plushie.Command do
   # Delegated: Window queries (Command.WindowQuery)
   # ---------------------------------------------------------------------------
 
-  defdelegate get_window_size(window_id, tag), to: __MODULE__.WindowQuery
-  defdelegate get_window_position(window_id, tag), to: __MODULE__.WindowQuery
+  defdelegate window_size(window_id, tag), to: __MODULE__.WindowQuery
+  defdelegate window_position(window_id, tag), to: __MODULE__.WindowQuery
   defdelegate is_maximized(window_id, tag), to: __MODULE__.WindowQuery
   defdelegate is_minimized(window_id, tag), to: __MODULE__.WindowQuery
-  defdelegate get_mode(window_id, tag), to: __MODULE__.WindowQuery
-  defdelegate get_scale_factor(window_id, tag), to: __MODULE__.WindowQuery
+  defdelegate window_mode(window_id, tag), to: __MODULE__.WindowQuery
+  defdelegate scale_factor(window_id, tag), to: __MODULE__.WindowQuery
   defdelegate raw_id(window_id, tag), to: __MODULE__.WindowQuery
   defdelegate monitor_size(window_id, tag), to: __MODULE__.WindowQuery
 
@@ -263,15 +263,15 @@ defmodule Plushie.Command do
   ## Example
 
       def update(model, %Plushie.Event.WidgetEvent{type: :click, id: "check_theme"}) do
-        {model, Plushie.Command.get_system_theme(:theme_result)}
+        {model, Plushie.Command.system_theme(:theme_result)}
       end
 
       def update(model, %Plushie.Event.SystemEvent{type: :system_theme, tag: "theme_result", value: mode}) do
         %{model | theme_mode: mode}
       end
   """
-  @spec get_system_theme(tag :: event_tag()) :: %__MODULE__{}
-  def get_system_theme(tag) do
+  @spec system_theme(tag :: event_tag()) :: %__MODULE__{}
+  def system_theme(tag) do
     %__MODULE__{
       type: :system_query,
       payload: %{op: "get_system_theme", tag: to_string(tag)}
@@ -294,15 +294,15 @@ defmodule Plushie.Command do
   ## Example
 
       def update(model, %Plushie.Event.WidgetEvent{type: :click, id: "sys_info"}) do
-        {model, Plushie.Command.get_system_info(:sys_info)}
+        {model, Plushie.Command.system_info(:sys_info)}
       end
 
       def update(model, %Plushie.Event.SystemEvent{type: :system_info, tag: "sys_info", value: info}) do
         %{model | system: info}
       end
   """
-  @spec get_system_info(tag :: event_tag()) :: %__MODULE__{}
-  def get_system_info(tag) do
+  @spec system_info(tag :: event_tag()) :: %__MODULE__{}
+  def system_info(tag) do
     %__MODULE__{
       type: :system_query,
       payload: %{op: "get_system_info", tag: to_string(tag)}

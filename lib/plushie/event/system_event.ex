@@ -2,7 +2,7 @@ defmodule Plushie.Event.SystemEvent do
   @moduledoc """
   System query responses and platform events.
 
-  Covers responses to system queries (`get_system_info`, `get_system_theme`)
+  Covers responses to system queries (`system_info`, `system_theme`)
   as well as recurring platform events like animation frames and OS theme
   changes.
 

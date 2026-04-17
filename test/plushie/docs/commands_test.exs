@@ -129,8 +129,8 @@ defmodule Plushie.Docs.CommandsTest do
 
   # -- Window queries ---------------------------------------------------------
 
-  test "commands_get_window_size_construct_test" do
-    cmd = Command.get_window_size("main", :got_size)
+  test "commands_window_size_construct_test" do
+    cmd = Command.window_size("main", :got_size)
     assert %Command{type: :window_query, payload: payload} = cmd
     assert payload.window_id == "main"
     assert payload.tag == "got_size"
@@ -138,8 +138,8 @@ defmodule Plushie.Docs.CommandsTest do
 
   # -- System queries ---------------------------------------------------------
 
-  test "commands_get_system_theme_construct_test" do
-    cmd = Command.get_system_theme(:theme_detected)
+  test "commands_system_theme_construct_test" do
+    cmd = Command.system_theme(:theme_detected)
     assert %Command{type: :system_query, payload: payload} = cmd
     assert payload.tag == "theme_detected"
   end

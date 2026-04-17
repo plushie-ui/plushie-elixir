@@ -250,18 +250,18 @@ defmodule Plushie.CommandParityTest do
     end
   end
 
-  describe "get_window_size/2" do
+  describe "window_size/2" do
     test "creates size query" do
-      cmd = Command.get_window_size("main", :size_result)
+      cmd = Command.window_size("main", :size_result)
       assert %Command{type: :window_query} = cmd
       assert cmd.payload.op == "get_size"
       assert cmd.payload.tag == "size_result"
     end
   end
 
-  describe "get_window_position/2" do
+  describe "window_position/2" do
     test "creates position query" do
-      cmd = Command.get_window_position("main", :pos_result)
+      cmd = Command.window_position("main", :pos_result)
       assert cmd.payload.op == "get_position"
       assert cmd.payload.tag == "pos_result"
     end
@@ -313,8 +313,8 @@ defmodule Plushie.CommandParityTest do
         Command.enable_mouse_passthrough("w"),
         Command.disable_mouse_passthrough("w"),
         Command.show_system_menu("w"),
-        Command.get_window_size("w", :t),
-        Command.get_window_position("w", :t),
+        Command.window_size("w", :t),
+        Command.window_position("w", :t),
         Command.is_maximized("w", :t),
         Command.is_minimized("w", :t)
       ]
