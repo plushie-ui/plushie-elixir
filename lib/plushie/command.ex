@@ -146,6 +146,32 @@ defmodule Plushie.Command do
   def focus_previous, do: %__MODULE__{type: :widget_op, payload: %{op: "focus_previous"}}
 
   @doc """
+  Move focus to the next focusable widget within the subtree rooted at
+  `scope`. Only widgets that are descendants of the scope widget are
+  considered; focus wraps at the subtree boundary.
+
+  Useful for menus, pane grids, and any other keyboard container that
+  wants a bounded Tab cycle without leaking focus to siblings.
+
+  ## Example
+
+      Command.focus_next_within("main#menu")
+  """
+  @spec focus_next_within(scope :: widget_id()) :: %__MODULE__{}
+  def focus_next_within(scope) when is_binary(scope) do
+    %__MODULE__{type: :widget_op, payload: %{op: "focus_next_within", scope: scope}}
+  end
+
+  @doc """
+  Move focus to the previous focusable widget within the subtree rooted
+  at `scope`. See `focus_next_within/1` for semantics.
+  """
+  @spec focus_previous_within(scope :: widget_id()) :: %__MODULE__{}
+  def focus_previous_within(scope) when is_binary(scope) do
+    %__MODULE__{type: :widget_op, payload: %{op: "focus_previous_within", scope: scope}}
+  end
+
+  @doc """
   Send `event` through `update/2` after `delay_ms` milliseconds.
 
   If a timer with the same event term is already pending, the previous
@@ -316,19 +342,25 @@ defmodule Plushie.Command do
   @doc """
   Triggers a screen reader announcement without a visible widget.
 
-  The text is immediately announced by assistive technology as a
-  live-region assertion. Useful for status updates, error messages,
-  and other dynamic content that should be announced but doesn't
-  need to be visually displayed.
+  The text is announced by assistive technology as a live-region
+  update. The default politeness is `:polite` which is the correct
+  choice for most toast-style feedback (saves, confirmations,
+  counts). Pass `:assertive` to interrupt the user's current
+  announcement for urgent context.
 
   ## Example
 
       Command.announce("File saved successfully")
-      Command.announce("3 search results found")
+      Command.announce("3 search results found", :polite)
+      Command.announce("Connection lost", :assertive)
   """
-  @spec announce(text :: String.t()) :: %__MODULE__{}
-  def announce(text) when is_binary(text) do
-    %__MODULE__{type: :widget_op, payload: %{op: "announce", text: text}}
+  @spec announce(text :: String.t(), politeness :: :polite | :assertive) :: %__MODULE__{}
+  def announce(text, politeness \\ :polite)
+      when is_binary(text) and politeness in [:polite, :assertive] do
+    %__MODULE__{
+      type: :widget_op,
+      payload: %{op: "announce", text: text, politeness: Atom.to_string(politeness)}
+    }
   end
 
   # ---------------------------------------------------------------------------

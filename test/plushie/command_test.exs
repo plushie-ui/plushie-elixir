@@ -118,6 +118,24 @@ defmodule Plushie.CommandTest do
     end
   end
 
+  describe "focus_next_within/1" do
+    test "returns a widget_op command with the scope payload" do
+      assert %Command{
+               type: :widget_op,
+               payload: %{op: "focus_next_within", scope: "main#menu"}
+             } = Command.focus_next_within("main#menu")
+    end
+  end
+
+  describe "focus_previous_within/1" do
+    test "returns a widget_op command with the scope payload" do
+      assert %Command{
+               type: :widget_op,
+               payload: %{op: "focus_previous_within", scope: "main#menu"}
+             } = Command.focus_previous_within("main#menu")
+    end
+  end
+
   describe "select_all/1" do
     test "returns a command targeting the widget" do
       assert %Command{type: :command, payload: %{id: "body_input", family: "select_all"}} =
@@ -304,12 +322,45 @@ defmodule Plushie.CommandTest do
     test "returns a widget_op Command with op announce" do
       cmd = Command.announce("File saved")
       assert cmd.type == :widget_op
-      assert cmd.payload == %{op: "announce", text: "File saved"}
+
+      assert cmd.payload == %{
+               op: "announce",
+               text: "File saved",
+               politeness: "polite"
+             }
     end
 
     test "raises when text is not a binary" do
       assert_raise FunctionClauseError, fn ->
         Command.announce(:not_a_string)
+      end
+    end
+  end
+
+  describe "announce/2" do
+    test "carries the politeness through the payload" do
+      cmd = Command.announce("Done", :polite)
+
+      assert cmd.payload == %{
+               op: "announce",
+               text: "Done",
+               politeness: "polite"
+             }
+    end
+
+    test "assertive variant serializes to the wire string" do
+      cmd = Command.announce("Connection lost", :assertive)
+
+      assert cmd.payload == %{
+               op: "announce",
+               text: "Connection lost",
+               politeness: "assertive"
+             }
+    end
+
+    test "rejects unknown politeness values" do
+      assert_raise FunctionClauseError, fn ->
+        Command.announce("hi", :whenever)
       end
     end
   end
