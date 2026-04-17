@@ -157,7 +157,7 @@ defmodule Plushie.Protocol.Encode do
   ## Example
 
       Plushie.Protocol.Encode.encode_image_op("create_image", %{handle: "logo", data: <<1, 2, 3>>}, :json)
-      #=> ~s({"data":"AQID","handle":"logo","op":"create_image","session":"","type":"image_op"}) <> "\\n"
+      #=> ~s({"op":"create_image","payload":{"data":"AQID","handle":"logo"},"session":"","type":"image_op"}) <> "\\n"
   """
   @spec encode_image_op(
           op :: String.t(),
@@ -166,7 +166,7 @@ defmodule Plushie.Protocol.Encode do
         ) :: iodata()
   def encode_image_op(op, payload, format \\ :msgpack) do
     payload = encode_binary_fields(payload, format)
-    serialize(Map.merge(%{type: "image_op", op: op}, payload), format)
+    serialize(%{type: "image_op", op: op, payload: payload}, format)
   end
 
   @doc """
@@ -206,42 +206,53 @@ defmodule Plushie.Protocol.Encode do
   @doc """
   Encodes a window lifecycle operation as a protocol message.
 
+  Uses the unified `_op` envelope: op-specific data lives under
+  `payload`; the `window_id` addressing field stays flat beside `op`.
+
   ## Example
 
       Plushie.Protocol.Encode.encode_window_op("open", "main", %{title: "My App"})
-      #=> ~s({"op":"open","session":"","settings":{"title":"My App"},"type":"window_op","window_id":"main"}) <> "\\n"
+      #=> ~s({"op":"open","payload":{"title":"My App"},"session":"","type":"window_op","window_id":"main"}) <> "\\n"
   """
   @spec encode_window_op(
           op :: String.t(),
           window_id :: String.t(),
-          settings :: map(),
+          payload :: map(),
           format :: Plushie.Protocol.format()
         ) :: iodata()
-  def encode_window_op(op, window_id, settings, format \\ :msgpack) do
-    # Binary fields in window op settings (e.g. icon_data for set_icon) need
+  def encode_window_op(op, window_id, payload, format \\ :msgpack) do
+    # Binary fields in window op payload (e.g. icon_data for set_icon) need
     # format-specific encoding, same as image ops.
-    settings = encode_binary_fields(settings, format, [:icon_data])
-    serialize(%{type: "window_op", op: op, window_id: window_id, settings: settings}, format)
+    payload = encode_binary_fields(payload, format, [:icon_data])
+    serialize(%{type: "window_op", op: op, window_id: window_id, payload: payload}, format)
   end
 
-  @doc "Encodes a system-wide operation as a protocol message."
+  @doc """
+  Encodes a system-wide operation as a protocol message.
+
+  Uses the unified `_op` envelope: op-specific data lives under `payload`.
+  """
   @spec encode_system_op(
           op :: String.t(),
-          settings :: map(),
+          payload :: map(),
           format :: Plushie.Protocol.format()
         ) :: iodata()
-  def encode_system_op(op, settings, format \\ :msgpack) do
-    serialize(%{type: "system_op", op: op, settings: settings}, format)
+  def encode_system_op(op, payload, format \\ :msgpack) do
+    serialize(%{type: "system_op", op: op, payload: payload}, format)
   end
 
-  @doc "Encodes a system-wide query as a protocol message."
+  @doc """
+  Encodes a system-wide query as a protocol message.
+
+  Uses the unified `_op` envelope: query-specific data lives under `payload`.
+  """
   @spec encode_system_query(
           op :: String.t(),
-          settings :: map(),
+          payload :: map(),
           format :: Plushie.Protocol.format()
         ) :: iodata()
-  def encode_system_query(op, settings, format \\ :msgpack) do
-    serialize(%{type: "system_query", op: op, settings: settings}, format)
+  def encode_system_query(op, payload, format \\ :msgpack) do
+    serialize(%{type: "system_query", op: op, payload: payload}, format)
   end
 
   @doc """

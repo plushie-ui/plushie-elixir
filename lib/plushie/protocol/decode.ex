@@ -214,17 +214,17 @@ defmodule Plushie.Protocol.Decode do
          "type" => "window_op",
          "op" => op,
          "window_id" => window_id,
-         "settings" => settings
+         "payload" => payload
        }) do
-    {:window_op, op, window_id, settings}
+    {:window_op, op, window_id, payload}
   end
 
-  defp dispatch(%{"type" => "system_op", "op" => op, "settings" => settings}) do
-    {:system_op, op, settings}
+  defp dispatch(%{"type" => "system_op", "op" => op, "payload" => payload}) do
+    {:system_op, op, payload}
   end
 
-  defp dispatch(%{"type" => "system_query", "op" => op, "settings" => settings}) do
-    {:system_query, op, settings}
+  defp dispatch(%{"type" => "system_query", "op" => op, "payload" => payload}) do
+    {:system_query, op, payload}
   end
 
   # -- Widget events --
@@ -1348,8 +1348,8 @@ defmodule Plushie.Protocol.Decode do
 
   # -- Outbound command messages (for diagnostics / parity tests) --
 
-  defp dispatch(%{"type" => "image_op", "op" => op} = msg) do
-    {:image_op, op, Map.drop(msg, ["type", "op", "session"])}
+  defp dispatch(%{"type" => "image_op", "op" => op, "payload" => payload}) do
+    {:image_op, op, payload}
   end
 
   defp dispatch(%{"type" => "command", "id" => id, "family" => family} = msg) do

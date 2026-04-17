@@ -81,8 +81,8 @@ defmodule Plushie.CommandImageTest do
       decoded = Jason.decode!(encoded)
       assert decoded["type"] == "image_op"
       assert decoded["op"] == "create_image"
-      assert decoded["handle"] == "img"
-      assert decoded["data"] == Base.encode64(raw)
+      assert decoded["payload"]["handle"] == "img"
+      assert decoded["payload"]["data"] == Base.encode64(raw)
     end
 
     test "base64-encodes the pixels field" do
@@ -96,9 +96,9 @@ defmodule Plushie.CommandImageTest do
         )
 
       decoded = Jason.decode!(encoded)
-      assert decoded["pixels"] == Base.encode64(pixels)
-      assert decoded["width"] == 1
-      assert decoded["height"] == 1
+      assert decoded["payload"]["pixels"] == Base.encode64(pixels)
+      assert decoded["payload"]["width"] == 1
+      assert decoded["payload"]["height"] == 1
     end
   end
 
@@ -111,9 +111,9 @@ defmodule Plushie.CommandImageTest do
       {:ok, decoded} = Msgpax.unpack(encoded)
       assert decoded["type"] == "image_op"
       assert decoded["op"] == "create_image"
-      assert decoded["handle"] == "img"
+      assert decoded["payload"]["handle"] == "img"
       # Msgpax.Bin round-trips as raw binary
-      assert decoded["data"] == raw
+      assert decoded["payload"]["data"] == raw
     end
 
     test "wraps pixels field in Msgpax.Bin" do
@@ -127,7 +127,7 @@ defmodule Plushie.CommandImageTest do
         )
 
       {:ok, decoded} = Msgpax.unpack(encoded)
-      assert decoded["pixels"] == pixels
+      assert decoded["payload"]["pixels"] == pixels
     end
 
     test "delete_image has no binary fields to encode" do
@@ -136,7 +136,7 @@ defmodule Plushie.CommandImageTest do
       {:ok, decoded} = Msgpax.unpack(encoded)
       assert decoded["type"] == "image_op"
       assert decoded["op"] == "delete_image"
-      assert decoded["handle"] == "gone"
+      assert decoded["payload"]["handle"] == "gone"
     end
   end
 

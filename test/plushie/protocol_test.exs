@@ -778,20 +778,20 @@ defmodule Plushie.ProtocolTest do
       assert parsed["type"] == "window_op"
     end
 
-    test "includes op, window_id, and settings fields" do
+    test "includes op, window_id, and payload fields" do
       result = Protocol.encode_window_op("close", "settings", %{}, :json)
       parsed = decode_json!(result)
       assert parsed["op"] == "close"
       assert parsed["window_id"] == "settings"
-      assert parsed["settings"] == %{}
+      assert parsed["payload"] == %{}
     end
 
-    test "settings map is preserved" do
-      settings = %{title: "Preferences", width: 800, height: 600}
-      result = Protocol.encode_window_op("open", "prefs", settings, :json)
+    test "payload map is preserved" do
+      payload = %{title: "Preferences", width: 800, height: 600}
+      result = Protocol.encode_window_op("open", "prefs", payload, :json)
       parsed = decode_json!(result)
-      assert parsed["settings"]["title"] == "Preferences"
-      assert parsed["settings"]["width"] == 800
+      assert parsed["payload"]["title"] == "Preferences"
+      assert parsed["payload"]["width"] == 800
     end
 
     test "output ends with a trailing newline" do
@@ -815,7 +815,7 @@ defmodule Plushie.ProtocolTest do
       assert {:ok, decoded} = Jason.decode(String.trim_trailing(json, "\n"))
       assert decoded["type"] == "window_op"
       assert decoded["op"] == "set_icon"
-      assert Base.decode64!(decoded["settings"]["icon_data"]) == rgba
+      assert Base.decode64!(decoded["payload"]["icon_data"]) == rgba
     end
 
     test "encodes raw icon_data as native binary in msgpack mode" do
@@ -833,7 +833,7 @@ defmodule Plushie.ProtocolTest do
       assert decoded["type"] == "window_op"
       assert decoded["op"] == "set_icon"
       # msgpack native binary roundtrips back to raw binary
-      assert decoded["settings"]["icon_data"] == rgba
+      assert decoded["payload"]["icon_data"] == rgba
     end
   end
 

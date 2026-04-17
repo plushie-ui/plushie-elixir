@@ -221,7 +221,7 @@ defmodule Plushie.Protocol do
   ## Example
 
       Plushie.Protocol.encode_image_op("create_image", %{handle: "logo", data: <<1, 2, 3>>}, :json)
-      #=> ~s({"data":"AQID","handle":"logo","op":"create_image","session":"","type":"image_op"}) <> "\\n"
+      #=> ~s({"op":"create_image","payload":{"data":"AQID","handle":"logo"},"session":"","type":"image_op"}) <> "\\n"
   """
   @spec encode_image_op(op :: String.t(), payload :: map(), format :: format()) :: iodata()
   defdelegate encode_image_op(op, payload, format \\ :msgpack), to: Plushie.Protocol.Encode
@@ -255,27 +255,38 @@ defmodule Plushie.Protocol do
   @doc """
   Encodes a window lifecycle operation as a protocol message.
 
+  Uses the unified `_op` envelope: op-specific data lives under
+  `payload`; the `window_id` addressing field stays flat beside `op`.
+
   ## Example
 
       Plushie.Protocol.encode_window_op("open", "main", %{title: "My App"}, :json)
-      #=> ~s({"op":"open","session":"","settings":{"title":"My App"},"type":"window_op","window_id":"main"}) <> "\\n"
+      #=> ~s({"op":"open","payload":{"title":"My App"},"session":"","type":"window_op","window_id":"main"}) <> "\\n"
   """
   @spec encode_window_op(
           op :: String.t(),
           window_id :: String.t(),
-          settings :: map(),
+          payload :: map(),
           format :: format()
         ) :: iodata()
-  defdelegate encode_window_op(op, window_id, settings, format \\ :msgpack),
+  defdelegate encode_window_op(op, window_id, payload, format \\ :msgpack),
     to: Plushie.Protocol.Encode
 
-  @doc "Encodes a system-wide operation as a protocol message."
-  @spec encode_system_op(op :: String.t(), settings :: map(), format :: format()) :: iodata()
-  defdelegate encode_system_op(op, settings, format \\ :msgpack), to: Plushie.Protocol.Encode
+  @doc """
+  Encodes a system-wide operation as a protocol message.
 
-  @doc "Encodes a system-wide query as a protocol message."
-  @spec encode_system_query(op :: String.t(), settings :: map(), format :: format()) :: iodata()
-  defdelegate encode_system_query(op, settings, format \\ :msgpack),
+  Uses the unified `_op` envelope: op-specific data lives under `payload`.
+  """
+  @spec encode_system_op(op :: String.t(), payload :: map(), format :: format()) :: iodata()
+  defdelegate encode_system_op(op, payload, format \\ :msgpack), to: Plushie.Protocol.Encode
+
+  @doc """
+  Encodes a system-wide query as a protocol message.
+
+  Uses the unified `_op` envelope: query-specific data lives under `payload`.
+  """
+  @spec encode_system_query(op :: String.t(), payload :: map(), format :: format()) :: iodata()
+  defdelegate encode_system_query(op, payload, format \\ :msgpack),
     to: Plushie.Protocol.Encode
 
   @doc """
