@@ -134,7 +134,7 @@ messages and dispatches them to typed structs:
 | `interact_step` | `{:interact_step, id, events}` | Test backend processes |
 | `interact_response` | `{:interact_response, id, events}` | Test backend resolves |
 | `screenshot_response` | `{:screenshot_response, data}` | `update/2` as raw tuple |
-| `effect_stub_registered` | `{:effect_stub_ack, kind}` | Runtime resolves pending stub call |
+| `effect_stub_register_ack` | `{:effect_stub_ack, kind}` | Runtime resolves pending stub call |
 | `session_error` | `{:session_error, data}` | Session pool handles |
 | `session_closed` | `{:session_closed, data}` | Session pool handles |
 

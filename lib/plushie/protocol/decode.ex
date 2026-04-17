@@ -1330,7 +1330,7 @@ defmodule Plushie.Protocol.Decode do
   # -- Effect stub ack responses --
 
   defp dispatch(%{"type" => type, "kind" => kind})
-       when type in ["effect_stub_registered", "effect_stub_unregistered"] do
+       when type in ["effect_stub_register_ack", "effect_stub_unregister_ack"] do
     {:effect_stub_ack, kind}
   end
 

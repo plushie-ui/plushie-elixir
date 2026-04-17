@@ -211,7 +211,7 @@ defmodule Plushie.Test.SessionPool.Windowed do
   end
 
   defp dispatch_response(session_id, %{"type" => type} = msg, session)
-       when type in ["effect_stub_registered", "effect_stub_unregistered"] do
+       when type in ["effect_stub_register_ack", "effect_stub_unregister_ack"] do
     send(session.owner_pid, {:plushie_pool_event, session_id, msg})
     session
   end
