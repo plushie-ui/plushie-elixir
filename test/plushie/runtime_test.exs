@@ -542,7 +542,7 @@ defmodule Plushie.RuntimeTest do
         def init(_opts), do: %{result: nil}
 
         def update(model, %WidgetEvent{type: :click, id: "go"}) do
-          cmd = Plushie.Command.done(:raw_value, fn val -> {:transformed, val} end)
+          cmd = Plushie.Command.dispatch(:raw_value, fn val -> {:transformed, val} end)
           {model, cmd}
         end
 

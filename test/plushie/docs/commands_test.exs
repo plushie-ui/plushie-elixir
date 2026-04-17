@@ -41,11 +41,11 @@ defmodule Plushie.Docs.CommandsTest do
     assert %Command{type: :cancel, payload: %{tag: :file_import}} = cmd
   end
 
-  # -- command.done -----------------------------------------------------------
+  # -- command.dispatch -------------------------------------------------------
 
-  test "commands_done_construct_test" do
-    cmd = Command.done(:defaults, fn v -> {:config_loaded, v} end)
-    assert %Command{type: :done, payload: %{value: :defaults}} = cmd
+  test "commands_dispatch_construct_test" do
+    cmd = Command.dispatch(:defaults, fn v -> {:config_loaded, v} end)
+    assert %Command{type: :dispatch, payload: %{value: :defaults}} = cmd
   end
 
   # -- command.exit -----------------------------------------------------------
@@ -218,13 +218,13 @@ defmodule Plushie.Docs.CommandsTest do
     assert payload.family == "write"
   end
 
-  test "commands_widget_commands_construct_test" do
+  test "commands_widget_batch_construct_test" do
     cmds = [
       {"term-1", "write", %{data: "line1"}},
       {"log-1", "append", %{line: "entry"}}
     ]
 
-    cmd = Command.widget_commands(cmds)
+    cmd = Command.widget_batch(cmds)
     assert %Command{type: :commands, payload: %{commands: ^cmds}} = cmd
   end
 

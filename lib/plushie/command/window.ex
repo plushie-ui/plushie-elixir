@@ -19,7 +19,7 @@ defmodule Plushie.Command.Window do
   ## Focus and interaction
 
   `focus_window/1`, `drag_window/1`, `drag_resize_window/2`,
-  `request_user_attention/2`, `show_system_menu/1`
+  `request_attention/2`, `show_system_menu/1`
 
   ## Input
 
@@ -166,9 +166,9 @@ defmodule Plushie.Command.Window do
   end
 
   @doc "Request user attention for a window. Urgency can be :informational or :critical."
-  @spec request_user_attention(window_id :: Command.window_id(), urgency :: atom() | nil) ::
+  @spec request_attention(window_id :: Command.window_id(), urgency :: atom() | nil) ::
           Command.t()
-  def request_user_attention(window_id, urgency \\ nil) do
+  def request_attention(window_id, urgency \\ nil) do
     %Command{
       type: :window_op,
       payload: %{

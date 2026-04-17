@@ -74,15 +74,15 @@ defmodule Plushie.Automation.FileTest do
       assert script.header.backend == :mock
     end
 
-    test "returns error for missing app field" do
+    test "missing app field parses successfully with nil app" do
       input = """
       viewport: 800x600
       -----
       click "#btn"
       """
 
-      assert {:error, msg} = File.parse(input)
-      assert msg =~ "app"
+      assert {:ok, script} = File.parse(input)
+      assert script.header.app == nil
     end
 
     test "returns error for missing separator" do

@@ -96,7 +96,7 @@ defmodule Plushie.App do
 
   Most events are `Plushie.Event` structs from the renderer and
   subscriptions. The `term()` case covers bare values delivered by
-  `Command.send_after/2` and `Command.done/2`.
+  `Command.send_after/2` and `Command.dispatch/2`.
   """
   @type event :: Plushie.Event.t() | term()
 

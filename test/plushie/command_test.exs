@@ -38,27 +38,27 @@ defmodule Plushie.CommandTest do
     end
   end
 
-  describe "done/2" do
-    test "returns a Command with type :done" do
-      cmd = Command.done(:hello, fn val -> {:got, val} end)
-      assert cmd.type == :done
+  describe "dispatch/2" do
+    test "returns a Command with type :dispatch" do
+      cmd = Command.dispatch(:hello, fn val -> {:got, val} end)
+      assert cmd.type == :dispatch
     end
 
     test "stores the value and mapper in the payload" do
       mapper = fn val -> {:wrapped, val} end
-      cmd = Command.done(42, mapper)
+      cmd = Command.dispatch(42, mapper)
       assert cmd.payload.value == 42
       assert cmd.payload.mapper == mapper
     end
 
     test "mapper is called with the provided value" do
-      cmd = Command.done(:input, fn val -> {:mapped, val} end)
+      cmd = Command.dispatch(:input, fn val -> {:mapped, val} end)
       assert cmd.payload.mapper.(cmd.payload.value) == {:mapped, :input}
     end
 
     test "raises when mapper is not a 1-arity function" do
       assert_raise FunctionClauseError, fn ->
-        Command.done(:val, fn _a, _b -> :nope end)
+        Command.dispatch(:val, fn _a, _b -> :nope end)
       end
     end
   end
@@ -314,17 +314,17 @@ defmodule Plushie.CommandTest do
     end
   end
 
-  describe "widget_commands/1" do
+  describe "widget_batch/1" do
     test "returns a Command with type :commands" do
       cmds = [{"n1", "op1", %{a: 1}}, {"n2", "op2", %{b: 2}}]
-      cmd = Command.widget_commands(cmds)
+      cmd = Command.widget_batch(cmds)
       assert cmd.type == :commands
       assert cmd.payload.commands == cmds
     end
 
     test "raises when given a non-list" do
       assert_raise FunctionClauseError, fn ->
-        Command.widget_commands("not a list")
+        Command.widget_batch("not a list")
       end
     end
   end

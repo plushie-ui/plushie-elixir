@@ -180,15 +180,15 @@ defmodule Plushie.CommandParityTest do
     end
   end
 
-  describe "request_user_attention/2" do
+  describe "request_attention/2" do
     test "defaults to nil urgency" do
-      cmd = Command.request_user_attention("main")
+      cmd = Command.request_attention("main")
       assert cmd.payload.op == "request_attention"
       assert cmd.payload.urgency == nil
     end
 
     test "accepts urgency level" do
-      cmd = Command.request_user_attention("main", :critical)
+      cmd = Command.request_attention("main", :critical)
       assert cmd.payload.urgency == "critical"
     end
   end
@@ -305,7 +305,7 @@ defmodule Plushie.CommandParityTest do
         Command.set_window_level("w", :normal),
         Command.drag_window("w"),
         Command.drag_resize_window("w", :south),
-        Command.request_user_attention("w"),
+        Command.request_attention("w"),
         Command.screenshot("w", :tag),
         Command.set_resizable("w", true),
         Command.set_min_size("w", 1, 1),

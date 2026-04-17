@@ -17,7 +17,7 @@ defmodule Plushie.Command do
     `maximize_window/2`, `minimize_window/2`, `set_window_mode/2`,
     `toggle_maximize/1`, `toggle_decorations/1`, `focus_window/1`,
     `set_window_level/2`, `drag_window/1`, `drag_resize_window/2`,
-    `request_user_attention/2`, `screenshot/2`, `set_resizable/2`,
+    `request_attention/2`, `screenshot/2`, `set_resizable/2`,
     `set_min_size/3`, `set_max_size/3`, `enable_mouse_passthrough/1`,
     `disable_mouse_passthrough/1`, `show_system_menu/1`, `set_icon/4`,
     `set_resize_increments/3` (see `Command.Window`)
@@ -34,7 +34,7 @@ defmodule Plushie.Command do
   - **Queries**: `tree_hash/1`, `find_focused/1`
   - **Font**: `load_font/1`
   - **Accessibility**: `announce/1`
-  - **Widget commands**: `widget_command/3`, `widget_commands/1`
+  - **Widget commands**: `widget_command/3`, `widget_batch/1`
   - **Test/Headless**: `advance_frame/1`
   - **Batch**: `batch/1`
 
@@ -107,9 +107,9 @@ defmodule Plushie.Command do
   is processed. The mapper should produce an event struct that `update/2`
   handles by reading the current model at that point.
   """
-  @spec done(value :: term(), msg_fn :: (term() -> term())) :: %__MODULE__{}
-  def done(value, msg_fn) when is_function(msg_fn, 1) do
-    %__MODULE__{type: :done, payload: %{value: value, mapper: msg_fn}}
+  @spec dispatch(value :: term(), msg_fn :: (term() -> term())) :: %__MODULE__{}
+  def dispatch(value, msg_fn) when is_function(msg_fn, 1) do
+    %__MODULE__{type: :dispatch, payload: %{value: value, mapper: msg_fn}}
   end
 
   @doc """
@@ -193,7 +193,7 @@ defmodule Plushie.Command do
   defdelegate set_window_level(window_id, level), to: __MODULE__.Window
   defdelegate drag_window(window_id), to: __MODULE__.Window
   defdelegate drag_resize_window(window_id, direction), to: __MODULE__.Window
-  defdelegate request_user_attention(window_id, urgency \\ nil), to: __MODULE__.Window
+  defdelegate request_attention(window_id, urgency \\ nil), to: __MODULE__.Window
   defdelegate screenshot(window_id, tag), to: __MODULE__.Window
   defdelegate set_resizable(window_id, resizable), to: __MODULE__.Window
   defdelegate set_min_size(window_id, width, height), to: __MODULE__.Window
@@ -499,8 +499,8 @@ defmodule Plushie.Command do
   Each command in the list is a `{id, family, value}` tuple. All commands
   are applied before any resulting events are emitted.
   """
-  @spec widget_commands(commands :: [{String.t(), String.t(), term()}]) :: %__MODULE__{}
-  def widget_commands(commands) when is_list(commands) do
+  @spec widget_batch(commands :: [{String.t(), String.t(), term()}]) :: %__MODULE__{}
+  def widget_batch(commands) when is_list(commands) do
     %__MODULE__{type: :commands, payload: %{commands: commands}}
   end
 

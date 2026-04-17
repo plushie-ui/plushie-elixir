@@ -35,7 +35,7 @@ defmodule Plushie.Runtime.Commands do
   defp execute_command(%Plushie.Command{type: :none}, state), do: state
 
   defp execute_command(
-         %Plushie.Command{type: :done, payload: %{value: value, mapper: mapper}},
+         %Plushie.Command{type: :dispatch, payload: %{value: value, mapper: mapper}},
          state
        ) do
     try do
@@ -44,7 +44,7 @@ defmodule Plushie.Runtime.Commands do
     catch
       kind, reason ->
         Logger.warning(
-          "plushie runtime: Command.done mapper #{kind}: " <>
+          "plushie runtime: Command.dispatch mapper #{kind}: " <>
             Exception.format(kind, reason, __STACKTRACE__)
         )
     end

@@ -29,7 +29,7 @@ defmodule Plushie.Automation.File do
   """
 
   @type header :: %{
-          app: module(),
+          app: module() | nil,
           viewport: {non_neg_integer(), non_neg_integer()},
           theme: String.t(),
           backend: Plushie.Automation.backend_mode()
@@ -91,17 +91,18 @@ defmodule Plushie.Automation.File do
         end
       end)
 
-    case Map.fetch(fields, "app") do
-      {:ok, app_str} ->
-        app = Module.concat([app_str])
-        viewport = parse_viewport(Map.get(fields, "viewport", "800x600"))
-        theme = Map.get(fields, "theme", "dark")
-        backend = parse_backend(Map.get(fields, "backend", "mock"))
-        {:ok, %{app: app, viewport: viewport, theme: theme, backend: backend}}
+    # `app:` is optional; when present, it resolves to a module. Scripts
+    # that run against an already-started app can omit it.
+    app =
+      case Map.fetch(fields, "app") do
+        {:ok, app_str} -> Module.concat([app_str])
+        :error -> nil
+      end
 
-      :error ->
-        {:error, "header must include 'app:' field"}
-    end
+    viewport = parse_viewport(Map.get(fields, "viewport", "800x600"))
+    theme = Map.get(fields, "theme", "dark")
+    backend = parse_backend(Map.get(fields, "backend", "mock"))
+    {:ok, %{app: app, viewport: viewport, theme: theme, backend: backend}}
   end
 
   defp parse_viewport(str) do
