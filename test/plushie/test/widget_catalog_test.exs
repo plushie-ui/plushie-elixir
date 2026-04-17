@@ -82,7 +82,8 @@ defmodule Plushie.Test.WidgetCatalogTest do
 
     test "missing props defaults to empty map" do
       result = Tree.normalize(%{id: "x", type: "text"})
-      assert result.props == %{}
+      # Post-normalize auto-populates a11y.role from the widget type.
+      assert result.props == %{a11y: %{role: "label"}}
     end
 
     test "missing children defaults to empty list" do

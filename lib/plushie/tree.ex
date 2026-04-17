@@ -80,12 +80,14 @@ defmodule Plushie.Tree do
     # Synthetic root wrapper; does not create a scope boundary
     {children, _ctx} = normalize_children_with_ctx(nodes, ctx)
 
-    %{
+    tree = %{
       id: "root",
       type: "container",
       props: %{},
       children: children
     }
+
+    post_normalize(tree)
   end
 
   def normalize({:__widget_prop__, key, _value}, _widget_states) do
@@ -115,7 +117,7 @@ defmodule Plushie.Tree do
   def normalize(%{} = node, widget_states) do
     ctx = %{@default_ctx | widget_states: widget_states}
     {result, _ctx} = normalize_with_ctx(node, ctx)
-    result
+    post_normalize(result)
   end
 
   @doc false
@@ -124,7 +126,30 @@ defmodule Plushie.Tree do
           normalize_ctx()
         ) :: {tree_node(), normalize_ctx()}
   def normalize_with_caches(tree, ctx) do
-    normalize_root(tree, ctx)
+    {tree, ctx} = normalize_root(tree, ctx)
+    {post_normalize(tree), ctx}
+  end
+
+  # Second-pass rewrites that run after the tree has been fully scoped.
+  # Mirrors the Rust SDK's post-normalize pass:
+  #
+  #   - Auto-populate :a11y.role from the widget type when unset.
+  #   - Rewrite cross-widget a11y refs (:labelled_by, :described_by,
+  #     :error_message, :active_descendant, :radio_group) through the
+  #     same scope-prefix logic used for widget IDs.
+  #   - Populate implicit :a11y.radio_group with peer scoped IDs when
+  #     radios share a :group prop.
+  #   - Emit "a11y_ref_unresolved" diagnostics for refs that don't
+  #     resolve to any declared ID.
+  #   - Emit "missing_accessible_name" diagnostics for interactive
+  #     widgets that carry no accessible name.
+  @spec post_normalize(tree_node()) :: tree_node()
+  defp post_normalize(tree) do
+    declared = collect_ids(tree)
+    radio_groups = collect_radio_groups(tree)
+    rewritten = rewrite_a11y(tree, "", declared, radio_groups)
+    check_missing_accessible_name(rewritten)
+    rewritten
   end
 
   # Top-level entry point for normalize that handles nil, lists, structs,
@@ -498,6 +523,342 @@ defmodule Plushie.Tree do
   end
 
   defp accumulate_native_meta(ctx, _scoped_id, _meta), do: ctx
+
+  # ---------------------------------------------------------------------------
+  # Post-normalize a11y pass
+  # ---------------------------------------------------------------------------
+  #
+  # Runs after the first normalize pass has produced a fully scoped tree.
+  # Validates and extends a11y metadata without altering widget IDs.
+
+  # Collect every declared scoped ID in the finalized tree. Auto-IDs
+  # (children that didn't get an explicit ID) are excluded since they
+  # can't be the target of a cross-widget reference.
+  @spec collect_ids(tree_node()) :: MapSet.t()
+  defp collect_ids(node) do
+    walk_collect_ids(node, MapSet.new())
+  end
+
+  defp walk_collect_ids(%{id: id, children: children}, acc) do
+    acc =
+      if is_binary(id) and id != "" and not auto_id?(id) do
+        MapSet.put(acc, id)
+      else
+        acc
+      end
+
+    Enum.reduce(children, acc, fn child, inner -> walk_collect_ids(child, inner) end)
+  end
+
+  # Collect radio groups keyed by {scope, group_name} within the
+  # finalized tree. Used to populate implicit a11y.radio_group lists.
+  @spec collect_radio_groups(tree_node()) :: %{{String.t(), String.t()} => [String.t()]}
+  defp collect_radio_groups(root) do
+    walk_collect_radio_groups(root, "", %{})
+  end
+
+  defp walk_collect_radio_groups(
+         %{type: type, id: id, props: props, children: children},
+         scope,
+         acc
+       ) do
+    acc =
+      if type == "radio" do
+        case fetch_group_prop(props) do
+          nil -> acc
+          group -> Map.update(acc, {scope, group}, [id], fn ids -> ids ++ [id] end)
+        end
+      else
+        acc
+      end
+
+    child_scope = child_scope_of(id, type, scope)
+
+    Enum.reduce(children, acc, fn child, inner ->
+      walk_collect_radio_groups(child, child_scope, inner)
+    end)
+  end
+
+  defp fetch_group_prop(props) do
+    case Map.get(props, :group) || Map.get(props, "group") do
+      g when is_binary(g) and g != "" -> g
+      _ -> nil
+    end
+  end
+
+  # Scope string under which this node's children live. Mirrors the
+  # child-scope logic inside normalize_with_ctx/2 but works from the
+  # already-scoped node ID.
+  defp child_scope_of(id, type, scope) do
+    cond do
+      type == "window" -> "#{id}#"
+      not is_binary(id) or id == "" or auto_id?(id) -> scope
+      true -> id
+    end
+  end
+
+  # Walk the finalized tree and:
+  #   - auto-populate :a11y.role when unset
+  #   - scope-rewrite :active_descendant and :radio_group references
+  #   - populate implicit :a11y.radio_group when radios share :group
+  #   - validate all cross-widget refs and emit diagnostics
+  @spec rewrite_a11y(
+          tree_node(),
+          String.t(),
+          MapSet.t(),
+          %{{String.t(), String.t()} => [String.t()]}
+        ) :: tree_node()
+  defp rewrite_a11y(node, scope, declared, radio_groups) do
+    %{type: type, id: id, props: props, children: children} = node
+
+    child_scope = child_scope_of(id, type, scope)
+
+    children =
+      Enum.map(children, fn child ->
+        rewrite_a11y(child, child_scope, declared, radio_groups)
+      end)
+
+    a11y_in = Map.get(props, :a11y)
+    props = apply_a11y_rewrites(props, a11y_in, type, id, scope, declared, radio_groups)
+    %{node | props: props, children: children}
+  end
+
+  defp apply_a11y_rewrites(props, a11y_in, type, id, scope, declared, radio_groups) do
+    role_default = widget_type_to_role(type)
+
+    radio_ids =
+      if type == "radio" do
+        case fetch_group_prop(props) do
+          nil -> nil
+          group -> Map.get(radio_groups, {scope, group})
+        end
+      end
+
+    a11y_map = to_a11y_map(a11y_in)
+
+    needs_update? =
+      (role_default != nil and not has_role?(a11y_map)) or
+        radio_ids != nil or
+        has_any_ref?(a11y_map)
+
+    if a11y_map == nil and not needs_update? do
+      props
+    else
+      a11y_map = a11y_map || %{}
+
+      a11y_map =
+        if role_default != nil and not has_role?(a11y_map) do
+          Map.put(a11y_map, :role, role_default)
+        else
+          a11y_map
+        end
+
+      a11y_map = rewrite_single_refs(a11y_map, id, scope, declared)
+      a11y_map = rewrite_radio_group(a11y_map, id, scope, declared)
+
+      a11y_map =
+        if radio_ids != nil and not Map.has_key?(a11y_map, :radio_group) do
+          Map.put(a11y_map, :radio_group, radio_ids)
+        else
+          a11y_map
+        end
+
+      Map.put(props, :a11y, a11y_map)
+    end
+  end
+
+  # Normalize the existing a11y prop into a plain map for further processing.
+  # Accepts an A11y struct (already encoded to a map earlier), a map with
+  # atom or string keys, or nil.
+  defp to_a11y_map(nil), do: nil
+  defp to_a11y_map(%Plushie.Type.A11y{} = a11y), do: Plushie.Type.A11y.encode(a11y)
+
+  defp to_a11y_map(%{} = map) do
+    Map.new(map, fn {k, v} ->
+      {if(is_binary(k), do: String.to_atom(k), else: k), v}
+    end)
+  end
+
+  defp to_a11y_map(_), do: nil
+
+  defp has_role?(%{role: role}) when not is_nil(role), do: true
+  defp has_role?(%{"role" => role}) when not is_nil(role), do: true
+  defp has_role?(_), do: false
+
+  @a11y_single_ref_keys [:labelled_by, :described_by, :error_message, :active_descendant]
+
+  defp has_any_ref?(nil), do: false
+
+  defp has_any_ref?(a11y_map) do
+    Enum.any?(@a11y_single_ref_keys, fn k -> Map.has_key?(a11y_map, k) end) or
+      Map.has_key?(a11y_map, :radio_group)
+  end
+
+  defp rewrite_single_refs(a11y_map, owner_id, scope, declared) do
+    Enum.reduce(@a11y_single_ref_keys, a11y_map, fn key, acc ->
+      case Map.get(acc, key) do
+        nil ->
+          acc
+
+        ref when is_binary(ref) and ref != "" ->
+          rewritten = scope_ref(ref, scope)
+          maybe_warn_unresolved(rewritten, ref, key, owner_id, declared)
+          Map.put(acc, key, rewritten)
+
+        _ ->
+          acc
+      end
+    end)
+  end
+
+  defp rewrite_radio_group(a11y_map, owner_id, scope, declared) do
+    case Map.get(a11y_map, :radio_group) do
+      nil ->
+        a11y_map
+
+      refs when is_list(refs) ->
+        rewritten =
+          Enum.map(refs, fn
+            ref when is_binary(ref) and ref != "" ->
+              r = scope_ref(ref, scope)
+              maybe_warn_unresolved(r, ref, :radio_group, owner_id, declared)
+              r
+
+            other ->
+              other
+          end)
+
+        Map.put(a11y_map, :radio_group, rewritten)
+
+      _ ->
+        a11y_map
+    end
+  end
+
+  defp maybe_warn_unresolved(rewritten, original, key, owner_id, declared) do
+    unless MapSet.member?(declared, rewritten) do
+      emit_diagnostic("a11y_ref_unresolved", %{
+        key: key,
+        ref: original,
+        id: owner_id,
+        message:
+          "a11y.#{key} \"#{original}\" on #{inspect(owner_id)} " <>
+            "does not match any declared widget ID"
+      })
+    end
+  end
+
+  # Widget types that must carry an accessible name. Matches the Rust
+  # SDK's missing_accessible_name check.
+  @named_interactive_types ~w(button toggler checkbox pointer_area)
+
+  defp check_missing_accessible_name(tree) do
+    walk_missing_accessible_name(tree)
+  end
+
+  defp walk_missing_accessible_name(%{type: type, id: id, props: props, children: children}) do
+    if type in @named_interactive_types and not has_accessible_name?(props, children) do
+      emit_diagnostic("missing_accessible_name", %{
+        type: type,
+        id: id,
+        message:
+          "missing_accessible_name: #{type} #{inspect(id)} has no label, " <>
+            "text child, a11y.label, or a11y.labelled_by; screen readers " <>
+            "will announce no name"
+      })
+    end
+
+    Enum.each(children, &walk_missing_accessible_name/1)
+  end
+
+  defp has_accessible_name?(props, children) do
+    label = Map.get(props, :label) || Map.get(props, "label")
+
+    cond do
+      is_binary(label) and label != "" ->
+        true
+
+      has_a11y_name?(Map.get(props, :a11y)) ->
+        true
+
+      text_descendant?(children) ->
+        true
+
+      true ->
+        false
+    end
+  end
+
+  defp has_a11y_name?(nil), do: false
+
+  defp has_a11y_name?(%Plushie.Type.A11y{label: label, labelled_by: lb}),
+    do: (is_binary(label) and label != "") or (is_binary(lb) and lb != "")
+
+  defp has_a11y_name?(%{} = a11y) do
+    label = Map.get(a11y, :label) || Map.get(a11y, "label")
+    lb = Map.get(a11y, :labelled_by) || Map.get(a11y, "labelled_by")
+
+    (is_binary(label) and label != "") or (is_binary(lb) and lb != "")
+  end
+
+  defp has_a11y_name?(_), do: false
+
+  defp text_descendant?([]), do: false
+
+  defp text_descendant?([child | rest]) do
+    case child do
+      %{type: "text", props: props} ->
+        content = Map.get(props, :content) || Map.get(props, "content")
+        (is_binary(content) and content != "") or text_descendant?(rest)
+
+      %{children: grandkids} ->
+        text_descendant?(grandkids) or text_descendant?(rest)
+
+      _ ->
+        text_descendant?(rest)
+    end
+  end
+
+  defp emit_diagnostic(code, metadata) do
+    :telemetry.execute(
+      [:plushie, :diagnostic],
+      %{count: 1},
+      Map.merge(%{level: "warning", code: code}, metadata)
+    )
+  end
+
+  # Widget-type -> accessible-role map. Mirrors the Rust SDK's
+  # widget_type_to_role so cross-SDK tree hashes stay stable. Widgets
+  # whose role is context-dependent are omitted so the author's intent
+  # (or the fork default) wins. Returns a wire-ready string because the
+  # a11y prop is already encoded to its wire form at this stage.
+  defp widget_type_to_role("button"), do: "button"
+  defp widget_type_to_role("checkbox"), do: "check_box"
+  defp widget_type_to_role("toggler"), do: "switch"
+  defp widget_type_to_role("radio"), do: "radio_button"
+  defp widget_type_to_role("text_input"), do: "text_input"
+  defp widget_type_to_role("text_editor"), do: "multiline_text_input"
+  defp widget_type_to_role("text"), do: "label"
+  defp widget_type_to_role("rich_text"), do: "label"
+  defp widget_type_to_role("slider"), do: "slider"
+  defp widget_type_to_role("vertical_slider"), do: "slider"
+  defp widget_type_to_role("pick_list"), do: "combo_box"
+  defp widget_type_to_role("combo_box"), do: "combo_box"
+  defp widget_type_to_role("progress_bar"), do: "progress_indicator"
+  defp widget_type_to_role("image"), do: "image"
+  defp widget_type_to_role("svg"), do: "image"
+  defp widget_type_to_role("qr_code"), do: "image"
+  defp widget_type_to_role("scrollable"), do: "scroll_view"
+  defp widget_type_to_role("container"), do: "generic_container"
+  defp widget_type_to_role("column"), do: "generic_container"
+  defp widget_type_to_role("row"), do: "generic_container"
+  defp widget_type_to_role("stack"), do: "generic_container"
+  defp widget_type_to_role("grid"), do: "generic_container"
+  defp widget_type_to_role("pane_grid"), do: "generic_container"
+  defp widget_type_to_role("table"), do: "table"
+  defp widget_type_to_role("canvas"), do: "canvas"
+  defp widget_type_to_role("rule"), do: "separator"
+  defp widget_type_to_role(_), do: nil
 
   # Resolve a11y ID references (labelled_by, described_by, error_message)
   # relative to the current scope. These fields reference sibling widgets

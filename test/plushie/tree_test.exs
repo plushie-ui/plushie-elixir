@@ -73,7 +73,8 @@ defmodule Plushie.TreeTest do
 
     test "missing props defaults to empty map" do
       result = Tree.normalize(%{id: "a", type: "text"})
-      assert result.props == %{}
+      # Post-normalize auto-populates a11y.role from the widget type.
+      assert result.props == %{a11y: %{role: "label"}}
     end
 
     test "missing children defaults to empty list" do
@@ -1103,7 +1104,8 @@ defmodule Plushie.TreeTest do
 
       result = Tree.normalize(canvas)
       assert result.children == []
-      assert result.props == %{background: "white"}
+      # Post-normalize auto-populates a11y.role from the widget type.
+      assert result.props == %{background: "white", a11y: %{role: "canvas"}}
     end
 
     test "diff detects individual shape changes via layer children" do
@@ -1188,6 +1190,154 @@ defmodule Plushie.TreeTest do
       inserts = Enum.filter(ops, &(&1.op == "insert_child"))
       assert length(inserts) == 1
       assert hd(inserts).node.type == "circle"
+    end
+  end
+
+  describe "post-normalize a11y" do
+    test "auto-populates a11y.role from the widget type" do
+      tree = %{
+        id: "root",
+        type: "column",
+        props: %{},
+        children: [%{id: "save", type: "button", props: %{}, children: []}]
+      }
+
+      result = Tree.normalize(tree)
+      [btn] = result.children
+      assert btn.props.a11y.role == "button"
+    end
+
+    test "explicit a11y.role wins over inferred default" do
+      tree = %{
+        id: "root",
+        type: "column",
+        props: %{},
+        children: [
+          %{id: "save", type: "button", props: %{a11y: %{role: "link"}}, children: []}
+        ]
+      }
+
+      result = Tree.normalize(tree)
+      [btn] = result.children
+      assert btn.props.a11y.role == "link"
+    end
+
+    test "scope-rewrites a11y.active_descendant inside a scoped container" do
+      tree = %{
+        id: "form",
+        type: "container",
+        props: %{},
+        children: [
+          %{
+            id: "menu",
+            type: "container",
+            props: %{a11y: %{active_descendant: "item"}},
+            children: []
+          },
+          %{id: "item", type: "text", props: %{content: "Hello"}, children: []}
+        ]
+      }
+
+      result = Tree.normalize(tree)
+      [menu, _item] = result.children
+      assert menu.props.a11y.active_descendant == "form/item"
+    end
+
+    test "scope-rewrites a11y.radio_group peers" do
+      tree = %{
+        id: "form",
+        type: "container",
+        props: %{},
+        children: [
+          %{id: "r1", type: "radio", props: %{a11y: %{radio_group: ["r2", "r3"]}}, children: []},
+          %{id: "r2", type: "radio", props: %{}, children: []},
+          %{id: "r3", type: "radio", props: %{}, children: []}
+        ]
+      }
+
+      result = Tree.normalize(tree)
+      [r1, _r2, _r3] = result.children
+      assert r1.props.a11y.radio_group == ["form/r2", "form/r3"]
+    end
+
+    test "populates implicit a11y.radio_group from shared :group prop" do
+      tree = %{
+        id: "form",
+        type: "container",
+        props: %{},
+        children: [
+          %{id: "r1", type: "radio", props: %{group: "flavor"}, children: []},
+          %{id: "r2", type: "radio", props: %{group: "flavor"}, children: []}
+        ]
+      }
+
+      result = Tree.normalize(tree)
+      [r1, r2] = result.children
+      assert r1.props.a11y.radio_group == ["form/r1", "form/r2"]
+      assert r2.props.a11y.radio_group == ["form/r1", "form/r2"]
+    end
+
+    test "emits a11y_ref_unresolved diagnostic for dangling reference" do
+      Plushie.Test.DiagnosticCollector.attach()
+      on_exit(fn -> Plushie.Test.DiagnosticCollector.detach() end)
+
+      tree = %{
+        id: "form",
+        type: "container",
+        props: %{},
+        children: [
+          %{
+            id: "email",
+            type: "text_input",
+            props: %{a11y: %{labelled_by: "missing"}},
+            children: []
+          }
+        ]
+      }
+
+      Tree.normalize(tree)
+
+      diagnostics = Plushie.Test.DiagnosticCollector.flush()
+      assert Enum.any?(diagnostics, &(&1.code == "a11y_ref_unresolved"))
+    end
+
+    test "emits missing_accessible_name for icon-only button" do
+      Plushie.Test.DiagnosticCollector.attach()
+      on_exit(fn -> Plushie.Test.DiagnosticCollector.detach() end)
+
+      tree = %{
+        id: "root",
+        type: "column",
+        props: %{},
+        children: [%{id: "save", type: "button", props: %{}, children: []}]
+      }
+
+      Tree.normalize(tree)
+
+      diagnostics = Plushie.Test.DiagnosticCollector.flush()
+
+      assert Enum.any?(diagnostics, fn d ->
+               d.code == "missing_accessible_name" and d.id == "root/save"
+             end)
+    end
+
+    test "button with label prop does not trigger missing_accessible_name" do
+      Plushie.Test.DiagnosticCollector.attach()
+      on_exit(fn -> Plushie.Test.DiagnosticCollector.detach() end)
+
+      tree = %{
+        id: "root",
+        type: "column",
+        props: %{},
+        children: [
+          %{id: "save", type: "button", props: %{label: "Save"}, children: []}
+        ]
+      }
+
+      Tree.normalize(tree)
+
+      diagnostics = Plushie.Test.DiagnosticCollector.flush()
+      refute Enum.any?(diagnostics, &(&1.code == "missing_accessible_name"))
     end
   end
 end
