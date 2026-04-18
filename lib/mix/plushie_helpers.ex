@@ -106,6 +106,122 @@ defmodule Mix.PlushieHelpers do
     end
   end
 
+  @doc """
+  Resolves how to invoke `cargo-plushie` for renderer workspace generation.
+
+  Returns `{command, args_prefix}`. Callers append their own cargo-plushie
+  subcommand and flags after the prefix, for example:
+
+      {cmd, prefix} = Mix.PlushieHelpers.resolve_cargo_plushie()
+      args = prefix ++ ["build", "--manifest-path", path]
+      System.cmd(cmd, args)
+
+  Resolution:
+
+  1. When `PLUSHIE_RUST_SOURCE_PATH` is set, run the tool straight from
+     the source checkout via `cargo run -p cargo-plushie --release`.
+     This always works while cargo-plushie is still unpublished and
+     keeps the tool in lockstep with the local source tree.
+  2. Otherwise, use `cargo-plushie` from PATH if installed at the exact
+     version this SDK targets (`plushie_rust_version/0`).
+  3. Raises with an install instruction if cargo-plushie is absent or
+     its version does not match.
+  """
+  @spec resolve_cargo_plushie() :: {String.t(), [String.t()]}
+  def resolve_cargo_plushie do
+    case source_path() do
+      nil ->
+        resolve_cargo_plushie_from_path()
+
+      source ->
+        manifest = Path.join(Path.expand(source), "Cargo.toml")
+
+        unless File.exists?(manifest) do
+          Mix.raise("""
+          PLUSHIE_RUST_SOURCE_PATH points to #{inspect(source)} but no \
+          Cargo.toml was found at #{manifest}. Fix the path or unset the \
+          variable to use the registry-installed cargo-plushie.
+          """)
+        end
+
+        {"cargo",
+         ["run", "--manifest-path", manifest, "-p", "cargo-plushie", "--release", "--quiet", "--"]}
+    end
+  end
+
+  # Resolves via a crates.io-installed `cargo-plushie` on PATH.
+  # Extracted for clean injection in tests.
+  @doc false
+  @spec resolve_cargo_plushie_from_path() :: {String.t(), [String.t()]}
+  def resolve_cargo_plushie_from_path do
+    case installed_cargo_plushie_version() do
+      {:ok, version} ->
+        expected = Plushie.Binary.plushie_rust_version()
+
+        if version == expected do
+          {"cargo-plushie", []}
+        else
+          Mix.raise(cargo_plushie_install_message(expected, {:mismatch, version}))
+        end
+
+      :error ->
+        Mix.raise(cargo_plushie_install_message(Plushie.Binary.plushie_rust_version(), :missing))
+    end
+  end
+
+  # Reads `cargo-plushie --version` and extracts the semver string. Test
+  # hook: swap out via `:persistent_term.put({__MODULE__, :cargo_plushie_version}, value)`.
+  # The persistent_term value, if set, must be `{:ok, "x.y.z"}` or `:error`.
+  @spec installed_cargo_plushie_version() :: {:ok, String.t()} | :error
+  defp installed_cargo_plushie_version do
+    case :persistent_term.get({__MODULE__, :cargo_plushie_version}, :unset) do
+      :unset -> probe_cargo_plushie_version()
+      override -> override
+    end
+  end
+
+  @spec probe_cargo_plushie_version() :: {:ok, String.t()} | :error
+  defp probe_cargo_plushie_version do
+    if System.find_executable("cargo-plushie") do
+      case System.cmd("cargo-plushie", ["--version"], stderr_to_stdout: true) do
+        {output, 0} ->
+          case Regex.run(~r/(\d+\.\d+\.\d+)/, output) do
+            [_, version] -> {:ok, version}
+            _ -> :error
+          end
+
+        _ ->
+          :error
+      end
+    else
+      :error
+    end
+  rescue
+    ErlangError -> :error
+  end
+
+  @spec cargo_plushie_install_message(String.t(), :missing | {:mismatch, String.t()}) ::
+          String.t()
+  defp cargo_plushie_install_message(expected, state) do
+    prefix =
+      case state do
+        :missing ->
+          "cargo-plushie is not installed."
+
+        {:mismatch, found} ->
+          "cargo-plushie version mismatch: installed #{found}, expected #{expected}."
+      end
+
+    """
+    error: #{prefix}
+
+      Install the matching version:
+        cargo install cargo-plushie --version #{expected} --locked
+
+      Or set PLUSHIE_RUST_SOURCE_PATH to a plushie-rust checkout for local dev.\
+    """
+  end
+
   @doc "Validates that a module is loaded. Raises with a clear message if not."
   @spec validate_module!(module :: module()) :: :ok
   def validate_module!(mod) do
