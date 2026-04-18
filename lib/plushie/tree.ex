@@ -658,100 +658,80 @@ defmodule Plushie.Tree do
          radio_groups,
          tooltip_parent_id
        ) do
-    role_default = widget_type_to_role(type)
-
-    radio_ids =
-      if type == "radio" do
-        case fetch_group_prop(props) do
-          nil -> nil
-          group -> Map.get(radio_groups, {scope, group})
-        end
-      end
-
-    placeholder_desc = placeholder_description(type, props)
-    required_prop = required_from_props_for(type, props)
-    {invalid_prop, error_text} = invalid_from_props_for(type, props)
-
+    defaults = a11y_defaults(type, props, scope, radio_groups, tooltip_parent_id)
     a11y_map = to_a11y_map(a11y_in)
 
-    needs_update? =
-      (role_default != nil and not has_role?(a11y_map)) or
-        radio_ids != nil or
-        has_any_ref?(a11y_map) or
-        placeholder_desc != nil or
-        required_prop != nil or
-        invalid_prop != nil or
-        error_text != nil or
-        tooltip_parent_id != nil
-
-    if a11y_map == nil and not needs_update? do
+    if a11y_map == nil and not a11y_needs_update?(a11y_map, defaults) do
       props
     else
-      a11y_map = a11y_map || %{}
-
       a11y_map =
-        if role_default != nil and not has_role?(a11y_map) do
-          Map.put(a11y_map, :role, role_default)
-        else
-          a11y_map
-        end
-
-      a11y_map = rewrite_single_refs(a11y_map, id, scope, declared)
-      a11y_map = rewrite_radio_group(a11y_map, id, scope, declared)
-
-      a11y_map =
-        if radio_ids != nil and not Map.has_key?(a11y_map, :radio_group) do
-          Map.put(a11y_map, :radio_group, radio_ids)
-        else
-          a11y_map
-        end
-
-      a11y_map =
-        if placeholder_desc != nil and
-             not Map.has_key?(a11y_map, :description) and
-             not Map.has_key?(a11y_map, "description") do
-          Map.put(a11y_map, :description, placeholder_desc)
-        else
-          a11y_map
-        end
-
-      a11y_map =
-        if required_prop == true and
-             not Map.has_key?(a11y_map, :required) and
-             not Map.has_key?(a11y_map, "required") do
-          Map.put(a11y_map, :required, true)
-        else
-          a11y_map
-        end
-
-      a11y_map =
-        if invalid_prop != nil and
-             not Map.has_key?(a11y_map, :invalid) and
-             not Map.has_key?(a11y_map, "invalid") do
-          Map.put(a11y_map, :invalid, invalid_prop)
-        else
-          a11y_map
-        end
-
-      a11y_map =
-        if error_text != nil and
-             not Map.has_key?(a11y_map, :error_message) and
-             not Map.has_key?(a11y_map, "error_message") do
-          Map.put(a11y_map, :error_message, error_text)
-        else
-          a11y_map
-        end
-
-      a11y_map =
-        if tooltip_parent_id != nil and
-             not Map.has_key?(a11y_map, :described_by) and
-             not Map.has_key?(a11y_map, "described_by") do
-          Map.put(a11y_map, :described_by, tooltip_parent_id)
-        else
-          a11y_map
-        end
+        (a11y_map || %{})
+        |> put_role_default(defaults.role_default)
+        |> rewrite_single_refs(id, scope, declared)
+        |> rewrite_radio_group(id, scope, declared)
+        |> put_a11y_default(:radio_group, defaults.radio_ids)
+        |> put_a11y_default(:description, defaults.placeholder_desc)
+        |> put_a11y_default(:required, if(defaults.required_prop == true, do: true))
+        |> put_a11y_default(:invalid, defaults.invalid_prop)
+        |> put_a11y_default(:error_message, defaults.error_text)
+        |> put_a11y_default(:described_by, tooltip_parent_id)
 
       Map.put(props, :a11y, a11y_map)
+    end
+  end
+
+  defp a11y_defaults(type, props, scope, radio_groups, tooltip_parent_id) do
+    {invalid_prop, error_text} = invalid_from_props_for(type, props)
+
+    %{
+      role_default: widget_type_to_role(type),
+      radio_ids: radio_ids_for(type, props, scope, radio_groups),
+      placeholder_desc: placeholder_description(type, props),
+      required_prop: required_from_props_for(type, props),
+      invalid_prop: invalid_prop,
+      error_text: error_text,
+      tooltip_parent_id: tooltip_parent_id
+    }
+  end
+
+  defp radio_ids_for("radio", props, scope, radio_groups) do
+    case fetch_group_prop(props) do
+      nil -> nil
+      group -> Map.get(radio_groups, {scope, group})
+    end
+  end
+
+  defp radio_ids_for(_type, _props, _scope, _radio_groups), do: nil
+
+  defp a11y_needs_update?(a11y_map, defaults) do
+    (defaults.role_default != nil and not has_role?(a11y_map)) or
+      defaults.radio_ids != nil or
+      has_any_ref?(a11y_map) or
+      defaults.placeholder_desc != nil or
+      defaults.required_prop != nil or
+      defaults.invalid_prop != nil or
+      defaults.error_text != nil or
+      defaults.tooltip_parent_id != nil
+  end
+
+  defp put_role_default(a11y_map, nil), do: a11y_map
+
+  defp put_role_default(a11y_map, role_default) do
+    if has_role?(a11y_map), do: a11y_map, else: Map.put(a11y_map, :role, role_default)
+  end
+
+  # Set an a11y key to `value` only when neither the atom nor string form
+  # of the key is already present and the value is not nil. Lets us express
+  # the "default if unset" pattern as a pipeline.
+  defp put_a11y_default(a11y_map, _key, nil), do: a11y_map
+
+  defp put_a11y_default(a11y_map, key, value) do
+    string_key = Atom.to_string(key)
+
+    if Map.has_key?(a11y_map, key) or Map.has_key?(a11y_map, string_key) do
+      a11y_map
+    else
+      Map.put(a11y_map, key, value)
     end
   end
 
@@ -790,56 +770,31 @@ defmodule Plushie.Tree do
   #   %{state: :invalid, message: m}               -> {true, m}
   #   %{state: :valid}                             -> {false, nil}
   defp invalid_from_props(props) do
-    case Map.get(props, :validation) || Map.get(props, "validation") do
-      nil ->
-        {nil, nil}
-
-      :valid ->
-        {false, nil}
-
-      "valid" ->
-        {false, nil}
-
-      :pending ->
-        {nil, nil}
-
-      "pending" ->
-        {nil, nil}
-
-      {:invalid, msg} when is_binary(msg) ->
-        {true, msg}
-
-      ["invalid", msg] when is_binary(msg) ->
-        {true, msg}
-
-      %{state: :valid} ->
-        {false, nil}
-
-      %{state: :pending} ->
-        {nil, nil}
-
-      %{state: :invalid, message: msg} when is_binary(msg) ->
-        {true, msg}
-
-      %{state: :invalid} ->
-        {true, nil}
-
-      %{"state" => "valid"} ->
-        {false, nil}
-
-      %{"state" => "pending"} ->
-        {nil, nil}
-
-      %{"state" => "invalid", "message" => msg} when is_binary(msg) ->
-        {true, msg}
-
-      %{"state" => "invalid"} ->
-        {true, nil}
-
-      _ ->
-        {nil, nil}
-    end
+    parse_validation(Map.get(props, :validation) || Map.get(props, "validation"))
   end
+
+  defp parse_validation(nil), do: {nil, nil}
+  defp parse_validation(state) when state in [:valid, "valid"], do: {false, nil}
+  defp parse_validation(state) when state in [:pending, "pending"], do: {nil, nil}
+  defp parse_validation({:invalid, msg}) when is_binary(msg), do: {true, msg}
+  defp parse_validation(["invalid", msg]) when is_binary(msg), do: {true, msg}
+
+  defp parse_validation(%{} = map) do
+    state = Map.get(map, :state) || Map.get(map, "state")
+    message = Map.get(map, :message) || Map.get(map, "message")
+    parse_validation_map(state, message)
+  end
+
+  defp parse_validation(_), do: {nil, nil}
+
+  defp parse_validation_map(state, _message) when state in [:valid, "valid"], do: {false, nil}
+  defp parse_validation_map(state, _message) when state in [:pending, "pending"], do: {nil, nil}
+
+  defp parse_validation_map(state, msg) when state in [:invalid, "invalid"] and is_binary(msg),
+    do: {true, msg}
+
+  defp parse_validation_map(state, _message) when state in [:invalid, "invalid"], do: {true, nil}
+  defp parse_validation_map(_state, _message), do: {nil, nil}
 
   # Guard validation/required projections to validatable widget types.
   # Any widget outside the list ignores these props for a11y purposes.
