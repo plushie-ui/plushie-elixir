@@ -38,6 +38,10 @@ defmodule Plushie.RendererEnv do
     * **Font** - `FONTCONFIG_*`, `XDG_DATA_DIRS`, `XDG_DATA_HOME`
     * **Renderer** - `RUST_LOG`, `RUST_BACKTRACE`
     * **Home** - `HOME`, `USER`
+    * **Plushie toggles** - any variable starting with `PLUSHIE_` (debug
+      and diagnostic toggles read by the renderer itself, e.g.
+      `PLUSHIE_NO_CATCH_UNWIND`). The prefix is plushie-reserved; no
+      legitimate secret should use it.
   """
 
   @typedoc "A single entry for the `:env` option of `Port.open/2`."
@@ -78,6 +82,7 @@ defmodule Plushie.RendererEnv do
     GALLIUM_
     AT_SPI_
     FONTCONFIG_
+    PLUSHIE_
   ]
 
   @doc """
