@@ -37,6 +37,7 @@ defmodule Plushie.Widget.TextEditor do
     field :key_bindings, {:list, :map}, doc: "Declarative key binding rules for the editor."
     field :placeholder_color, Plushie.Type.Color, doc: "Placeholder text color."
     field :selection_color, Plushie.Type.Color, doc: "Text selection highlight color."
+
     field :required, :boolean,
       doc: "Marks the field as required. Flows into `a11y.required` automatically."
 

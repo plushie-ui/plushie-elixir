@@ -54,6 +54,7 @@ defmodule Plushie.Widget.ComboBox do
 
     field :menu_style, :map, doc: "Inline style for the dropdown menu."
     field :style, Plushie.Type.Style, doc: "Named preset or custom `StyleMap`."
+
     field :required, :boolean,
       doc: "Marks the field as required. Flows into `a11y.required` automatically."
 

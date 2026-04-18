@@ -27,6 +27,7 @@ defmodule Plushie.Widget.PickList do
     field :style, Plushie.Type.Style, doc: "Named preset or custom `StyleMap`."
     field :on_open, :boolean, doc: "Emit open event when the dropdown opens."
     field :on_close, :boolean, doc: "Emit close event when the dropdown closes."
+
     field :required, :boolean,
       doc: "Marks the field as required. Flows into `a11y.required` automatically."
 

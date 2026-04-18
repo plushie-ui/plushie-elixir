@@ -21,6 +21,7 @@ defmodule Plushie.Widget.Checkbox do
     field :style, Plushie.Type.Style, doc: "Named preset or custom `StyleMap`."
     field :icon, :map, doc: "Custom icon for the check mark."
     field :disabled, :boolean, doc: "When true, cannot be toggled."
+
     field :required, :boolean,
       doc: "Marks the field as required. Flows into `a11y.required` automatically."
 

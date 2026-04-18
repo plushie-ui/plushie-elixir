@@ -38,6 +38,7 @@ defmodule Plushie.Widget.TextInput do
     field :style, Plushie.Type.Style, doc: "Named style preset or custom `StyleMap`."
     field :placeholder_color, Plushie.Type.Color, doc: "Placeholder text color."
     field :selection_color, Plushie.Type.Color, doc: "Text selection highlight color."
+
     field :required, :boolean,
       doc: "Marks the field as required. Flows into `a11y.required` automatically."
 
