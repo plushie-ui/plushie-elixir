@@ -32,7 +32,7 @@ defmodule Plushie.Command do
     `update_image/4`, `delete_image/1`, `list_images/1`, `clear_images/0`
     (see `Command.Image`)
   - **Queries**: `tree_hash/1`, `find_focused/1`
-  - **Font**: `load_font/1`
+  - **Font**: `load_font/2`
   - **Accessibility**: `announce/1`
   - **Widget commands**: `widget_command/3`, `widget_batch/1`
   - **Test/Headless**: `advance_frame/1`
@@ -483,19 +483,19 @@ defmodule Plushie.Command do
   Loads a font at runtime from binary data.
 
   The font data should be the raw bytes of a TrueType (.ttf) or OpenType
-  (.otf) font file. Once loaded, the font can be referenced by name in
-  widget `font` props.
+  (.otf) font file. Once loaded, the font can be referenced by `family`
+  in widget `font` props.
 
   ## Example
 
       font_data = File.read!("path/to/CustomFont.ttf")
-      Plushie.Command.load_font(font_data)
+      Plushie.Command.load_font("CustomFont", font_data)
   """
-  @spec load_font(data :: binary()) :: %__MODULE__{}
-  def load_font(data) when is_binary(data) do
+  @spec load_font(family :: String.t(), data :: binary()) :: %__MODULE__{}
+  def load_font(family, data) when is_binary(family) and is_binary(data) do
     %__MODULE__{
       type: :widget_op,
-      payload: %{op: "load_font", data: data}
+      payload: %{op: "load_font", family: family, data: data}
     }
   end
 

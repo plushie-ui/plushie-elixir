@@ -35,7 +35,7 @@ defmodule Plushie.Command.Window do
   @doc "Close the window identified by `window_id`."
   @spec close_window(window_id :: Command.window_id()) :: Command.t()
   def close_window(window_id) do
-    %Command{type: :close_window, payload: %{window_id: window_id}}
+    %Command{type: :window_op, payload: %{op: "close", window_id: window_id}}
   end
 
   @doc """

@@ -235,7 +235,7 @@ defmodule Plushie.Docs.AppBehaviourTest do
 
   test "app_behaviour_window_close_command_test" do
     cmd = Command.close_window("main")
-    assert %Command{type: :close_window} = cmd
+    assert %Command{type: :window_op, payload: %{op: "close"}} = cmd
     assert cmd.payload.window_id == "main"
   end
 

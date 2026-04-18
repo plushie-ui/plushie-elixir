@@ -147,7 +147,7 @@ dynamic content.
 
 | Function | Purpose |
 |---|---|
-| `load_font/1` | Load a font from binary data at runtime |
+| `load_font/2` | Load a font from binary data at runtime (family name required) |
 | `tree_hash/1` | Query structural hash of the UI tree |
 | `find_focused/1` | Query which widget has focus |
 | `advance_frame/1` | Manual animation frame advance (test/headless mode) |

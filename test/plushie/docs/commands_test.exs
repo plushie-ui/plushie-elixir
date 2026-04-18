@@ -110,7 +110,9 @@ defmodule Plushie.Docs.CommandsTest do
 
   test "commands_close_window_construct_test" do
     cmd = Command.close_window("main")
-    assert %Command{type: :close_window, payload: %{window_id: "main"}} = cmd
+
+    assert %Command{type: :window_op, payload: %{op: "close", window_id: "main"}} =
+             cmd
   end
 
   test "commands_set_window_mode_construct_test" do

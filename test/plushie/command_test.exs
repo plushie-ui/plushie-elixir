@@ -191,8 +191,9 @@ defmodule Plushie.CommandTest do
   end
 
   describe "close_window/1" do
-    test "returns a Command with type :close_window" do
-      assert %Command{type: :close_window} = Command.close_window("settings")
+    test "returns a Command with type :window_op and op close" do
+      assert %Command{type: :window_op, payload: %{op: "close"}} =
+               Command.close_window("settings")
     end
 
     test "stores the window id under :window_id in the payload" do

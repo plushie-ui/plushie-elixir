@@ -68,9 +68,11 @@ defmodule Plushie.WidgetOpsTest do
       assert cmd.payload.value == %{x: 0.0, y: 250.0}
     end
 
-    test "close_window/1 returns a Command with type :close_window and window_id in payload" do
+    test "close_window/1 returns a window_op Command with op close and window_id" do
       cmd = Command.close_window("settings")
-      assert %Command{type: :close_window, payload: %{window_id: "settings"}} = cmd
+
+      assert %Command{type: :window_op, payload: %{op: "close", window_id: "settings"}} =
+               cmd
     end
   end
 
@@ -189,16 +191,19 @@ defmodule Plushie.WidgetOpsTest do
       assert hd(cmds).value == %{x: 0.0, y: 999.0}
     end
 
-    test "close_window command sends widget_op with op 'close_window'" do
+    test "close_window command sends window_op with op 'close'" do
       {runtime, bridge} = start_runtime(WidgetOpApp)
       await_initial_render(runtime)
 
       dispatch_and_wait(runtime, {:do, :close_window})
 
-      ops = Plushie.Test.InternalMockBridge.get_widget_ops(bridge)
-      assert length(ops) == 1
-      assert hd(ops).op == "close_window"
-      assert hd(ops).payload == %{window_id: "preferences"}
+      close_ops =
+        bridge
+        |> Plushie.Test.InternalMockBridge.get_window_ops()
+        |> Enum.filter(&(&1.op == "close"))
+
+      assert length(close_ops) == 1
+      assert hd(close_ops).window_id == "preferences"
     end
 
     test "widget ops are not sent when bridge is nil" do
@@ -263,12 +268,16 @@ defmodule Plushie.WidgetOpsTest do
       assert hd(cmds).family == "focus"
 
       ops = Plushie.Test.InternalMockBridge.get_widget_ops(bridge)
-      assert length(ops) == 2
+      assert length(ops) == 1
+      assert hd(ops).op == "focus_next"
 
-      assert Enum.at(ops, 0).op == "focus_next"
+      close_ops =
+        bridge
+        |> Plushie.Test.InternalMockBridge.get_window_ops()
+        |> Enum.filter(&(&1.op == "close"))
 
-      assert Enum.at(ops, 1).op == "close_window"
-      assert Enum.at(ops, 1).payload == %{window_id: "main"}
+      assert length(close_ops) == 1
+      assert hd(close_ops).window_id == "main"
     end
   end
 end

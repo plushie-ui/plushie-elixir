@@ -166,18 +166,6 @@ defmodule Plushie.Runtime.Commands do
     state
   end
 
-  # close_window is routed through widget_op (not window_op) because the
-  # Rust renderer dispatches it alongside other widget operations like
-  # focus, scroll, and pane management. This matches the protocol spec
-  # where close_window is listed under widget_op operations.
-  defp execute_command(%Plushie.Command{type: :close_window, payload: payload}, state) do
-    if state.bridge do
-      Plushie.Bridge.send_widget_op(state.bridge, "close_window", payload)
-    end
-
-    state
-  end
-
   defp execute_command(%Plushie.Command{type: :widget_op, payload: %{op: op} = payload}, state) do
     if state.bridge do
       Plushie.Bridge.send_widget_op(state.bridge, op, Map.delete(payload, :op))

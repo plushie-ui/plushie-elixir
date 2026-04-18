@@ -62,9 +62,10 @@ defmodule Plushie.MultiWindowTest do
       assert cmd.payload.window_id == "settings_window"
     end
 
-    test "type is :close_window" do
+    test "type is :window_op with op close" do
       cmd = Command.close_window("w")
-      assert cmd.type == :close_window
+      assert cmd.type == :window_op
+      assert cmd.payload.op == "close"
     end
   end
 

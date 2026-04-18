@@ -1317,13 +1317,29 @@ defmodule Plushie.Protocol.Decode do
     }
   end
 
-  defp dispatch(%{"type" => "event", "family" => "diagnostic", "value" => data} = msg) do
+  # Top-level diagnostic wire message emitted by the Rust renderer.
+  # Shape: {"type":"diagnostic","session":"...","level":"warn"|"info"|"error",
+  #         "diagnostic":{"kind":"...","...":"..."}}
+  # The typed `diagnostic` payload carries a `kind` discriminator plus
+  # variant-specific fields. We surface it as a SystemEvent so the
+  # runtime's existing :diagnostic handler logs and emits telemetry.
+  defp dispatch(%{"type" => "diagnostic", "diagnostic" => diag} = msg)
+       when is_map(diag) do
+    level = msg["level"] || "warn"
+    kind = diag["kind"]
+    # Merge level into the value map so the runtime's existing logging
+    # path (which reads value[:level]) picks it up. The "warn" wire
+    # level maps to Logger.warning, matching the runtime dispatcher.
+    merged = Map.put(diag, "level", level)
+
+    value = safe_atomize_keys(merged)
+
     %Plushie.Event.SystemEvent{
       type: :diagnostic,
-      tag: data["code"],
-      value: safe_atomize_keys(data),
-      id: msg["id"],
-      window_id: msg["window_id"]
+      tag: kind,
+      value: value,
+      id: diag["id"],
+      window_id: diag["window_id"]
     }
   end
 
