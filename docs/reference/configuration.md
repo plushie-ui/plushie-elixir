@@ -11,7 +11,7 @@ binary and go.
 | Variable | Purpose |
 |---|---|
 | `PLUSHIE_BINARY_PATH` | Explicit path to the renderer binary. Overrides all other binary resolution. |
-| `PLUSHIE_SOURCE_PATH` | Path to a local [plushie-rust](https://github.com/plushie-ui/plushie-rust) checkout for source builds. |
+| `PLUSHIE_RUST_SOURCE_PATH` | Path to a local [plushie-rust](https://github.com/plushie-ui/plushie-rust) checkout for source builds. |
 | `PLUSHIE_TEST_BACKEND` | Test backend: `mock` (default), `headless`, or `windowed`. |
 | `PLUSHIE_UPDATE_SCREENSHOTS` | When set to any value, update screenshot golden files instead of comparing. |
 | `PLUSHIE_UPDATE_SNAPSHOTS` | When set to any value, update tree-hash snapshot files instead of comparing. |
@@ -25,7 +25,7 @@ where the binary ships alongside the release. If set but pointing to
 a missing file, resolution raises immediately rather than falling
 through to other paths.
 
-### PLUSHIE_SOURCE_PATH
+### PLUSHIE_RUST_SOURCE_PATH
 
 Points to a local checkout of the
 [plushie-rust](https://github.com/plushie-ui/plushie-rust)
@@ -35,7 +35,7 @@ reload. The typical setup is a sibling directory:
 
 ```bash
 git clone https://github.com/plushie-ui/plushie-rust ../plushie-rust
-PLUSHIE_SOURCE_PATH=../plushie-rust mix plushie.build
+PLUSHIE_RUST_SOURCE_PATH=../plushie-rust mix plushie.build
 ```
 
 ### RUST_LOG
@@ -75,7 +75,7 @@ are for customising builds, binary paths, and test backends.
 | Key | Type | Default | Purpose |
 |---|---|---|---|
 | `:binary_path` | `String.t()` | `nil` | Explicit binary path. The env var `PLUSHIE_BINARY_PATH` takes precedence if set. |
-| `:source_path` | `String.t()` | `nil` | Rust source checkout path. The env var `PLUSHIE_SOURCE_PATH` takes precedence if set. |
+| `:source_path` | `String.t()` | `nil` | Rust source checkout path. The env var `PLUSHIE_RUST_SOURCE_PATH` takes precedence if set. |
 | `:build_name` | `String.t()` | `"app-renderer"` | Custom binary name for `mix plushie.build` output. |
 | `:build_profile` | `:release \| :debug` | `:debug` | Cargo build profile. `:release` enables optimisations. |
 | `:artifacts` | `[:bin] \| [:bin, :wasm]` | `[:bin]` | Which artifacts `mix plushie.build` and `mix plushie.download` install. |

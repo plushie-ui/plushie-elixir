@@ -173,7 +173,7 @@ defmodule Plushie.MixProject do
         docs
         examples
         mix.exs
-        BINARY_VERSION
+        PLUSHIE_RUST_VERSION
         README.md
         CHANGELOG.md
         LICENSE

@@ -9,7 +9,7 @@ and a `.wasm` binary that can be served from any static file host.
 - **Rust toolchain** with the `wasm32-unknown-unknown` target:
   `rustup target add wasm32-unknown-unknown`
 - **wasm-pack**: install via https://rustwasm.github.io/wasm-pack/
-- **Plushie Rust source checkout**: set `PLUSHIE_SOURCE_PATH` to
+- **Plushie Rust source checkout**: set `PLUSHIE_RUST_SOURCE_PATH` to
   the local `plushie-rust` directory. The WASM build requires
   the `plushie-renderer-wasm` crate, which lives in the source
   checkout.
@@ -18,13 +18,13 @@ and a `.wasm` binary that can be served from any static file host.
 
 ```bash
 # Build the WASM renderer (debug, for development)
-PLUSHIE_SOURCE_PATH=~/projects/plushie-rust mix plushie.build --wasm
+PLUSHIE_RUST_SOURCE_PATH=~/projects/plushie-rust mix plushie.build --wasm
 
 # Build with optimizations (for production)
-PLUSHIE_SOURCE_PATH=~/projects/plushie-rust mix plushie.build --wasm --release
+PLUSHIE_RUST_SOURCE_PATH=~/projects/plushie-rust mix plushie.build --wasm --release
 
 # Build both native binary and WASM in one command
-PLUSHIE_SOURCE_PATH=~/projects/plushie-rust mix plushie.build --bin --wasm
+PLUSHIE_RUST_SOURCE_PATH=~/projects/plushie-rust mix plushie.build --bin --wasm
 ```
 
 The build produces two files:

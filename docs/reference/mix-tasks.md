@@ -150,8 +150,8 @@ The task creates a Cargo workspace under `_build/<env>/plushie-renderer/`
 containing:
 
 - **Cargo.toml** - workspace manifest with dependencies from crates.io
-  (version from `BINARY_VERSION` file) or local paths (when
-  `PLUSHIE_SOURCE_PATH` is set). Includes `[patch.crates-io]` for local
+  (version from `PLUSHIE_RUST_VERSION` file) or local paths (when
+  `PLUSHIE_RUST_SOURCE_PATH` is set). Includes `[patch.crates-io]` for local
   source mode so all crates share the same types.
 - **main.rs** - entry point that initialises the Plushie renderer and
   registers each native widget via its `rust_constructor` expression.
@@ -181,7 +181,7 @@ out.
 ### Local source vs crates.io
 
 By default, Rust dependencies come from crates.io using the version in
-the `BINARY_VERSION` file at the project root. For development against a
+the `PLUSHIE_RUST_VERSION` file at the project root. For development against a
 local renderer checkout, clone it as a sibling directory:
 
 ```bash
@@ -191,7 +191,7 @@ git clone https://github.com/plushie-ui/plushie-rust ../plushie-rust
 Then point the build at it:
 
 ```bash
-PLUSHIE_SOURCE_PATH=../plushie-rust mix plushie.build
+PLUSHIE_RUST_SOURCE_PATH=../plushie-rust mix plushie.build
 ```
 
 Or permanently in config:
@@ -209,7 +209,7 @@ To build against the latest renderer `main` branch:
 
 ```bash
 cd ../plushie-rust && git pull
-cd ../plushie-elixir && PLUSHIE_SOURCE_PATH=../plushie-rust mix plushie.build
+cd ../plushie-elixir && PLUSHIE_RUST_SOURCE_PATH=../plushie-rust mix plushie.build
 ```
 
 ### WASM builds
@@ -224,7 +224,7 @@ with `--target web`. The output files (`plushie_renderer_wasm.js` and
 `plushie_renderer_wasm_bg.wasm`) go to `_build/plushie-renderer/wasm/` by default.
 
 WASM builds require a local renderer source checkout
-(`PLUSHIE_SOURCE_PATH`) and `wasm-pack` on the PATH. The task sets
+(`PLUSHIE_RUST_SOURCE_PATH`) and `wasm-pack` on the PATH. The task sets
 `WASM_BINDGEN_EXTERNREF=0` to avoid "failed to grow table" errors in
 some browser environments.
 
@@ -247,7 +247,7 @@ mix plushie.download --wasm        # WASM renderer
 
 This is the fastest way to get a working renderer. The binary is
 platform-specific (OS + architecture) and version-matched to the SDK
-via the `BINARY_VERSION` file.
+via the `PLUSHIE_RUST_VERSION` file.
 
 ### Flags
 

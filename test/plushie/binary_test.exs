@@ -88,9 +88,9 @@ defmodule Plushie.BinaryTest do
     end
   end
 
-  describe "binary_version/0" do
+  describe "plushie_rust_version/0" do
     test "returns a valid version string" do
-      version = Binary.binary_version()
+      version = Binary.plushie_rust_version()
       assert is_binary(version)
       assert version =~ ~r/^\d+\.\d+\.\d+$/
     end

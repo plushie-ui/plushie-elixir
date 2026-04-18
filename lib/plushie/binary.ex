@@ -14,13 +14,13 @@ defmodule Plushie.Binary do
   3 and 4 are implicit discovery and silently try the next option.
   """
 
-  @binary_version_path Path.expand("../../BINARY_VERSION", __DIR__)
-  @external_resource @binary_version_path
-  @binary_version File.read!(@binary_version_path) |> String.trim()
+  @plushie_rust_version_path Path.expand("../../PLUSHIE_RUST_VERSION", __DIR__)
+  @external_resource @plushie_rust_version_path
+  @plushie_rust_version File.read!(@plushie_rust_version_path) |> String.trim()
 
-  @doc "Returns the plushie-renderer version this SDK targets."
-  @spec binary_version() :: String.t()
-  def binary_version, do: @binary_version
+  @doc "Returns the plushie-rust release this SDK targets."
+  @spec plushie_rust_version() :: String.t()
+  def plushie_rust_version, do: @plushie_rust_version
 
   @doc """
   Standard instructions for resolving a missing plushie binary.

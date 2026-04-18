@@ -2,30 +2,30 @@ defmodule Mix.PlushieHelpers do
   @moduledoc false
 
   @doc """
-  Returns the path to the plushie source checkout, or nil.
+  Returns the path to the plushie-rust source checkout, or nil.
 
   Checked in order:
-  1. `PLUSHIE_SOURCE_PATH` environment variable
+  1. `PLUSHIE_RUST_SOURCE_PATH` environment variable
   2. `config :plushie, :source_path`
   """
   @spec source_path() :: String.t() | nil
   def source_path do
-    System.get_env("PLUSHIE_SOURCE_PATH") ||
+    System.get_env("PLUSHIE_RUST_SOURCE_PATH") ||
       Application.get_env(:plushie, :source_path)
   end
 
   @doc """
-  Returns the path to the plushie source checkout, or raises.
+  Returns the path to the plushie-rust source checkout, or raises.
   """
   @spec source_path!() :: String.t()
   def source_path! do
     source_path() ||
       raise """
-      plushie source path not configured.
+      plushie-rust source path not configured.
 
       Set one of:
-        export PLUSHIE_SOURCE_PATH=/path/to/plushie
-        config :plushie, :source_path, "/path/to/plushie"
+        export PLUSHIE_RUST_SOURCE_PATH=/path/to/plushie-rust
+        config :plushie, :source_path, "/path/to/plushie-rust"
       """
   end
 

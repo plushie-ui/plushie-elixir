@@ -35,7 +35,7 @@ jobs:
           path: |
             deps
             _build
-          key: mix-${{ matrix.elixir }}-${{ matrix.otp }}-${{ hashFiles('mix.lock') }}-${{ hashFiles('BINARY_VERSION') }}
+          key: mix-${{ matrix.elixir }}-${{ matrix.otp }}-${{ hashFiles('mix.lock') }}-${{ hashFiles('PLUSHIE_RUST_VERSION') }}
           restore-keys: |
             mix-${{ matrix.elixir }}-${{ matrix.otp }}-
 

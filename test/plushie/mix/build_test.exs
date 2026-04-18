@@ -137,14 +137,14 @@ defmodule Mix.Tasks.Plushie.BuildTest do
       """
 
       pattern = ~r/name = "plushie-ext"\nversion = "(\d+\.\d+\.\d+)"/
-      expected = Plushie.Binary.binary_version()
+      expected = Plushie.Binary.plushie_rust_version()
 
       [_, locked_version] = Regex.run(pattern, lock_content)
       assert locked_version != expected
     end
 
     test "version match passes" do
-      expected = Plushie.Binary.binary_version()
+      expected = Plushie.Binary.plushie_rust_version()
 
       lock_content = """
       [[package]]

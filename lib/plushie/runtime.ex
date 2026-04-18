@@ -1624,7 +1624,7 @@ defmodule Plushie.Runtime do
   end
 
   defp check_renderer_version(hello) do
-    expected = Plushie.Binary.binary_version()
+    expected = Plushie.Binary.plushie_rust_version()
 
     if hello.version != expected do
       Logger.warning(

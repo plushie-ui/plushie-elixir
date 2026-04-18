@@ -5,9 +5,9 @@ defmodule Mix.Tasks.Plushie.Build do
   Build the plushie binary and/or WASM renderer from source.
 
   Generates a Cargo workspace and builds it. When a local source checkout
-  is available (`PLUSHIE_SOURCE_PATH`), dependencies use local paths for
+  is available (`PLUSHIE_RUST_SOURCE_PATH`), dependencies use local paths for
   development. Otherwise, dependencies are pulled from crates.io using
-  the `:binary_version` from mix.exs.
+  the version from `PLUSHIE_RUST_VERSION`.
 
   When native widgets are detected, the workspace includes each widget's
   Rust crate and the generated `main.rs` registers them at startup.
@@ -15,7 +15,7 @@ defmodule Mix.Tasks.Plushie.Build do
   ## Prerequisites
 
   - **Rust toolchain** #{elem(@min_rust_version, 0)}.#{elem(@min_rust_version, 1)}+ (install via https://rustup.rs)
-  - **Plushie Rust source** (optional): set `PLUSHIE_SOURCE_PATH` or
+  - **Plushie Rust source** (optional): set `PLUSHIE_RUST_SOURCE_PATH` or
     `config :plushie, :source_path` to use local sources instead of crates.io
   - **wasm-pack** (for `--wasm` only): install via https://rustwasm.github.io/wasm-pack/
 
@@ -380,7 +380,7 @@ defmodule Mix.Tasks.Plushie.Build do
     source_info =
       if Mix.PlushieHelpers.source_path(),
         do: "local source",
-        else: "crates.io v#{Plushie.Binary.binary_version()}"
+        else: "crates.io v#{Plushie.Binary.plushie_rust_version()}"
 
     if native_widgets != [] do
       ext_names = Enum.map_join(native_widgets, ", ", &inspect/1)
@@ -434,7 +434,7 @@ defmodule Mix.Tasks.Plushie.Build do
   defp check_lock_version! do
     if File.exists?(@lock_file) do
       content = File.read!(@lock_file)
-      expected = Plushie.Binary.binary_version()
+      expected = Plushie.Binary.plushie_rust_version()
 
       case Regex.run(
              ~r/name = "plushie-widget-sdk"\nversion = "(\d+\.\d+\.\d+)"/,
@@ -443,7 +443,7 @@ defmodule Mix.Tasks.Plushie.Build do
         [_, locked_version] when locked_version != expected ->
           Mix.raise("""
           Cargo.lock version mismatch: plushie-widget-sdk #{locked_version} is locked \
-          but BINARY_VERSION is #{expected}.
+          but PLUSHIE_RUST_VERSION is #{expected}.
 
           Run `mix plushie.build --update` to re-resolve dependencies.\
           """)
@@ -511,11 +511,11 @@ defmodule Mix.Tasks.Plushie.Build do
   end
 
   # Each native widget crate should depend on a plushie-widget-sdk version compatible
-  # with Plushie.Binary.binary_version(). Check before building to give a clear
+  # with Plushie.Binary.plushie_rust_version(). Check before building to give a clear
   # error instead of a cryptic Cargo resolution failure.
 
   defp check_widget_versions!(crate_paths) do
-    expected = Version.parse!(Plushie.Binary.binary_version())
+    expected = Version.parse!(Plushie.Binary.plushie_rust_version())
 
     Enum.each(crate_paths, fn {mod, crate_path} ->
       cargo_toml_path = Path.join(crate_path, "Cargo.toml")
@@ -629,7 +629,7 @@ defmodule Mix.Tasks.Plushie.Build do
     #   plushie-renderer  - binary entry point (run function)
     if source_path && !File.dir?(source_path) do
       Mix.raise(
-        "PLUSHIE_SOURCE_PATH is set to #{inspect(source_path)} but the directory does not exist. " <>
+        "PLUSHIE_RUST_SOURCE_PATH is set to #{inspect(source_path)} but the directory does not exist. " <>
           "Fix the path or unset it to use crates.io dependencies."
       )
     end
@@ -650,8 +650,8 @@ defmodule Mix.Tasks.Plushie.Build do
         {~s(plushie-widget-sdk = { path = "#{ext_rel}" }),
          ~s(plushie-renderer = { path = "#{renderer_rel}" })}
       else
-        {~s(plushie-widget-sdk = "#{Plushie.Binary.binary_version()}"),
-         ~s(plushie-renderer = "#{Plushie.Binary.binary_version()}")}
+        {~s(plushie-widget-sdk = "#{Plushie.Binary.plushie_rust_version()}"),
+         ~s(plushie-renderer = "#{Plushie.Binary.plushie_rust_version()}")}
       end
 
     ext_deps =
@@ -704,7 +704,7 @@ defmodule Mix.Tasks.Plushie.Build do
         """
         [package]
         name = "#{package_name}"
-        version = "#{Plushie.Binary.binary_version()}"
+        version = "#{Plushie.Binary.plushie_rust_version()}"
         edition = "2024"
 
         [[bin]]

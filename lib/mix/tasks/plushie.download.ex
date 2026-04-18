@@ -184,7 +184,7 @@ defmodule Mix.Tasks.Plushie.Download do
   # -- Shared helpers ---------------------------------------------------------
 
   defp release_url(artifact) do
-    "#{@base_url}/v#{Plushie.Binary.binary_version()}/#{artifact}"
+    "#{@base_url}/v#{Plushie.Binary.plushie_rust_version()}/#{artifact}"
   end
 
   defp download_to_file(url, dest_path) do
