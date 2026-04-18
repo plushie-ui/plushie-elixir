@@ -27,20 +27,16 @@ defmodule Plushie.WidgetTest do
     def type_names, do: [:mock_widget]
   end
 
+  # Collision checks used to live in Mix.Tasks.Plushie.Build. They now
+  # live in cargo-plushie, which runs them during `cargo plushie build`
+  # using the widget metadata tables in each crate's Cargo.toml. The
+  # reference widget modules above stay because they exercise the
+  # Plushie.Widget behaviour + registry discovery below.
+
   test "widget registry discovers widgets via protocol" do
     widgets = Plushie.WidgetRegistry.all_widgets()
     assert is_list(widgets)
     assert widgets != []
-  end
-
-  test "check_collisions! raises on duplicate type names" do
-    assert_raise Mix.Error, ~r/collision/i, fn ->
-      Mix.Tasks.Plushie.Build.check_collisions!([MockNativeWidget, ConflictWidget])
-    end
-  end
-
-  test "check_collisions! passes with no duplicates" do
-    assert :ok == Mix.Tasks.Plushie.Build.check_collisions!([MockNativeWidget])
   end
 
   describe "WidgetRegistry" do

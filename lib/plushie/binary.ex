@@ -200,13 +200,14 @@ defmodule Plushie.Binary do
   defp custom_build_path do
     if mix_available?() do
       bin_name = build_name()
+      ext = if os_name() == "windows", do: ".exe", else: ""
 
       for profile <- ["release", "debug"] do
-        ext = if os_name() == "windows", do: ".exe", else: ""
-
         path =
           Path.join([
             Mix.Project.build_path(),
+            "plushie-renderer-spec",
+            "target",
             "plushie-renderer",
             "target",
             profile,

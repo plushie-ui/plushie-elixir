@@ -149,10 +149,35 @@ defmodule Plushie.Test.SessionPoolTest do
         }
       })
 
-      # The renderer should emit a theme_changed event
-      assert_receive {:plushie_pool_event, ^session_id, msg}, 1000
-      assert msg["type"] == "event"
-      assert msg["family"] == "theme_changed"
+      # The renderer should emit a theme_changed event. Other events
+      # (e.g. prop_validation, rendering diagnostics) may arrive first,
+      # so drain until we find the one we want or time out.
+      assert %{"type" => "event", "family" => "theme_changed"} =
+               drain_until_theme_changed(session_id)
+    end
+
+    # Receive-loop that ignores unrelated pool messages and returns the
+    # first `theme_changed` event seen within the budget.
+    defp drain_until_theme_changed(session_id, budget_ms \\ 1000)
+
+    defp drain_until_theme_changed(_session_id, budget_ms) when budget_ms <= 0 do
+      flunk("timed out waiting for theme_changed event")
+    end
+
+    defp drain_until_theme_changed(session_id, budget_ms) do
+      started = System.monotonic_time(:millisecond)
+
+      receive do
+        {:plushie_pool_event, ^session_id,
+         %{"type" => "event", "family" => "theme_changed"} = msg} ->
+          msg
+
+        {:plushie_pool_event, ^session_id, _other} ->
+          elapsed = System.monotonic_time(:millisecond) - started
+          drain_until_theme_changed(session_id, budget_ms - elapsed)
+      after
+        budget_ms -> flunk("timed out waiting for theme_changed event")
+      end
     end
 
     test "register raises when pool is full" do

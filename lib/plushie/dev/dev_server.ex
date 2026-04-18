@@ -316,34 +316,43 @@ defmodule Plushie.Dev.DevServer do
 
     state = send_overlay(state, :building, "")
 
-    build_dir =
+    spec_dir =
       if Code.ensure_loaded?(Mix.Project) and function_exported?(Mix.Project, :build_path, 0) do
-        Path.join(Mix.Project.build_path(), "plushie-renderer")
+        Path.join(Mix.Project.build_path(), "plushie-renderer-spec")
       end
 
-    cargo = System.find_executable("cargo")
-
-    if cargo && build_dir && File.dir?(build_dir) do
-      release? = Application.get_env(:plushie, :build_profile) == :release
-      args = if release?, do: ["build", "--release"], else: ["build"]
-
-      port =
-        Port.open({:spawn_executable, cargo}, [
-          :binary,
-          :exit_status,
-          :stderr_to_stdout,
-          {:line, 4096},
-          {:args, args},
-          {:cd, build_dir}
-        ])
-
-      %{state | rust_build_port: port}
-    else
+    if is_nil(spec_dir) or not File.dir?(spec_dir) do
       Logger.warning(
-        "plushie dev: cannot start rust build (cargo not found or workspace missing)"
+        "plushie dev: cannot start rust build (spec missing; run `mix plushie.build` once first)"
       )
 
-      send_overlay(state, :failed, "cargo not found or build workspace missing")
+      send_overlay(state, :failed, "renderer spec not found; run mix plushie.build")
+    else
+      try do
+        {cmd, prefix} = Mix.PlushieHelpers.resolve_cargo_plushie()
+        executable = System.find_executable(cmd) || cmd
+
+        release? = Application.get_env(:plushie, :build_profile) == :release
+
+        manifest = Path.join(spec_dir, "Cargo.toml")
+        args = prefix ++ ["build", "--manifest-path", manifest]
+        args = if release?, do: args ++ ["--release"], else: args
+
+        port =
+          Port.open({:spawn_executable, executable}, [
+            :binary,
+            :exit_status,
+            :stderr_to_stdout,
+            {:line, 4096},
+            {:args, args}
+          ])
+
+        %{state | rust_build_port: port}
+      rescue
+        e in Mix.Error ->
+          Logger.warning("plushie dev: #{e.message}")
+          send_overlay(state, :failed, e.message)
+      end
     end
   end
 
@@ -377,40 +386,56 @@ defmodule Plushie.Dev.DevServer do
   end
 
   defp start_wasm_build(state) do
-    source_path = Mix.PlushieHelpers.source_path()
-    wasm_pack = System.find_executable("wasm-pack")
+    spec_dir =
+      if Code.ensure_loaded?(Mix.Project) and function_exported?(Mix.Project, :build_path, 0) do
+        Path.join(Mix.Project.build_path(), "plushie-renderer-spec")
+      end
 
-    if source_path && wasm_pack do
-      wasm_crate = Path.join([source_path, "crates", "plushie-renderer-wasm"])
-
-      if File.dir?(wasm_crate) do
-        release? = Application.get_env(:plushie, :build_profile) == :release
-        profile = if release?, do: "--release", else: "--dev"
-        env = [{"WASM_BINDGEN_EXTERNREF", "0"}]
-
-        state = send_overlay(state, :building, state.rust_build_output)
-
-        port =
-          Port.open({:spawn_executable, wasm_pack}, [
-            :binary,
-            :exit_status,
-            :stderr_to_stdout,
-            {:line, 4096},
-            {:args, ["build", "--target", "web", profile]},
-            {:cd, wasm_crate},
-            {:env, env}
-          ])
-
-        %{state | wasm_build_port: port, wasm_build_output: ""}
-      else
-        Logger.warning("plushie dev: wasm crate not found at #{wasm_crate}, skipping")
+    cond do
+      is_nil(Mix.PlushieHelpers.source_path()) ->
+        Logger.info("plushie dev: PLUSHIE_RUST_SOURCE_PATH not set, skipping wasm build")
         {:noreply, state} = finish_rebuild(state)
         state
-      end
-    else
-      Logger.info("plushie dev: wasm-pack or source_path not available, skipping wasm build")
-      {:noreply, state} = finish_rebuild(state)
-      state
+
+      is_nil(spec_dir) or not File.dir?(spec_dir) ->
+        Logger.warning("plushie dev: renderer spec missing, skipping wasm build")
+        {:noreply, state} = finish_rebuild(state)
+        state
+
+      true ->
+        try do
+          {cmd, prefix} = Mix.PlushieHelpers.resolve_cargo_plushie()
+          executable = System.find_executable(cmd) || cmd
+
+          release? = Application.get_env(:plushie, :build_profile) == :release
+          wasm_dir = Mix.PlushieHelpers.resolve_wasm_dir([])
+          File.mkdir_p!(wasm_dir)
+
+          manifest = Path.join(spec_dir, "Cargo.toml")
+
+          args =
+            prefix ++ ["build", "--manifest-path", manifest, "--wasm", "--wasm-dir", wasm_dir]
+
+          args = if release?, do: args ++ ["--release"], else: args
+
+          state = send_overlay(state, :building, state.rust_build_output)
+
+          port =
+            Port.open({:spawn_executable, executable}, [
+              :binary,
+              :exit_status,
+              :stderr_to_stdout,
+              {:line, 4096},
+              {:args, args}
+            ])
+
+          %{state | wasm_build_port: port, wasm_build_output: ""}
+        rescue
+          e in Mix.Error ->
+            Logger.warning("plushie dev: wasm build setup failed: #{e.message}")
+            {:noreply, state} = finish_rebuild(state)
+            state
+        end
     end
   end
 
