@@ -111,7 +111,7 @@ defmodule Mix.Tasks.Plushie.Build do
 
     source_dir = Mix.PlushieHelpers.source_path!()
 
-    wasm_crate = Path.join(source_dir, "plushie-renderer-wasm")
+    wasm_crate = Path.join([source_dir, "crates", "plushie-renderer-wasm"])
 
     unless File.dir?(wasm_crate) do
       Mix.raise("""
@@ -641,8 +641,11 @@ defmodule Mix.Tasks.Plushie.Build do
 
     {plushie_widget_sdk_dep, plushie_renderer_dep} =
       if source_path do
-        ext_rel = Path.relative_to(Path.join(source_path, "plushie-widget-sdk"), build_dir)
-        renderer_rel = Path.relative_to(Path.join(source_path, "plushie-renderer"), build_dir)
+        ext_rel =
+          Path.relative_to(Path.join([source_path, "crates", "plushie-widget-sdk"]), build_dir)
+
+        renderer_rel =
+          Path.relative_to(Path.join([source_path, "crates", "plushie-renderer"]), build_dir)
 
         {~s(plushie-widget-sdk = { path = "#{ext_rel}" }),
          ~s(plushie-renderer = { path = "#{renderer_rel}" })}
@@ -673,8 +676,8 @@ defmodule Mix.Tasks.Plushie.Build do
     # workspace so the generated workspace shares the same local overrides.
     patch_section =
       if source_path do
-        ext_path = Path.join(source_path, "plushie-widget-sdk")
-        renderer_path = Path.join(source_path, "plushie-renderer")
+        ext_path = Path.join([source_path, "crates", "plushie-widget-sdk"])
+        renderer_path = Path.join([source_path, "crates", "plushie-renderer"])
 
         extra_patches = renderer_patch_entries(source_path)
 
@@ -721,26 +724,24 @@ defmodule Mix.Tasks.Plushie.Build do
   end
 
   # Reads [patch.crates-io] entries from the renderer workspace's Cargo.toml
-  # and returns patch lines with paths resolved against the renderer root.
-  # Entries for plushie-widget-sdk and plushie-renderer are skipped (already added
-  # as explicit patches above).
+  # and `.cargo/config.toml` (local-only dev overrides, gitignored), returning
+  # patch lines with paths resolved against the renderer root. Entries for
+  # plushie-widget-sdk and plushie-renderer are skipped (already added as
+  # explicit patches above).
   @spec renderer_patch_entries(source_path :: String.t()) :: String.t()
   defp renderer_patch_entries(source_path) do
-    cargo_toml = Path.join(source_path, "Cargo.toml")
-
-    if File.exists?(cargo_toml) do
-      cargo_toml
-      |> File.read!()
-      |> parse_cargo_patch_entries()
-      |> Enum.reject(fn {name, _} -> name in ["plushie-widget-sdk", "plushie-renderer"] end)
-      |> Enum.flat_map(fn {name, rel_path} ->
-        resolved = Path.expand(rel_path, source_path)
-        if File.dir?(resolved), do: ["#{name} = { path = \"#{resolved}\" }"], else: []
-      end)
-      |> Enum.join("\n")
-    else
-      ""
-    end
+    [
+      Path.join(source_path, "Cargo.toml"),
+      Path.join([source_path, ".cargo", "config.toml"])
+    ]
+    |> Enum.filter(&File.exists?/1)
+    |> Enum.flat_map(&parse_cargo_patch_entries(File.read!(&1)))
+    |> Enum.reject(fn {name, _} -> name in ["plushie-widget-sdk", "plushie-renderer"] end)
+    |> Enum.flat_map(fn {name, rel_path} ->
+      resolved = Path.expand(rel_path, source_path)
+      if File.dir?(resolved), do: ["#{name} = { path = \"#{resolved}\" }"], else: []
+    end)
+    |> Enum.join("\n")
   end
 
   # Parses [patch.crates-io] path entries from a Cargo.toml string.

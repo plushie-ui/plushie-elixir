@@ -381,7 +381,7 @@ defmodule Plushie.Dev.DevServer do
     wasm_pack = System.find_executable("wasm-pack")
 
     if source_path && wasm_pack do
-      wasm_crate = Path.join(source_path, "plushie-renderer-wasm")
+      wasm_crate = Path.join([source_path, "crates", "plushie-renderer-wasm"])
 
       if File.dir?(wasm_crate) do
         release? = Application.get_env(:plushie, :build_profile) == :release
