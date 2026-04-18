@@ -113,8 +113,8 @@ format and field descriptions.
 
 ## plushie.build
 
-Generates a [Cargo](https://doc.rust-lang.org/cargo/) workspace and
-compiles the renderer binary from Rust source.
+Delegates renderer workspace generation to the `cargo-plushie` Cargo
+subcommand and produces the renderer binary.
 
 ```bash
 mix plushie.build              # debug build
@@ -139,6 +139,7 @@ want to work against a local renderer checkout.
 | `--wasm` | Build the WASM renderer via [wasm-pack](https://rustwasm.github.io/wasm-pack/) |
 | `--release` | Build with optimisations (also enabled by `config :plushie, build_profile: :release`) |
 | `--verbose` | Print full Cargo output even on success |
+| `--update` | Wipe the spec scratch dir to force a clean regen |
 | `--bin-file PATH` | Override native binary destination |
 | `--wasm-dir PATH` | Override WASM output directory |
 
@@ -146,31 +147,54 @@ want to work against a local renderer checkout.
 
 ### What it generates
 
-The task creates a Cargo workspace under `_build/<env>/plushie-renderer/`
-containing:
+The Mix task itself writes a small "renderer spec" manifest that
+cargo-plushie reads via `cargo metadata`:
 
-- **Cargo.toml** - workspace manifest with dependencies from crates.io
-  (version from `PLUSHIE_RUST_VERSION` file) or local paths (when
-  `PLUSHIE_RUST_SOURCE_PATH` is set). Includes `[patch.crates-io]` for local
-  source mode so all crates share the same types.
-- **main.rs** - entry point that initialises the Plushie renderer and
-  registers each native widget via its `rust_constructor` expression.
-- **Crate references** - one `[dependencies]` entry per native widget,
-  pointing to the widget's Rust crate.
+- `_build/<env>/plushie-renderer-spec/Cargo.toml` - minimal manifest
+  listing each detected native widget crate as a path dependency and
+  carrying `[package.metadata.plushie]` (binary name, source path).
+- `_build/<env>/plushie-renderer-spec/src/lib.rs` - placeholder so the
+  manifest parses cleanly.
+
+cargo-plushie produces the real renderer workspace and binary:
+
+- `_build/<env>/plushie-renderer-spec/target/plushie-renderer/` - the
+  generated Cargo workspace (Cargo.toml + main.rs + Cargo.lock).
+- `_build/<env>/plushie-renderer-spec/target/plushie-renderer/target/<profile>/<bin>` -
+  the compiled binary, copied to `_build/plushie/bin/` after a successful
+  build.
+
+Using `PLUSHIE_RUST_SOURCE_PATH`, cargo-plushie emits `[patch.crates-io]`
+redirecting plushie crates (and any workspace-level patches declared in
+`plushie-rust/Cargo.toml` or its `.cargo/config.toml`) to the local
+checkout.
+
+### cargo-plushie resolution
+
+The task's internal helper decides how to invoke the subcommand:
+
+1. **`PLUSHIE_RUST_SOURCE_PATH` set**: run from source via
+   `cargo run -p cargo-plushie --release --quiet -- ...`. Always works
+   during local plushie-rust development.
+2. **Otherwise**: expect `cargo-plushie` on PATH at the exact version
+   the SDK targets (`Plushie.Binary.plushie_rust_version/0`). Install
+   with `cargo install cargo-plushie --version X.Y.Z --locked`.
+3. **Missing or mismatched**: the task raises with an install hint;
+   no auto-install.
 
 ### Native widget auto-detection
 
-Native widgets are discovered automatically via
-`Plushie.Tree.Node` protocol consolidation at compile time.
-Any module that implements the protocol and exports `native_crate/0` is
-included in the build. No configuration needed. Add a native widget
-dependency to your `mix.exs` and it appears in the next build.
+Native widgets are discovered automatically via `Plushie.Tree.Node`
+protocol consolidation at compile time. Any module that implements the
+protocol and exports `native_crate/0` is listed as a path dependency
+in the spec manifest. No Elixir-side configuration needed beyond
+declaring the widget dependency in `mix.exs`.
 
-The task validates:
-- No two widgets claim the same type name
-- No two widgets produce the same Cargo crate name
-- Widget versions are compatible with the renderer version (pre-1.0:
-  major.minor must match; post-1.0: major must match)
+Each widget's Rust crate must declare `[package.metadata.plushie.widget]`
+with `type_name` and `constructor` fields in its own `Cargo.toml`.
+cargo-plushie reads these tables via `cargo metadata` to wire widgets
+into the generated `main.rs` and to run collision checks (duplicate
+type names, built-in shadows, duplicate crate basenames).
 
 **Removing native widgets**: when you remove a native widget dependency
 from your project, run `mix clean` before the next build. Protocol
@@ -219,22 +243,27 @@ mix plushie.build --wasm
 mix plushie.build --wasm --release
 ```
 
-Builds a WASM renderer via [wasm-pack](https://rustwasm.github.io/wasm-pack/)
-with `--target web`. The output files (`plushie_renderer_wasm.js` and
-`plushie_renderer_wasm_bg.wasm`) go to `_build/plushie-renderer/wasm/` by default.
+Shells out to `cargo plushie build --wasm`, which in turn drives
+[wasm-pack](https://rustwasm.github.io/wasm-pack/) with `--target web`.
+The output files (`plushie_renderer_wasm.js` and
+`plushie_renderer_wasm_bg.wasm`) go to `_build/plushie-renderer/wasm/`
+by default.
 
-WASM builds require a local renderer source checkout
-(`PLUSHIE_RUST_SOURCE_PATH`) and `wasm-pack` on the PATH. The task sets
-`WASM_BINDGEN_EXTERNREF=0` to avoid "failed to grow table" errors in
-some browser environments.
+WASM builds require `PLUSHIE_RUST_SOURCE_PATH` set to a local plushie-rust
+checkout and `wasm-pack` on the PATH. There is no crates.io path: the
+WASM renderer has no pre-built bundle to fetch.
 
 ### Requirements
 
 - [Rust](https://rustup.rs/) 1.92+ (checked at build time via
   `rustc --version`)
 - `cargo` on the PATH
+- `cargo-plushie` at the matching `PLUSHIE_RUST_VERSION`, installed
+  with `cargo install cargo-plushie --version <PLUSHIE_RUST_VERSION> --locked`,
+  or `PLUSHIE_RUST_SOURCE_PATH` set to a local plushie-rust checkout
 - For WASM: [wasm-pack](https://rustwasm.github.io/wasm-pack/) on the
-  PATH
+  PATH and `PLUSHIE_RUST_SOURCE_PATH` set (WASM builds always run
+  against local plushie-rust source)
 
 ## plushie.download
 
@@ -446,7 +475,8 @@ resolves it in priority order:
 1. `PLUSHIE_BINARY_PATH` environment variable - explicit override,
    useful for CI or custom build pipelines
 2. Application config `:binary_path` - explicit per-environment path
-3. Custom widget build in `_build/<env>/plushie-renderer/target/` -
+3. Custom widget build under
+   `_build/<env>/plushie-renderer-spec/target/plushie-renderer/target/` -
    auto-detected after `mix plushie.build`
 4. Downloaded binary in `_build/plushie/bin/` - auto-detected after
    `mix plushie.download`

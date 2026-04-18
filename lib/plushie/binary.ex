@@ -6,7 +6,8 @@ defmodule Plushie.Binary do
 
   1. `PLUSHIE_BINARY_PATH` environment variable
   2. Application config `:binary_path`
-  3. Custom widget build in `_build/<env>/plushie-renderer/target/`
+  3. Custom widget build under
+     `_build/<env>/plushie-renderer-spec/target/plushie-renderer/target/`
   4. Downloaded binary in `_build/plushie/bin/`
 
   Steps 1 and 2 are explicit configuration. If set but pointing to a

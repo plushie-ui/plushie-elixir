@@ -4,6 +4,37 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Breaking
+
+- **`BINARY_VERSION` renamed to `PLUSHIE_RUST_VERSION`.** The version
+  file now makes its purpose explicit: it pins the plushie-rust
+  release this SDK targets, independent of the SDK's own semver.
+  `Plushie.Binary.plushie_rust_version/0` replaces the previous
+  `binary_version/0`.
+- **`PLUSHIE_SOURCE_PATH` renamed to `PLUSHIE_RUST_SOURCE_PATH`.** The
+  application config key `:source_path` is unchanged.
+
+### Changed
+
+- **`mix plushie.build` delegates to cargo-plushie.** Workspace
+  generation, widget collision checks, main.rs emission, and Cargo.lock
+  shepherding moved to the `cargo-plushie` Cargo subcommand in the
+  plushie-rust workspace. The Mix task writes a "renderer spec"
+  Cargo.toml listing native widget crates and shells out. Widget
+  crates must declare `[package.metadata.plushie.widget]` in their own
+  Cargo.toml for discovery. See `docs/versioning.md` and the
+  "Building the renderer binary" section of `CLAUDE.md`.
+- **`Plushie.Dev.DevServer`** now triggers incremental Rust builds
+  through `cargo plushie build` instead of driving `cargo build`
+  directly.
+
+### Removed
+
+- **`native/plushie/Cargo.lock` stash.** cargo-plushie preserves its
+  own lockfile across runs; no SDK-level stash is needed.
+
 ## [0.6.0] - 2026-04-02
 
 ### Breaking
