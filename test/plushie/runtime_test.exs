@@ -1807,6 +1807,70 @@ defmodule Plushie.RuntimeTest do
     end
   end
 
+  describe "required_widgets in settings" do
+    defmodule RequiredWidgetsApp do
+      use Plushie.App
+
+      def init(_opts), do: %{}
+      def update(model, _event), do: model
+
+      def view(_model) do
+        import Plushie.UI
+
+        window "main" do
+          text("ok")
+        end
+      end
+
+      def settings do
+        %{required_widgets: ["gauge", "custom_chart"]}
+      end
+    end
+
+    defmodule EmptyRequiredWidgetsApp do
+      use Plushie.App
+
+      def init(_opts), do: %{}
+      def update(model, _event), do: model
+
+      def view(_model) do
+        import Plushie.UI
+
+        window "main" do
+          text("ok")
+        end
+      end
+
+      def settings do
+        %{required_widgets: []}
+      end
+    end
+
+    test "settings includes required_widgets when the app declares names" do
+      {runtime, bridge} = start_runtime(RequiredWidgetsApp)
+      await_initial_render(runtime)
+
+      settings = hd(Plushie.Test.InternalMockBridge.get_settings(bridge))
+      assert settings[:required_widgets] == ["gauge", "custom_chart"]
+    end
+
+    test "settings omits required_widgets when the list is empty" do
+      {runtime, bridge} = start_runtime(EmptyRequiredWidgetsApp)
+      await_initial_render(runtime)
+
+      settings = hd(Plushie.Test.InternalMockBridge.get_settings(bridge))
+      refute Map.has_key?(settings, :required_widgets)
+    end
+
+    test "settings omits required_widgets when the app leaves it unset" do
+      {runtime, bridge} = start_runtime(SimpleApp)
+      await_initial_render(runtime)
+
+      settings = hd(Plushie.Test.InternalMockBridge.get_settings(bridge))
+      refute Map.has_key?(settings, :required_widgets)
+    end
+  end
+
   describe "interact caller timeout cleanup" do
     test "pending_interact is cleaned up on caller timeout" do
       capture_log(fn ->
