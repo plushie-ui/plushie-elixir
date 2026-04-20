@@ -293,6 +293,27 @@ defmodule Plushie.ProtocolTest do
     end
   end
 
+  describe "decode_message/1 -- link_click events" do
+    test "decodes a link_click event with the link URL as value" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "link_click",
+          id: "article",
+          value: %{link: "https://example.com/article"},
+          window_id: "main"
+        })
+
+      assert Protocol.decode_message(json, :json) == %WidgetEvent{
+               type: :link_click,
+               id: "article",
+               value: "https://example.com/article",
+               scope: ["main"],
+               window_id: "main"
+             }
+    end
+  end
+
   describe "decode_message/1 -- key events (key in value.key)" do
     test "decodes a named key to %KeyEvent{type: :press}" do
       json =

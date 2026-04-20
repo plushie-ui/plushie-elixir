@@ -325,6 +325,26 @@ defmodule Plushie.Protocol.Decode do
     }
   end
 
+  defp dispatch(
+         %{"type" => "event", "family" => "link_click", "id" => _id, "value" => data} = msg
+       ) do
+    {local, scope, window_id, _family} = event_identity!(msg)
+
+    link =
+      case data do
+        %{"link" => url} when is_binary(url) -> url
+        _ -> ""
+      end
+
+    %WidgetEvent{
+      type: :link_click,
+      id: local,
+      scope: scope,
+      window_id: window_id,
+      value: link
+    }
+  end
+
   # -- Keyboard events --
   # Global key events have no "id" field (or an empty "id"). Widget-scoped
   # key events include a non-empty "id" and are handled as WidgetEvent structs.

@@ -38,6 +38,7 @@ defmodule Plushie.Event.WidgetEvent do
           | :close
           | :option_hovered
           | :key_binding
+          | :link_click
           | :sort
           | :pane_focus_cycle
           | :press
@@ -93,7 +94,7 @@ defmodule Plushie.Event.WidgetEvent do
 
   @builtin_event_types ~w(
     click input submit toggle select slide slide_release paste open close option_hovered
-    key_binding sort scrolled pane_focus_cycle
+    key_binding link_click sort scrolled pane_focus_cycle
     press release move scroll enter exit double_click resize
     focused blurred drag drag_end key_press key_release
     pane_resized pane_dragged pane_clicked
