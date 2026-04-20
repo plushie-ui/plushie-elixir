@@ -724,11 +724,14 @@ defmodule Plushie.Bridge do
                 expected = Plushie.Protocol.protocol_version()
 
                 if protocol != expected do
-                  Logger.error(
-                    "plushie bridge: protocol mismatch: renderer reports protocol #{protocol}, " <>
-                      "expected #{expected}. Stopping bridge."
-                  )
+                  err =
+                    Plushie.Protocol.ProtocolVersionMismatchError.exception(
+                      expected: expected,
+                      got: protocol
+                    )
 
+                  Logger.error("plushie bridge: #{Exception.message(err)}. Stopping bridge.")
+                  send(state.runtime, {:protocol_version_mismatch, err})
                   send(self(), {:stop_protocol_mismatch, protocol, expected})
                   state
                 else

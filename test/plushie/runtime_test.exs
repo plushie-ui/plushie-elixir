@@ -2326,22 +2326,24 @@ defmodule Plushie.RuntimeTest do
       {runtime, _bridge} = start_runtime(SimpleApp)
       await_initial_render(runtime)
 
-      diag_event = %Plushie.Event.SystemEvent{
-        type: :diagnostic,
-        tag: "unknown_prop",
-        value: %{level: "warning", code: "unknown_prop", message: "unknown prop: foo"},
-        id: "canvas1",
-        window_id: "main"
+      diag_event = %Plushie.Event.DiagnosticMessage{
+        session: "default",
+        level: :warn,
+        diagnostic: %Plushie.Event.Diagnostic.PropUnknown{
+          id: "canvas1",
+          type_name: "canvas",
+          prop: "foo",
+          known_debug: "[width, height]"
+        }
       }
 
       send(runtime, {:renderer_event, diag_event})
       Plushie.Runtime.sync(runtime)
 
       assert_receive {:diag, metadata}
-      assert metadata.code == "unknown_prop"
-      assert metadata.message == "unknown prop: foo"
-      assert metadata.id == "canvas1"
-      assert metadata.window_id == "main"
+      assert metadata.code == "prop_unknown"
+      assert metadata.level == :warn
+      assert %Plushie.Event.Diagnostic.PropUnknown{prop: "foo"} = metadata.diagnostic
 
       :telemetry.detach("diag-test-#{inspect(ref)}")
     end
@@ -2364,9 +2366,12 @@ defmodule Plushie.RuntimeTest do
         send(
           runtime,
           {:renderer_event,
-           %Plushie.Event.SystemEvent{
-             type: :diagnostic,
-             value: %{n: i, level: "info", message: "diag #{i}"}
+           %Plushie.Event.DiagnosticMessage{
+             session: "default",
+             level: :info,
+             diagnostic: %Plushie.Event.Diagnostic.FontFamilyNotFound{
+               family: "Missing-#{i}"
+             }
            }}
         )
       end
@@ -2374,8 +2379,13 @@ defmodule Plushie.RuntimeTest do
       Plushie.Runtime.sync(runtime)
 
       for i <- 1..3 do
-        assert_receive {:diag, %{message: msg}}
-        assert msg == "diag #{i}"
+        assert_receive {:diag,
+                        %{
+                          code: "font_family_not_found",
+                          diagnostic: %Plushie.Event.Diagnostic.FontFamilyNotFound{family: family}
+                        }}
+
+        assert family == "Missing-#{i}"
       end
 
       :telemetry.detach("diag-multi-#{inspect(ref)}")

@@ -1372,25 +1372,27 @@ defmodule Plushie.Protocol.Decode do
   # Shape: {"type":"diagnostic","session":"...","level":"warn"|"info"|"error",
   #         "diagnostic":{"kind":"...","...":"..."}}
   # The typed `diagnostic` payload carries a `kind` discriminator plus
-  # variant-specific fields. We surface it as a SystemEvent so the
-  # runtime's existing :diagnostic handler logs and emits telemetry.
+  # variant-specific fields. We dispatch on the kind to the matching
+  # typed variant struct under `Plushie.Event.Diagnostic.*` and wrap it
+  # in a `DiagnosticMessage` carrier so the app can pattern match on
+  # the variant with compile-time assurance.
   defp dispatch(%{"type" => "diagnostic", "diagnostic" => diag} = msg)
        when is_map(diag) do
-    level = msg["level"] || "warn"
-    kind = diag["kind"]
-    # Merge level into the value map so the runtime's existing logging
-    # path (which reads value[:level]) picks it up. The "warn" wire
-    # level maps to Logger.warning, matching the runtime dispatcher.
-    merged = Map.put(diag, "level", level)
+    level =
+      case msg["level"] do
+        "info" -> :info
+        "warn" -> :warn
+        "error" -> :error
+        nil -> :warn
+        other -> raise ArgumentError, "unknown diagnostic level #{inspect(other)}"
+      end
 
-    value = safe_atomize_keys(merged)
+    typed = Plushie.Event.Diagnostic.decode!(diag)
 
-    %Plushie.Event.SystemEvent{
-      type: :diagnostic,
-      tag: kind,
-      value: value,
-      id: diag["id"],
-      window_id: diag["window_id"]
+    %Plushie.Event.DiagnosticMessage{
+      session: msg["session"] || "",
+      level: level,
+      diagnostic: typed
     }
   end
 

@@ -100,7 +100,8 @@ defmodule Plushie.Runtime do
             memo_cache: %{},
             widget_view_cache: %{},
             dev_overlay: nil,
-            dev_overlay_timer: nil
+            dev_overlay_timer: nil,
+            dispatch_depth: 0
 
   @typep state :: %__MODULE__{
            app: module(),
@@ -584,28 +585,23 @@ defmodule Plushie.Runtime do
 
   @impl GenServer
   def handle_info(
-        {:renderer_event, %Plushie.Event.SystemEvent{type: :diagnostic} = event},
+        {:renderer_event, %Plushie.Event.DiagnosticMessage{} = event},
         state
       ) do
-    level = event.value[:level] || "warning"
-    code = event.tag || "unknown"
-    source = [event.window_id, event.id] |> Enum.reject(&is_nil/1) |> Enum.join("/")
-    prefix = if source != "", do: " [#{source}]", else: ""
-    msg = "plushie runtime:#{prefix} #{code}: #{event.value[:message] || inspect(event.value)}"
+    code = diagnostic_kind(event.diagnostic)
+    msg = "plushie runtime: #{code}: #{inspect(event.diagnostic)}"
 
-    case level do
-      "error" -> Logger.error(msg)
-      "info" -> Logger.info(msg)
+    case event.level do
+      :error -> Logger.error(msg)
+      :info -> Logger.info(msg)
       _ -> Logger.warning(msg)
     end
 
     :telemetry.execute([:plushie, :diagnostic], %{count: 1}, %{
-      level: level,
+      level: event.level,
       code: code,
-      message: event.value[:message],
-      id: event.id,
-      window_id: event.window_id,
-      element_id: event.value[:element_id],
+      session: event.session,
+      diagnostic: event.diagnostic,
       event: event
     })
 
@@ -758,6 +754,20 @@ defmodule Plushie.Runtime do
 
   @impl GenServer
   def handle_info({:renderer_event, event}, state) do
+    # Renderer-originated events reset the dispatch chain: this is a
+    # fresh input, not a tail of a chained dispatch.
+    state = %{state | dispatch_depth: 0}
+    state = flush_coalescables(state)
+    state = run_update(state, event)
+    {:noreply, state}
+  end
+
+  @impl GenServer
+  def handle_info({:dispatched_event, depth, event}, state) do
+    # Events produced by `Command.dispatch/1` carry the chain depth so
+    # a pathological update loop is capped by the guard in
+    # `Plushie.Runtime.Commands`.
+    state = %{state | dispatch_depth: depth}
     state = flush_coalescables(state)
     state = run_update(state, event)
     {:noreply, state}
@@ -1204,6 +1214,17 @@ defmodule Plushie.Runtime do
 
   # -- Dev overlay helpers ----------------------------------------------------
 
+  # Stable kind discriminator for the typed Diagnostic variant. Mirrors
+  # the renderer's `plushie-core::DiagnosticKind` snake_case string so
+  # telemetry / logs stay grouped across releases even though the
+  # struct module name is the compile-time identity.
+  defp diagnostic_kind(%mod{}) do
+    mod
+    |> Module.split()
+    |> List.last()
+    |> Macro.underscore()
+  end
+
   defp maybe_handle_dev_overlay_event(state, event) do
     case DevOverlay.maybe_handle_event(state, event) do
       {:rerender, state} -> {:handled, dev_rerender(state)}
@@ -1352,28 +1373,28 @@ defmodule Plushie.Runtime do
   end
 
   # Converts a raw renderer exit reason into a structured %RendererExit{}.
-  @spec build_renderer_exit(term()) :: Plushie.RendererExit.t()
+  @spec build_renderer_exit(term()) :: Plushie.RendererExitError.t()
   defp build_renderer_exit(:normal),
-    do: %Plushie.RendererExit{type: :shutdown, message: "renderer shut down normally"}
+    do: %Plushie.RendererExitError{type: :shutdown, message: "renderer shut down normally"}
 
   defp build_renderer_exit(:shutdown),
-    do: %Plushie.RendererExit{type: :shutdown, message: "renderer shut down"}
+    do: %Plushie.RendererExitError{type: :shutdown, message: "renderer shut down"}
 
   defp build_renderer_exit(:heartbeat_timeout),
-    do: %Plushie.RendererExit{
+    do: %Plushie.RendererExitError{
       type: :heartbeat_timeout,
       message: "renderer unresponsive (heartbeat timeout)"
     }
 
   defp build_renderer_exit({:exit_status, status}),
-    do: %Plushie.RendererExit{
+    do: %Plushie.RendererExitError{
       type: :crash,
       message: "renderer crashed with exit status #{status}",
       details: status
     }
 
   defp build_renderer_exit(reason),
-    do: %Plushie.RendererExit{
+    do: %Plushie.RendererExitError{
       type: :crash,
       message: "renderer exited unexpectedly: #{inspect(reason)}",
       details: reason

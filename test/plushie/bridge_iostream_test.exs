@@ -171,7 +171,7 @@ defmodule Plushie.BridgeIostreamTest do
             assert_receive {:EXIT, ^bridge, {:protocol_mismatch, _, _}}, 1_000
           end)
 
-        assert log =~ "protocol mismatch"
+        assert log =~ "protocol version mismatch"
       after
         Process.flag(:trap_exit, false)
       end

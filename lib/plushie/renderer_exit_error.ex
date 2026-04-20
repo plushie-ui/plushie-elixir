@@ -1,4 +1,4 @@
-defmodule Plushie.RendererExit do
+defmodule Plushie.RendererExitError do
   @moduledoc "Structured renderer exit reason for handle_renderer_exit/2."
 
   defexception [:type, :message, :details]

@@ -137,11 +137,11 @@ defmodule Plushie.App do
 
   @doc """
   Called when the renderer process exits unexpectedly. Receives a
-  `%Plushie.RendererExit{}` struct with `:type`, `:message`, and `:details`.
+  `%Plushie.RendererExitError{}` struct with `:type`, `:message`, and `:details`.
   Return the model to use when the renderer restarts.
   Default: return model unchanged.
   """
-  @callback handle_renderer_exit(model, reason :: Plushie.RendererExit.t()) :: model
+  @callback handle_renderer_exit(model, reason :: Plushie.RendererExitError.t()) :: model
 
   @doc """
   Called on runtime startup to configure window properties. Also called

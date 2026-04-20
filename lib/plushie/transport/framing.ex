@@ -21,16 +21,44 @@ defmodule Plushie.Transport.Framing do
 
   Each message is terminated by a newline character (`\\n`). Messages
   must not contain embedded newlines.
+
+  ## Size cap
+
+  Both framings reject messages larger than
+  `#{__MODULE__}.max_message_size/0` (64 MiB) by raising
+  `Plushie.Transport.BufferOverflowError`. Oversized frames are a
+  protocol violation: silently dropping them risks desync, and the
+  payload cannot legitimately exceed the cap.
   """
+
+  @max_message_size 64 * 1024 * 1024
+
+  @doc """
+  The per-message size cap in bytes.
+
+  Matches the renderer's cap so both ends reject the same threshold.
+  """
+  @spec max_message_size() :: pos_integer()
+  def max_message_size, do: @max_message_size
 
   @doc """
   Encode a protocol message with a 4-byte length prefix (MessagePack mode).
 
   Returns iodata that can be written to the transport.
+
+  Raises `Plushie.Transport.BufferOverflowError` when the payload
+  exceeds the 64 MiB cap.
   """
   @spec encode_packet(data :: iodata()) :: iodata()
   def encode_packet(data) do
     size = IO.iodata_length(data)
+
+    if size > @max_message_size do
+      raise Plushie.Transport.BufferOverflowError,
+        size: size,
+        limit: @max_message_size
+    end
+
     [<<size::32-big>>, data]
   end
 
@@ -41,6 +69,9 @@ defmodule Plushie.Transport.Framing do
   `complete_messages` is a list of binaries (each a complete protocol
   message) and `remaining_buffer` is leftover bytes waiting for more
   data.
+
+  Raises `Plushie.Transport.BufferOverflowError` when a length prefix
+  declares a frame larger than the 64 MiB cap.
 
   ## Examples
 
@@ -59,6 +90,13 @@ defmodule Plushie.Transport.Framing do
     decode_packet_loop(buffer, [])
   end
 
+  defp decode_packet_loop(<<size::32-big, _rest::binary>>, _acc)
+       when size > @max_message_size do
+    raise Plushie.Transport.BufferOverflowError,
+      size: size,
+      limit: @max_message_size
+  end
+
   defp decode_packet_loop(<<size::32-big, rest::binary>>, acc)
        when byte_size(rest) >= size do
     <<frame::binary-size(size), remaining::binary>> = rest
@@ -71,9 +109,20 @@ defmodule Plushie.Transport.Framing do
 
   @doc """
   Encode a protocol message with a newline terminator (JSON mode).
+
+  Raises `Plushie.Transport.BufferOverflowError` when the encoded
+  line exceeds the 64 MiB cap.
   """
   @spec encode_line(data :: iodata()) :: iodata()
   def encode_line(data) do
+    size = IO.iodata_length(data)
+
+    if size > @max_message_size do
+      raise Plushie.Transport.BufferOverflowError,
+        size: size,
+        limit: @max_message_size
+    end
+
     [data, "\n"]
   end
 
@@ -81,16 +130,37 @@ defmodule Plushie.Transport.Framing do
   Decode complete lines from accumulated bytes (JSON mode).
 
   Returns `{complete_lines, remaining_buffer}`.
+
+  Raises `Plushie.Transport.BufferOverflowError` when a completed
+  line exceeds the 64 MiB cap, or when the partial tail has already
+  grown past the cap without a newline.
   """
   @spec decode_lines(buffer :: binary()) :: {[binary()], binary()}
   def decode_lines(buffer) do
-    case :binary.split(buffer, "\n", [:global]) do
-      [^buffer] ->
-        {[], buffer}
+    {lines, remaining} =
+      case :binary.split(buffer, "\n", [:global]) do
+        [^buffer] ->
+          {[], buffer}
 
-      parts ->
-        {lines, [remaining]} = Enum.split(parts, length(parts) - 1)
-        {lines, remaining}
+        parts ->
+          {lines, [remaining]} = Enum.split(parts, length(parts) - 1)
+          {lines, remaining}
+      end
+
+    Enum.each(lines, fn line ->
+      if byte_size(line) > @max_message_size do
+        raise Plushie.Transport.BufferOverflowError,
+          size: byte_size(line),
+          limit: @max_message_size
+      end
+    end)
+
+    if byte_size(remaining) > @max_message_size do
+      raise Plushie.Transport.BufferOverflowError,
+        size: byte_size(remaining),
+        limit: @max_message_size
     end
+
+    {lines, remaining}
   end
 end

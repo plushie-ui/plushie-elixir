@@ -13,6 +13,17 @@ defmodule Plushie.Runtime.Commands do
   @effect_timeout_ms 30_000
 
   @doc """
+  Maximum synchronous dispatch chain depth.
+
+  `Command.dispatch/1` queues a follow-up event in the runtime's
+  mailbox. A pathological `update` that keeps emitting another
+  `Command.dispatch` would fill the mailbox indefinitely; the runtime
+  bumps a depth counter per chained event and drops the command when
+  the counter reaches this cap.
+  """
+  def dispatch_depth_limit, do: 100
+
+  @doc """
   Executes a list of commands (or a single command), threading the runtime
   state through each one. Batch commands are flattened recursively.
   """
@@ -38,18 +49,45 @@ defmodule Plushie.Runtime.Commands do
          %Plushie.Command{type: :dispatch, payload: %{value: value, mapper: mapper}},
          state
        ) do
-    try do
-      event = mapper.(value)
-      send(self(), {:renderer_event, event})
-    catch
-      kind, reason ->
-        Logger.warning(
-          "plushie runtime: Command.dispatch mapper #{kind}: " <>
-            Exception.format(kind, reason, __STACKTRACE__)
-        )
-    end
+    depth = Map.get(state, :dispatch_depth, 0)
+    limit = dispatch_depth_limit()
 
-    state
+    if depth >= limit do
+      diag = %Plushie.Event.Diagnostic.DispatchLoopExceeded{
+        depth: depth + 1,
+        limit: limit
+      }
+
+      Logger.error(
+        "plushie runtime: dispatch_loop_exceeded: command chain reached depth " <>
+          "#{depth + 1} (limit #{limit}); dropping command to break the loop"
+      )
+
+      send(
+        self(),
+        {:renderer_event,
+         %Plushie.Event.DiagnosticMessage{
+           session: Map.get(state, :session, ""),
+           level: :error,
+           diagnostic: diag
+         }}
+      )
+
+      state
+    else
+      try do
+        event = mapper.(value)
+        send(self(), {:dispatched_event, depth + 1, event})
+      catch
+        kind, reason ->
+          Logger.warning(
+            "plushie runtime: Command.dispatch mapper #{kind}: " <>
+              Exception.format(kind, reason, __STACKTRACE__)
+          )
+      end
+
+      state
+    end
   end
 
   defp execute_command(%Plushie.Command{type: :task, payload: %{fun: fun, tag: tag}}, state) do

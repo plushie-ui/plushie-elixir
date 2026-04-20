@@ -126,6 +126,55 @@ defmodule Plushie.Transport.FramingTest do
     end
   end
 
+  describe "buffer overflow" do
+    alias Plushie.Transport.BufferOverflowError
+
+    test "encode_packet raises when payload exceeds cap" do
+      cap = Framing.max_message_size()
+      oversize = :binary.copy("x", cap + 1)
+
+      assert_raise BufferOverflowError, fn ->
+        Framing.encode_packet(oversize)
+      end
+    end
+
+    test "decode_packets raises when length prefix declares oversize frame" do
+      cap = Framing.max_message_size()
+      bad = <<cap + 1::32-big>>
+
+      assert_raise BufferOverflowError, fn ->
+        Framing.decode_packets(bad)
+      end
+    end
+
+    test "encode_line raises when payload exceeds cap" do
+      cap = Framing.max_message_size()
+      oversize = :binary.copy("x", cap + 1)
+
+      assert_raise BufferOverflowError, fn ->
+        Framing.encode_line(oversize)
+      end
+    end
+
+    test "decode_lines raises when a line exceeds cap" do
+      cap = Framing.max_message_size()
+      oversize_line = :binary.copy("x", cap + 1) <> "\n"
+
+      assert_raise BufferOverflowError, fn ->
+        Framing.decode_lines(oversize_line)
+      end
+    end
+
+    test "decode_lines raises when partial tail exceeds cap" do
+      cap = Framing.max_message_size()
+      oversize_tail = :binary.copy("x", cap + 1)
+
+      assert_raise BufferOverflowError, fn ->
+        Framing.decode_lines(oversize_tail)
+      end
+    end
+  end
+
   describe "round-trip" do
     test "encode_packet then decode_packets recovers original data" do
       messages = ["hello", "world", "test"]
