@@ -9,7 +9,13 @@ defmodule Plushie.Event.DiagnosticMessage do
 
   ## Fields
 
-    * `:session` - session ID the diagnostic is attributed to.
+    * `:session` - session ID the diagnostic is attributed to. An
+      empty string for process-scoped diagnostics (font load failures,
+      renderer startup or panic, writer-dead, anything that affects
+      the whole renderer rather than a single session). Non-empty for
+      session-scoped diagnostics (widget panics, view errors, tree
+      validation warnings, anything produced inside a session's
+      update or apply pipeline).
     * `:level` - severity: `:info`, `:warn`, or `:error`.
     * `:diagnostic` - typed diagnostic variant struct.
 
