@@ -1082,8 +1082,11 @@ defmodule Plushie.RuntimeTest do
           {model, cmd}
         end
 
-        def update(model, %EffectEvent{tag: :open, result: {:ok, result}}) do
-          %{model | result: result}
+        def update(model, %EffectEvent{
+              tag: :open,
+              result: %Plushie.Effect.Result.FileOpened{path: path}
+            }) do
+          %{model | result: %{path: path}}
         end
 
         def update(model, _event), do: model
@@ -1124,7 +1127,10 @@ defmodule Plushie.RuntimeTest do
           {%{model | effect_id: cmd.payload.id}, cmd}
         end
 
-        def update(model, %EffectEvent{tag: :pick, result: {:ok, %{path: path}}}) do
+        def update(model, %EffectEvent{
+              tag: :pick,
+              result: %Plushie.Effect.Result.FileOpened{path: path}
+            }) do
           %{model | path: path}
         end
 
@@ -1150,7 +1156,7 @@ defmodule Plushie.RuntimeTest do
 
       send(
         runtime,
-        {:renderer_event, {:effect_response, effect_id, {:ok, %{path: "/tmp/test.txt"}}}}
+        {:renderer_event, {:effect_response, effect_id, "ok", %{path: "/tmp/test.txt"}}}
       )
 
       Plushie.Runtime.sync(runtime)
@@ -1172,7 +1178,7 @@ defmodule Plushie.RuntimeTest do
           {%{model | effect_id: cmd.payload.id}, cmd}
         end
 
-        def update(model, %EffectEvent{tag: :read, result: {:error, :timeout}}) do
+        def update(model, %EffectEvent{tag: :read, result: %Plushie.Effect.Result.Timeout{}}) do
           %{model | timeout_result: {:timed_out, :read}}
         end
 
@@ -1220,11 +1226,14 @@ defmodule Plushie.RuntimeTest do
           {%{model | effect_id: cmd.payload.id}, cmd}
         end
 
-        def update(model, %EffectEvent{tag: :read, result: {:error, :timeout}}) do
+        def update(model, %EffectEvent{tag: :read, result: %Plushie.Effect.Result.Timeout{}}) do
           %{model | timeout_result: :read}
         end
 
-        def update(model, %EffectEvent{tag: :read, result: {:ok, value}}) do
+        def update(model, %EffectEvent{
+              tag: :read,
+              result: %Plushie.Effect.Result.ClipboardText{text: value}
+            }) do
           %{model | success_result: {:read, value}}
         end
 
@@ -1249,7 +1258,7 @@ defmodule Plushie.RuntimeTest do
       send(runtime, {:effect_timeout, effect_id})
       Plushie.Runtime.sync(runtime)
 
-      send(runtime, {:renderer_event, {:effect_response, effect_id, {:ok, "late"}}})
+      send(runtime, {:renderer_event, {:effect_response, effect_id, "ok", %{text: "late"}}})
       Plushie.Runtime.sync(runtime)
 
       model = Plushie.Runtime.get_model(runtime)

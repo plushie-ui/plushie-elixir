@@ -12,12 +12,14 @@ defmodule Plushie.Integration.EffectTest do
       {model, Plushie.Effect.clipboard_read(:read)}
     end
 
-    def update(model, %EffectEvent{tag: :read, result: {:ok, data}}) do
-      text = if is_binary(data), do: data, else: ""
+    def update(model, %EffectEvent{
+          tag: :read,
+          result: %Plushie.Effect.Result.ClipboardText{text: text}
+        }) do
       %{model | clipboard_text: text}
     end
 
-    def update(model, %EffectEvent{tag: :read, result: {:error, :unsupported}}) do
+    def update(model, %EffectEvent{tag: :read, result: %Plushie.Effect.Result.Unsupported{}}) do
       %{model | got_unsupported: true}
     end
 
@@ -43,7 +45,7 @@ defmodule Plushie.Integration.EffectTest do
   end
 
   test "stubbed effect returns controlled response" do
-    register_effect_stub(:clipboard_read, "test data")
+    register_effect_stub(:clipboard_read, %{text: "test data"})
 
     click("#read")
 
@@ -53,7 +55,7 @@ defmodule Plushie.Integration.EffectTest do
   end
 
   test "unregister removes the stub" do
-    register_effect_stub(:clipboard_read, "first")
+    register_effect_stub(:clipboard_read, %{text: "first"})
     unregister_effect_stub(:clipboard_read)
 
     # Without a stub, clipboard_read in mock mode returns unsupported

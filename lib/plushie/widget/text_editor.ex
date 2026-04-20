@@ -27,7 +27,8 @@ defmodule Plushie.Widget.TextEditor do
     field :wrapping, Plushie.Type.Wrapping, doc: "Text wrapping mode."
 
     field :input_purpose,
-          {:enum, [:normal, :secure, :terminal, :number, :decimal, :phone, :email, :url, :search]},
+          {:enum,
+           [:normal, :secure, :terminal, :number, :decimal, :phone, :email, :url, :search]},
           doc:
             "Input purpose: `:normal`, `:secure`, `:terminal`, `:number`, `:decimal`, `:phone`, `:email`, `:url`, `:search`."
 

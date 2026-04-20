@@ -9,8 +9,9 @@ defmodule Plushie.Effect do
   Each function takes an atom `tag` as the first argument and returns a
   `Plushie.Command` struct. Dispatch it from `update/2` like any other
   command. The result arrives later as a `%Plushie.Event.EffectEvent{tag: tag,
-  result: result}` event in `update/2`. Pattern match on the tag to
-  identify which effect the response belongs to.
+  result: result}` event in `update/2`, where `result` is a typed
+  `Plushie.Effect.Result.*` struct. Pattern match on the tag plus the
+  struct module to identify the outcome.
 
   Only one effect per tag can be in flight at a time. Starting a new
   effect with a tag that already has a pending request discards the
@@ -18,23 +19,31 @@ defmodule Plushie.Effect do
 
   ## Example
 
+      alias Plushie.Effect.Result
+
       def update(model, %Plushie.Event.WidgetEvent{type: :click, id: "open"}) do
         {model, Plushie.Effect.file_open(:import, title: "Pick a file")}
       end
 
-      def update(model, %Plushie.Event.EffectEvent{tag: :import, result: {:ok, %{path: path}}}) do
+      def update(model, %Plushie.Event.EffectEvent{
+        tag: :import,
+        result: %Result.FileOpened{path: path}
+      }) do
         %{model | file: path}
       end
 
-      def update(model, %Plushie.Event.EffectEvent{tag: :import, result: :cancelled}) do
+      def update(model, %Plushie.Event.EffectEvent{
+        tag: :import,
+        result: %Result.Cancelled{}
+      }) do
         model
       end
 
   ## Timeouts
 
-  Each effect has a default timeout. If the renderer does not respond in time,
-  `%Plushie.Event.EffectEvent{tag: tag, result: {:error, :timeout}}` arrives
-  in `update/2`.
+  Each effect has a default timeout. If the renderer does not respond in
+  time, `%Plushie.Event.EffectEvent{tag: tag, result: %Plushie.Effect.Result.Timeout{}}`
+  arrives in `update/2`.
 
   Default timeouts:
 

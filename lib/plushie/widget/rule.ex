@@ -10,6 +10,7 @@ defmodule Plushie.Widget.Rule do
   widget :rule do
     field :height, :float, doc: "Line thickness in pixels (for horizontal rules)."
     field :width, :float, doc: "Line thickness in pixels (for vertical rules)."
+
     field :thickness, :float,
       doc:
         "Direction-agnostic line thickness in pixels. Used when the direction-specific width/height isn't set."

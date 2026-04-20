@@ -24,22 +24,32 @@ defmodule Plushie.Docs.EffectsTest do
   # -- Effect result event matching -------------------------------------------
 
   test "effects_ok_result_match_test" do
-    event = %EffectEvent{tag: :import, result: {:ok, %{path: "/tmp/notes.txt"}}}
+    event = %EffectEvent{
+      tag: :import,
+      result: %Plushie.Effect.Result.FileOpened{path: "/tmp/notes.txt"}
+    }
 
-    assert %EffectEvent{tag: :import, result: {:ok, %{path: path}}} = event
+    assert %EffectEvent{
+             tag: :import,
+             result: %Plushie.Effect.Result.FileOpened{path: path}
+           } = event
+
     assert path == "/tmp/notes.txt"
   end
 
   test "effects_cancelled_result_match_test" do
-    event = %EffectEvent{tag: :import, result: :cancelled}
+    event = %EffectEvent{tag: :import, result: %Plushie.Effect.Result.Cancelled{}}
 
-    assert %EffectEvent{tag: :import, result: :cancelled} = event
+    assert %EffectEvent{tag: :import, result: %Plushie.Effect.Result.Cancelled{}} = event
   end
 
   test "effects_error_result_match_test" do
-    event = %EffectEvent{tag: :import, result: {:error, "unsupported"}}
+    event = %EffectEvent{
+      tag: :import,
+      result: %Plushie.Effect.Result.Error{message: "unsupported"}
+    }
 
-    assert %EffectEvent{result: {:error, reason}} = event
+    assert %EffectEvent{result: %Plushie.Effect.Result.Error{message: reason}} = event
     assert reason == "unsupported"
   end
 end

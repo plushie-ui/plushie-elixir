@@ -35,7 +35,7 @@ defmodule Plushie.Runtime do
         subscription_keys:  [term()],
         windows:            MapSet.t(),
         async_tasks:        %{atom() => {pid(), reference()}},
-        pending_effects:    %{String.t() => %{tag: atom(), timer_ref: reference()}},
+        pending_effects:    %{String.t() => %{tag: atom(), kind: String.t(), timer_ref: reference()}},
         pending_timers:     %{term() => {reference(), integer()}},
         pending_coalesce:   %{term() => Plushie.Event.t()},
         pending_coalesce_order: [term()],
@@ -116,7 +116,9 @@ defmodule Plushie.Runtime do
            subscription_keys: [term()],
            windows: MapSet.t(),
            async_tasks: %{atom() => {pid(), reference()}},
-           pending_effects: %{String.t() => %{tag: atom(), timer_ref: reference()}},
+           pending_effects: %{
+             String.t() => %{tag: atom(), kind: String.t(), timer_ref: reference()}
+           },
            pending_timers: %{term() => {reference(), integer()}},
            pending_coalesce: %{term() => Plushie.Event.t()},
            pending_coalesce_order: [term()],
@@ -623,10 +625,11 @@ defmodule Plushie.Runtime do
   end
 
   @impl GenServer
-  def handle_info({:renderer_event, {:effect_response, wire_id, result}}, state) do
+  def handle_info({:renderer_event, {:effect_response, wire_id, status, payload}}, state) do
     case pop_pending_effect(state, wire_id) do
-      {:ok, tag, state} ->
-        {:noreply, run_update(state, %EffectEvent{tag: tag, result: result})}
+      {:ok, tag, kind, state} ->
+        typed_result = Plushie.Effect.Result.decode(kind, status, payload)
+        {:noreply, run_update(state, %EffectEvent{tag: tag, result: typed_result})}
 
       :missing ->
         {:noreply, state}
@@ -1028,7 +1031,13 @@ defmodule Plushie.Runtime do
       {%{tag: tag}, pending_effects} ->
         :telemetry.execute([:plushie, :runtime, :effect_timeout], %{count: 1}, %{id: id})
         state = %{state | pending_effects: pending_effects}
-        state = run_update(state, %EffectEvent{tag: tag, result: {:error, :timeout}})
+
+        state =
+          run_update(state, %EffectEvent{
+            tag: tag,
+            result: Plushie.Effect.Result.timeout()
+          })
+
         {:noreply, state}
     end
   end
@@ -1799,26 +1808,27 @@ defmodule Plushie.Runtime do
   # Effect request tracking
   # ---------------------------------------------------------------------------
 
-  # Cancels the timeout timer for a resolved effect request and returns the tag.
-  @spec pop_pending_effect(state(), String.t()) :: {:ok, atom(), state()} | :missing
+  # Cancels the timeout timer for a resolved effect request and returns the
+  # user's tag plus the effect kind (so the typed result decoder knows
+  # how to destructure the payload).
+  @spec pop_pending_effect(state(), String.t()) :: {:ok, atom(), String.t(), state()} | :missing
   defp pop_pending_effect(state, id) do
     case Map.pop(state.pending_effects, id) do
       {nil, _} ->
         :missing
 
-      {%{tag: tag, timer_ref: timer_ref}, pending_effects} ->
+      {%{tag: tag, kind: kind, timer_ref: timer_ref}, pending_effects} ->
         Process.cancel_timer(timer_ref)
-        {:ok, tag, %{state | pending_effects: pending_effects}}
+        {:ok, tag, kind, %{state | pending_effects: pending_effects}}
     end
   end
 
-  # Flushes all pending effect requests, dispatching error results through
-  # update/2 and cancelling their timers.
-  # Flushes all pending effects by cancelling their timers and delivering
-  # error events. Each effect is removed individually before its error event
+  # Flushes all pending effect requests on renderer restart, dispatching
+  # a `RendererRestarted` result through update/2 and cancelling their
+  # timers. Each effect is removed individually before its result event
   # is dispatched so that new effects started during the flush survive.
-  @spec flush_pending_effects(state(), atom()) :: state()
-  defp flush_pending_effects(state, reason) do
+  @spec flush_pending_effects(state(), :renderer_restarted) :: state()
+  defp flush_pending_effects(state, :renderer_restarted) do
     ids = Map.keys(state.pending_effects)
 
     Enum.reduce(ids, state, fn id, acc ->
@@ -1826,7 +1836,8 @@ defmodule Plushie.Runtime do
         %{tag: tag, timer_ref: timer_ref} ->
           if timer_ref, do: Process.cancel_timer(timer_ref)
           acc = %{acc | pending_effects: Map.delete(acc.pending_effects, id)}
-          run_update(acc, %EffectEvent{tag: tag, result: {:error, reason}})
+          result = Plushie.Effect.Result.renderer_restarted()
+          run_update(acc, %EffectEvent{tag: tag, result: result})
 
         nil ->
           # Already removed (e.g. by a run_update side effect).

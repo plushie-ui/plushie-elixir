@@ -33,7 +33,8 @@ defmodule Plushie.Widget.TextInput do
     field :secure, :boolean, doc: "Mask input as password dots. Default: false."
 
     field :input_purpose,
-          {:enum, [:normal, :secure, :terminal, :number, :decimal, :phone, :email, :url, :search]},
+          {:enum,
+           [:normal, :secure, :terminal, :number, :decimal, :phone, :email, :url, :search]},
           doc:
             "Input purpose hint: `:normal`, `:secure`, `:terminal`, `:number`, `:decimal`, `:phone`, `:email`, `:url`, `:search`."
 

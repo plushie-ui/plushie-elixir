@@ -1031,8 +1031,9 @@ defmodule Plushie.Protocol.Decode do
 
   # -- Effect responses --
   #
-  # Returns a tagged tuple instead of an EffectEvent struct. The runtime maps
-  # the wire ID to the user-provided tag and creates the final %EffectEvent{}.
+  # Returns a tagged tuple instead of an EffectEvent struct. The runtime
+  # maps the wire ID to the user-provided tag and kind, then decodes the
+  # payload into a typed `Plushie.Effect.Result.*` struct.
 
   defp dispatch(%{
          "type" => "effect_response",
@@ -1040,7 +1041,7 @@ defmodule Plushie.Protocol.Decode do
          "status" => "ok",
          "result" => result
        }) do
-    {:effect_response, id, {:ok, safe_atomize_keys(result)}}
+    {:effect_response, id, "ok", safe_atomize_keys(result)}
   end
 
   defp dispatch(%{
@@ -1048,7 +1049,7 @@ defmodule Plushie.Protocol.Decode do
          "id" => id,
          "status" => "cancelled"
        }) do
-    {:effect_response, id, :cancelled}
+    {:effect_response, id, "cancelled", nil}
   end
 
   defp dispatch(%{
@@ -1057,7 +1058,7 @@ defmodule Plushie.Protocol.Decode do
          "status" => "error",
          "error" => reason
        }) do
-    {:effect_response, id, {:error, reason}}
+    {:effect_response, id, "error", reason}
   end
 
   defp dispatch(%{
@@ -1065,7 +1066,7 @@ defmodule Plushie.Protocol.Decode do
          "id" => id,
          "status" => "unsupported"
        }) do
-    {:effect_response, id, {:error, :unsupported}}
+    {:effect_response, id, "unsupported", nil}
   end
 
   # -- System query responses --
