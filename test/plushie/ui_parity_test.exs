@@ -9,7 +9,7 @@ defmodule PlushieUIParityTestHelper do
   end
 
   def grid_with_opts do
-    grid(columns: 3, spacing: 4)
+    grid(num_columns: 3, spacing: 4)
   end
 
   def grid_with_do_block do
@@ -20,13 +20,13 @@ defmodule PlushieUIParityTestHelper do
   end
 
   def grid_with_opts_and_do do
-    grid columns: 2 do
+    grid num_columns: 2 do
       text("x")
     end
   end
 
   def grid_with_explicit_id do
-    grid(id: "my_grid", columns: 3)
+    grid(id: "my_grid", num_columns: 3)
   end
 
   # -- keyed_column --
@@ -160,7 +160,7 @@ defmodule Plushie.UIParityTest do
 
     test "grid with opts sets props" do
       node = H.grid_with_opts()
-      assert node.props[:columns] == 3
+      assert node.props[:num_columns] == 3
       assert node.props[:spacing] == 4
     end
 
@@ -172,7 +172,7 @@ defmodule Plushie.UIParityTest do
 
     test "grid with opts and do block" do
       node = H.grid_with_opts_and_do()
-      assert node.props[:columns] == 2
+      assert node.props[:num_columns] == 2
       assert length(node.children) == 1
     end
 

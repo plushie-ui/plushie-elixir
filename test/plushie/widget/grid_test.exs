@@ -7,7 +7,7 @@ defmodule Plushie.Widget.GridTest do
     test "creates a grid with the given id and nil defaults" do
       g = Grid.new("g1")
       assert g.id == "g1"
-      assert g.columns == nil
+      assert g.num_columns == nil
       assert g.spacing == nil
       assert g.width == nil
       assert g.height == nil
@@ -15,16 +15,16 @@ defmodule Plushie.Widget.GridTest do
     end
 
     test "accepts keyword options" do
-      g = Grid.new("g1", columns: 3, spacing: 10)
-      assert g.columns == 3
+      g = Grid.new("g1", num_columns: 3, spacing: 10)
+      assert g.num_columns == 3
       assert g.spacing == 10
     end
   end
 
   describe "builder functions" do
-    test "columns/2 sets the columns field" do
-      g = Grid.new("g1") |> Grid.columns(4)
-      assert g.columns == 4
+    test "num_columns/2 sets the num_columns field" do
+      g = Grid.new("g1") |> Grid.num_columns(4)
+      assert g.num_columns == 4
     end
 
     test "spacing/2 sets the spacing field" do
@@ -79,15 +79,15 @@ defmodule Plushie.Widget.GridTest do
     end
 
     test "includes non-nil props" do
-      node = Grid.new("g1", columns: 2, spacing: 5, width: 300) |> Grid.build()
-      assert node.props[:columns] == 2
+      node = Grid.new("g1", num_columns: 2, spacing: 5, width: 300) |> Grid.build()
+      assert node.props[:num_columns] == 2
       assert node.props[:spacing] == 5
       assert node.props[:width] == 300
     end
 
     test "omits nil props" do
       node = Grid.new("g1") |> Grid.build()
-      refute Map.has_key?(node.props, "columns")
+      refute Map.has_key?(node.props, "num_columns")
       refute Map.has_key?(node.props, "spacing")
       refute Map.has_key?(node.props, "width")
       refute Map.has_key?(node.props, "height")
@@ -104,9 +104,9 @@ defmodule Plushie.Widget.GridTest do
     test "routes all options correctly" do
       g =
         Grid.new("g1")
-        |> Grid.with_options(columns: 5, spacing: 12, width: 800, height: 600)
+        |> Grid.with_options(num_columns: 5, spacing: 12, width: 800, height: 600)
 
-      assert g.columns == 5
+      assert g.num_columns == 5
       assert g.spacing == 12
       assert g.width == 800
       assert g.height == 600

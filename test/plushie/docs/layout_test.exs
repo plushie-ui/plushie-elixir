@@ -263,7 +263,7 @@ defmodule Plushie.Docs.LayoutTest do
     items = [%{id: "1", url: "a.png"}, %{id: "2", url: "b.png"}]
 
     tree =
-      grid id: "gallery", columns: 3, spacing: 8 do
+      grid id: "gallery", num_columns: 3, spacing: 8 do
         for item <- items do
           image("img:#{item.id}", item.url, width: :fill)
         end
@@ -273,7 +273,7 @@ defmodule Plushie.Docs.LayoutTest do
     assert node.type == "grid"
     assert node.id == "gallery"
     assert node.props[:spacing] == 8
-    assert node.props[:columns] == 3
+    assert node.props[:num_columns] == 3
     assert length(node.children) == 2
     assert Enum.all?(node.children, &(&1.type == "image"))
   end

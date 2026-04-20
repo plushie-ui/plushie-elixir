@@ -8,7 +8,7 @@ defmodule Plushie.Widget.Grid do
   # No a11y defaults: layout containers are transparent to AT
 
   widget :grid, container: true do
-    field :columns, :integer, doc: "Number of columns. Default: 1."
+    field :num_columns, :integer, doc: "Number of columns. Default: 1."
     field :spacing, :float, doc: "Spacing between grid cells in pixels. Default: 0."
     field :width, :float, doc: "Grid width in pixels."
     field :height, :float, doc: "Grid height in pixels."

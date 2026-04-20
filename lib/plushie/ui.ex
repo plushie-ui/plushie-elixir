@@ -681,17 +681,16 @@ defmodule Plushie.UI do
 
     ## Options
 
-    - `:columns` - number of columns
+    - `:num_columns` - number of columns
     - `:column_width` - width of each column
     - `:row_height` - height of each row
     - `:spacing` - gap between cells
-    - `:padding` - padding around grid
     - `:width` / `:height` - dimensions
     - `:id` - explicit ID (otherwise auto-generated from call site)
 
     ## Example
 
-        grid columns: 3, spacing: 8 do
+        grid num_columns: 3, spacing: 8 do
           for item <- items do
             text(item.id, item.name)
           end
