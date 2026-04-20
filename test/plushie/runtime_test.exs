@@ -577,6 +577,89 @@ defmodule Plushie.RuntimeTest do
       # The CommandApp init schedules send_after(10, :timer_tick).
       await_model(runtime, fn m -> m.value == 1 end)
     end
+
+    @tag capture_log: true
+    test "dispatch loop is capped at the configured depth limit" do
+      # An app whose update keeps returning `Command.dispatch(:loop)`,
+      # which would fill the runtime mailbox indefinitely without the
+      # depth guard. Each call bumps the depth counter; once the
+      # runtime reaches dispatch_depth_limit, the command is dropped
+      # and a typed DispatchLoopExceeded diagnostic fires.
+      defmodule LoopApp do
+        use Plushie.App
+
+        def init(_opts), do: %{ticks: 0, recovered: 0}
+
+        def update(model, :loop) do
+          cmd = Plushie.Command.dispatch(:dummy, fn _ -> :loop end)
+          {%{model | ticks: model.ticks + 1}, cmd}
+        end
+
+        def update(model, :recover), do: %{model | recovered: model.recovered + 1}
+        def update(model, _event), do: model
+
+        def view(model) do
+          import Plushie.UI
+
+          window "main" do
+            column do
+              text(inspect(model.ticks))
+            end
+          end
+        end
+      end
+
+      test_pid = self()
+      ref = make_ref()
+
+      :telemetry.attach(
+        "loop-cap-#{inspect(ref)}",
+        [:plushie, :diagnostic],
+        &Plushie.Test.TelemetryForwarder.handle/4,
+        %{pid: test_pid, tag: :diag}
+      )
+
+      try do
+        {runtime, _bridge} = start_runtime(LoopApp)
+        await_initial_render(runtime)
+
+        # Kick off the loop. The initial dispatch is a fresh chain at
+        # depth 0; each chained Command.dispatch bumps the counter.
+        Plushie.Runtime.dispatch(runtime, :loop)
+
+        cap = Plushie.Runtime.Commands.dispatch_depth_limit()
+
+        # The diagnostic should surface via telemetry.
+        assert_receive {:diag,
+                        %{
+                          code: "dispatch_loop_exceeded",
+                          level: :error,
+                          diagnostic: %Plushie.Event.Diagnostic.DispatchLoopExceeded{
+                            depth: depth,
+                            limit: ^cap
+                          }
+                        }},
+                       2_000
+
+        assert depth > cap
+
+        # The runtime is still alive and responsive: a fresh dispatch
+        # from outside the chain lands as expected.
+        Plushie.Runtime.dispatch(runtime, :recover)
+        Plushie.Runtime.sync(runtime)
+        model = Plushie.Runtime.get_model(runtime)
+        assert model.recovered == 1
+
+        # Ticks counts every time update ran in the loop. The exact
+        # value is cap + 1 (update runs once per chained event, and the
+        # cap is exceeded on the next dispatch which is dropped), but
+        # we assert the bounded behaviour rather than the exact edge.
+        assert model.ticks >= cap
+        assert model.ticks <= cap + 1
+      after
+        :telemetry.detach("loop-cap-#{inspect(ref)}")
+      end
+    end
   end
 
   describe "renderer lifecycle" do
