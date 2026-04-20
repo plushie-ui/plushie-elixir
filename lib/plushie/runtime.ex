@@ -184,7 +184,7 @@ defmodule Plushie.Runtime do
       # In update/2:
       def update(model, {:computation_done, result}), do: ...
 
-  Prefer `Plushie.Command.async/2` for most async work. Use `dispatch/2`
+  Prefer `Plushie.Command.task/2` for most async work. Use `dispatch/2`
   when you need direct control over the spawned process lifecycle.
   """
   @spec dispatch(GenServer.server(), term()) :: :ok

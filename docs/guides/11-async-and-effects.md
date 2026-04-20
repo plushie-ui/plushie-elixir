@@ -9,14 +9,14 @@ detach an experiment into its own window.
 
 ## Async commands
 
-`Plushie.Command.async/2` runs a function in a separate process and delivers
+`Plushie.Command.task/2` runs a function in a separate process and delivers
 the result as an event:
 
 ```elixir
 alias Plushie.Command
 
 def update(model, %WidgetEvent{type: :click, id: "fetch"}) do
-  cmd = Command.async(fn ->
+  cmd = Command.task(fn ->
     # This runs in a Task, not in the runtime process
     {:ok, fetch_data_from_api()}
   end, :data_loaded)
@@ -351,7 +351,7 @@ The full effect stubbing API is covered in [chapter 15](15-testing.md).
 
 Write experiments to try these concepts:
 
-- Build a button that triggers `Command.async` with a simulated slow
+- Build a button that triggers `Command.task` with a simulated slow
   operation (`Process.sleep(2000)`). Show a loading indicator while the
   task runs, then display the result.
 - Try `Command.stream` to deliver progress updates. Show a progress bar

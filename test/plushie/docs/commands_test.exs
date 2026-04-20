@@ -15,8 +15,8 @@ defmodule Plushie.Docs.CommandsTest do
   # -- command.async ----------------------------------------------------------
 
   test "commands_async_construct_test" do
-    cmd = Command.async(fn -> {:ok, "data"} end, :data_fetched)
-    assert %Command{type: :async, payload: %{tag: :data_fetched}} = cmd
+    cmd = Command.task(fn -> {:ok, "data"} end, :data_fetched)
+    assert %Command{type: :task, payload: %{tag: :data_fetched}} = cmd
   end
 
   # -- command.stream ---------------------------------------------------------
@@ -335,20 +335,20 @@ defmodule Plushie.Docs.CommandsTest do
   # -- Update testability pattern ---------------------------------------------
 
   test "commands_update_testability_test" do
-    cmd = Command.async(fn -> "data" end, :fetch)
-    assert %Command{type: :async, payload: %{tag: :fetch}} = cmd
+    cmd = Command.task(fn -> "data" end, :fetch)
+    assert %Command{type: :task, payload: %{tag: :fetch}} = cmd
   end
 
   # -- Chaining pattern (multi-step async) ------------------------------------
 
   test "commands_chaining_pattern_test" do
-    step1 = Command.async(fn -> :ok end, :validated)
-    step2 = Command.async(fn -> :ok end, :built)
-    step3 = Command.async(fn -> :ok end, :deployed)
+    step1 = Command.task(fn -> :ok end, :validated)
+    step2 = Command.task(fn -> :ok end, :built)
+    step3 = Command.task(fn -> :ok end, :deployed)
 
-    assert %Command{type: :async, payload: %{tag: :validated}} = step1
-    assert %Command{type: :async, payload: %{tag: :built}} = step2
-    assert %Command{type: :async, payload: %{tag: :deployed}} = step3
+    assert %Command{type: :task, payload: %{tag: :validated}} = step1
+    assert %Command{type: :task, payload: %{tag: :built}} = step2
+    assert %Command{type: :task, payload: %{tag: :deployed}} = step3
   end
 
   # -- Settings ---------------------------------------------------------------

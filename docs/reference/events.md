@@ -286,7 +286,7 @@ Timer tick events from `Plushie.Subscription.every/2`.
 
 ### `Plushie.Event.AsyncEvent`
 
-Results from `Plushie.Command.async/2` tasks.
+Results from `Plushie.Command.task/2` tasks.
 
 | Field    | Type                              | Description        |
 | -------- | --------------------------------- | ------------------ |

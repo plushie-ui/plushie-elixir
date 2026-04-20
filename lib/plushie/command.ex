@@ -57,7 +57,7 @@ defmodule Plushie.Command do
   ## Usage
 
       def update(model, %Plushie.Event.WidgetEvent{type: :click, id: "save"}) do
-        cmd = Plushie.Command.async(fn -> save(model) end, :save_result)
+        cmd = Plushie.Command.task(fn -> save(model) end, :save_result)
         {model, cmd}
       end
 
@@ -120,9 +120,9 @@ defmodule Plushie.Command do
   already running, it is killed and replaced. Use unique tags if you
   need concurrent tasks.
   """
-  @spec async(fun :: fun(), event_tag :: atom()) :: %__MODULE__{}
-  def async(fun, event_tag) when is_function(fun) and is_atom(event_tag) do
-    %__MODULE__{type: :async, payload: %{fun: fun, tag: event_tag}}
+  @spec task(fun :: fun(), event_tag :: atom()) :: %__MODULE__{}
+  def task(fun, event_tag) when is_function(fun) and is_atom(event_tag) do
+    %__MODULE__{type: :task, payload: %{fun: fun, tag: event_tag}}
   end
 
   @doc """

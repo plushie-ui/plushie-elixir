@@ -56,7 +56,7 @@ defmodule Plushie.Integration.CommandTest do
     def init(_opts), do: %{result: 0}
 
     def update(model, %WidgetEvent{type: :click, id: "go"}) do
-      cmd = Plushie.Command.async(fn -> 42 end, :compute)
+      cmd = Plushie.Command.task(fn -> 42 end, :compute)
       {model, cmd}
     end
 

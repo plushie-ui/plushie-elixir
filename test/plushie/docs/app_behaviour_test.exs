@@ -27,7 +27,7 @@ defmodule Plushie.Docs.AppBehaviourTest do
 
   defp init_with_command(_opts) do
     model = %{todos: [], loading: true}
-    {model, Command.async(fn -> :loaded end, :todos_loaded)}
+    {model, Command.task(fn -> :loaded end, :todos_loaded)}
   end
 
   # -- update example ----------------------------------------------------------
@@ -111,7 +111,7 @@ defmodule Plushie.Docs.AppBehaviourTest do
     {model, cmd} = init_with_command([])
     assert model.loading == true
     assert model.todos == []
-    assert %Command{type: :async} = cmd
+    assert %Command{type: :task} = cmd
   end
 
   test "app_behaviour_update_add_todo_test" do

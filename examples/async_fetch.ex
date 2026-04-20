@@ -3,7 +3,7 @@ defmodule AsyncFetch do
   Async command example: a button that triggers background work.
 
   Demonstrates:
-  - `Plushie.Command.async/2` for off-thread work
+  - `Plushie.Command.task/2` for off-thread work
   - Pattern matching on `%AsyncEvent{tag: ..., result: ...}` for success/error
   - Loading state management
   - Extracting view helpers for reuse
@@ -24,7 +24,7 @@ defmodule AsyncFetch do
 
   def update(model, %WidgetEvent{type: :click, id: "fetch"}) do
     cmd =
-      Command.async(fn ->
+      Command.task(fn ->
         # Simulate a slow network call
         Process.sleep(500)
         {:ok, "Fetched at #{Calendar.strftime(DateTime.utc_now(), "%H:%M:%S")}"}

@@ -48,11 +48,11 @@ defmodule Plushie.App do
 
       def init(_opts) do
         model = %{data: nil, loading: true}
-        {model, Command.async(fn -> load_initial_data() end, :loaded)}
+        {model, Command.task(fn -> load_initial_data() end, :loaded)}
       end
 
       def update(model, %WidgetEvent{type: :click, id: "save"}) do
-        {model, Command.async(fn -> save_to_disk(model) end, :save_result)}
+        {model, Command.task(fn -> save_to_disk(model) end, :save_result)}
       end
 
   See `Plushie.Command` for the full command API and result delivery.

@@ -281,7 +281,7 @@ if model.loading do
 end
 
 def update(model, %WidgetEvent{type: :click, id: "fetch"}) do
-  {%{model | loading: true}, Command.async(fn -> fetch_data() end, :fetch)}
+  {%{model | loading: true}, Command.task(fn -> fetch_data() end, :fetch)}
 end
 
 def update(model, %AsyncEvent{tag: :fetch, result: {:ok, data}}) do

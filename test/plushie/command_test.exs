@@ -63,32 +63,32 @@ defmodule Plushie.CommandTest do
     end
   end
 
-  describe "async/2" do
-    test "returns a Command with type :async" do
-      cmd = Command.async(fn -> :ok end, :my_result)
-      assert cmd.type == :async
+  describe "task/2" do
+    test "returns a Command with type :task" do
+      cmd = Command.task(fn -> :ok end, :my_result)
+      assert cmd.type == :task
     end
 
     test "stores the function under :fun in the payload" do
       fun = fn -> 42 end
-      cmd = Command.async(fun, :answer)
+      cmd = Command.task(fun, :answer)
       assert cmd.payload.fun == fun
     end
 
     test "stores the event tag under :tag in the payload" do
-      cmd = Command.async(fn -> :ok end, :save_done)
+      cmd = Command.task(fn -> :ok end, :save_done)
       assert cmd.payload.tag == :save_done
     end
 
     test "raises when the first argument is not a function" do
       assert_raise FunctionClauseError, fn ->
-        Command.async(:not_a_fun, :tag)
+        Command.task(:not_a_fun, :tag)
       end
     end
 
     test "raises when the event tag is not an atom" do
       assert_raise FunctionClauseError, fn ->
-        Command.async(fn -> :ok end, "string_tag")
+        Command.task(fn -> :ok end, "string_tag")
       end
     end
   end

@@ -1,6 +1,6 @@
 defmodule Plushie.Event.AsyncEvent do
   @moduledoc """
-  Results from `Plushie.Command.async/2` tasks.
+  Results from `Plushie.Command.task/2` tasks.
 
   ## Fields
 

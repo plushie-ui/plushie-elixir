@@ -63,7 +63,7 @@ defmodule Plushie.RuntimeTest do
     def init(_opts), do: %{value: 0}
 
     def update(model, %WidgetEvent{type: :click, id: "async"}) do
-      cmd = Plushie.Command.async(fn -> 42 end, :async_result)
+      cmd = Plushie.Command.task(fn -> 42 end, :async_result)
       {model, cmd}
     end
 
@@ -1889,7 +1889,7 @@ defmodule Plushie.RuntimeTest do
 
       def update(model, %WidgetEvent{type: :click, id: "start"}) do
         cmd =
-          Plushie.Command.async(
+          Plushie.Command.task(
             fn ->
               Process.sleep(500)
               42
@@ -1943,7 +1943,7 @@ defmodule Plushie.RuntimeTest do
 
       def update(model, %WidgetEvent{type: :click, id: "start"}) do
         cmd =
-          Plushie.Command.async(
+          Plushie.Command.task(
             fn ->
               Process.sleep(60_000)
               :should_not_arrive

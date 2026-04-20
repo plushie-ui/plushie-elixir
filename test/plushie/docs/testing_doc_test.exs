@@ -77,7 +77,7 @@ defmodule Plushie.Docs.TestingDocTest.SaveApp do
   def init(_opts), do: %{data: "unsaved"}
 
   def update(model, %WidgetEvent{type: :click, id: "save"}) do
-    {model, Plushie.Command.async(fn -> :ok end, :save_result)}
+    {model, Plushie.Command.task(fn -> :ok end, :save_result)}
   end
 
   def update(model, _event), do: model
@@ -135,7 +135,7 @@ defmodule Plushie.Docs.TestingDocTest do
     model = %{data: "unsaved"}
     {_model, cmd} = SaveApp.update(model, %Plushie.Event.WidgetEvent{type: :click, id: "save"})
 
-    assert %Plushie.Command{type: :async, payload: %{tag: :save_result}} = cmd
+    assert %Plushie.Command{type: :task, payload: %{tag: :save_result}} = cmd
   end
 
   # -- Testing view/1 ---------------------------------------------------------

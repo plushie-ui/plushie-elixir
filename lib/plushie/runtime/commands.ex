@@ -52,7 +52,7 @@ defmodule Plushie.Runtime.Commands do
     state
   end
 
-  defp execute_command(%Plushie.Command{type: :async, payload: %{fun: fun, tag: tag}}, state) do
+  defp execute_command(%Plushie.Command{type: :task, payload: %{fun: fun, tag: tag}}, state) do
     # Kill any existing task with the same tag before starting a new one.
     state = cancel_existing_task(state, tag)
 

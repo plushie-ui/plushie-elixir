@@ -96,7 +96,7 @@ mix plushie.gui Shortcuts
 **File:** `async_fetch.ex`
 
 Button that triggers simulated background work. Demonstrates
-`Plushie.Command.async/2` for running expensive operations off the main update
+`Plushie.Command.task/2` for running expensive operations off the main update
 loop. Shows the `{model, command}` return form from `update/2` and how async
 results are delivered back as events.
 
