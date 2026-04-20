@@ -28,9 +28,9 @@ defmodule Plushie.Command do
   - **System queries**: `system_theme/1`, `system_info/1`
   - **PaneGrid ops**: `pane_split/4`, `pane_close/2`, `pane_swap/3`,
     `pane_maximize/2`, `pane_restore/1`
-  - **Image ops**: `create_image/2`, `create_image/4`, `update_image/2`,
-    `update_image/4`, `delete_image/1`, `list_images/1`, `clear_images/0`
-    (see `Command.Image`)
+  - **Image ops**: `create_image/2`, `create_image_rgba/4`,
+    `update_image/2`, `update_image_rgba/4`, `delete_image/1`,
+    `list_images/1`, `clear_images/0` (see `Command.Image`)
   - **Queries**: `tree_hash/1`, `find_focused/1`
   - **Font**: `load_font/2`
   - **Accessibility**: `announce/1`
@@ -247,9 +247,9 @@ defmodule Plushie.Command do
   # ---------------------------------------------------------------------------
 
   defdelegate create_image(handle, data), to: __MODULE__.Image
-  defdelegate create_image(handle, width, height, pixels), to: __MODULE__.Image
+  defdelegate create_image_rgba(handle, width, height, pixels), to: __MODULE__.Image
   defdelegate update_image(handle, data), to: __MODULE__.Image
-  defdelegate update_image(handle, width, height, pixels), to: __MODULE__.Image
+  defdelegate update_image_rgba(handle, width, height, pixels), to: __MODULE__.Image
   defdelegate delete_image(handle), to: __MODULE__.Image
   defdelegate list_images(tag), to: __MODULE__.Image
   defdelegate clear_images(), to: __MODULE__.Image

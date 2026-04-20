@@ -8,15 +8,18 @@ defmodule Plushie.Command.Image do
 
   ## Example
 
-      # Create from file
+      # Create from encoded file bytes
       data = File.read!("photo.png")
       Command.create_image("avatar", data)
 
       # Create from raw RGBA pixels
-      Command.create_image("gradient", 256, 1, rgba_pixels)
+      Command.create_image_rgba("gradient", 256, 1, rgba_pixels)
 
-      # Update existing
+      # Update existing encoded image
       Command.update_image("avatar", new_data)
+
+      # Update existing raw image
+      Command.update_image_rgba("gradient", 256, 1, new_rgba_pixels)
 
       # Clean up
       Command.delete_image("avatar")
@@ -44,13 +47,13 @@ defmodule Plushie.Command.Image do
   The raw binary is stored as-is in the command payload. The protocol layer
   handles format-specific encoding (native binary for msgpack, base64 for JSON).
   """
-  @spec create_image(
+  @spec create_image_rgba(
           handle :: String.t(),
           width :: pos_integer(),
           height :: pos_integer(),
           pixels :: binary()
         ) :: Command.t()
-  def create_image(handle, width, height, pixels)
+  def create_image_rgba(handle, width, height, pixels)
       when is_binary(handle) and is_integer(width) and is_integer(height) and is_binary(pixels) do
     expected = width * height * 4
 
@@ -92,13 +95,13 @@ defmodule Plushie.Command.Image do
   The raw binary is stored as-is in the command payload. The protocol layer
   handles format-specific encoding (native binary for msgpack, base64 for JSON).
   """
-  @spec update_image(
+  @spec update_image_rgba(
           handle :: String.t(),
           width :: pos_integer(),
           height :: pos_integer(),
           pixels :: binary()
         ) :: Command.t()
-  def update_image(handle, width, height, pixels)
+  def update_image_rgba(handle, width, height, pixels)
       when is_binary(handle) and is_integer(width) and is_integer(height) and is_binary(pixels) do
     expected = width * height * 4
 

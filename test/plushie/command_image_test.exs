@@ -16,11 +16,11 @@ defmodule Plushie.CommandImageTest do
     end
   end
 
-  describe "create_image/4 (raw RGBA pixels)" do
+  describe "create_image_rgba/4 (raw RGBA pixels)" do
     test "returns a command struct with dimensions and pixel data" do
       # 2x2 red RGBA pixels
       pixels = <<255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255>>
-      cmd = Command.create_image("sprite", 2, 2, pixels)
+      cmd = Command.create_image_rgba("sprite", 2, 2, pixels)
 
       assert %Command{type: :image_op} = cmd
       assert cmd.payload.op == "create_image"
@@ -44,10 +44,10 @@ defmodule Plushie.CommandImageTest do
     end
   end
 
-  describe "update_image/4 (raw RGBA pixels)" do
+  describe "update_image_rgba/4 (raw RGBA pixels)" do
     test "returns a command struct with new dimensions and pixels" do
       pixels = <<0, 0, 0, 255>>
-      cmd = Command.update_image("sprite", 1, 1, pixels)
+      cmd = Command.update_image_rgba("sprite", 1, 1, pixels)
 
       assert %Command{type: :image_op} = cmd
       assert cmd.payload.op == "update_image"
@@ -141,21 +141,21 @@ defmodule Plushie.CommandImageTest do
   end
 
   describe "pixel buffer validation" do
-    test "create_image/4 rejects wrong buffer size" do
+    test "create_image_rgba/4 rejects wrong buffer size" do
       assert_raise ArgumentError, ~r/pixel buffer size mismatch/, fn ->
-        Command.create_image("sprite", 2, 2, <<0, 0, 0>>)
+        Command.create_image_rgba("sprite", 2, 2, <<0, 0, 0>>)
       end
     end
 
-    test "update_image/4 rejects wrong buffer size" do
+    test "update_image_rgba/4 rejects wrong buffer size" do
       assert_raise ArgumentError, ~r/pixel buffer size mismatch/, fn ->
-        Command.update_image("sprite", 2, 2, <<0, 0, 0>>)
+        Command.update_image_rgba("sprite", 2, 2, <<0, 0, 0>>)
       end
     end
 
-    test "create_image/4 accepts correct buffer size" do
+    test "create_image_rgba/4 accepts correct buffer size" do
       pixels = :binary.copy(<<255, 0, 0, 255>>, 4)
-      cmd = Command.create_image("sprite", 2, 2, pixels)
+      cmd = Command.create_image_rgba("sprite", 2, 2, pixels)
       assert cmd.payload.op == "create_image"
     end
   end

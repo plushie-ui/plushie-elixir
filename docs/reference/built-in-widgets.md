@@ -130,7 +130,7 @@ Key props: `content_fit`, `filter_method`, `width`, `height`,
 {model, Command.create_image("avatar", png_bytes)}
 
 # Create from raw RGBA pixels:
-{model, Command.create_image("avatar", 512, 512, rgba_pixels)}
+{model, Command.create_image_rgba("avatar", 512, 512, rgba_pixels)}
 
 # Reference in view:
 image("display", handle: "avatar")
