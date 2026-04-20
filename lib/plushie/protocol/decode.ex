@@ -614,6 +614,7 @@ defmodule Plushie.Protocol.Decode do
         x: x,
         y: y,
         button: :left,
+        lost: false,
         captured: msg["captured"] || false,
         modifiers: parse_modifiers(msg["modifiers"])
       }
@@ -818,7 +819,8 @@ defmodule Plushie.Protocol.Decode do
         button: parse_pointer_button(data["button"]),
         pointer: parse_pointer_type(data["pointer"]),
         finger: data["finger"],
-        modifiers: parse_modifiers(data["modifiers"])
+        modifiers: parse_modifiers(data["modifiers"]),
+        captured: data["captured"] || false
       }
     }
   end
@@ -837,7 +839,9 @@ defmodule Plushie.Protocol.Decode do
         button: parse_pointer_button(data["button"]),
         pointer: parse_pointer_type(data["pointer"]),
         finger: data["finger"],
-        modifiers: parse_modifiers(data["modifiers"])
+        modifiers: parse_modifiers(data["modifiers"]),
+        captured: data["captured"] || false,
+        lost: data["lost"]
       }
     }
   end
@@ -855,7 +859,8 @@ defmodule Plushie.Protocol.Decode do
         y: data["y"],
         pointer: parse_pointer_type(data["pointer"]),
         finger: data["finger"],
-        modifiers: parse_modifiers(data["modifiers"])
+        modifiers: parse_modifiers(data["modifiers"]),
+        captured: data["captured"] || false
       }
     }
   end
@@ -882,19 +887,44 @@ defmodule Plushie.Protocol.Decode do
         delta_x: data["delta_x"],
         delta_y: data["delta_y"],
         pointer: parse_pointer_type(data["pointer"]),
-        modifiers: parse_modifiers(data["modifiers"])
+        modifiers: parse_modifiers(data["modifiers"]),
+        captured: data["captured"] || false
       }
     }
   end
 
   defp dispatch(%{"type" => "event", "family" => "enter", "id" => _id} = msg) do
     {local, scope, window_id, _family} = event_identity!(msg)
-    %WidgetEvent{type: :enter, id: local, scope: scope, window_id: window_id}
+    data = msg["value"] || %{}
+
+    %WidgetEvent{
+      type: :enter,
+      id: local,
+      scope: scope,
+      window_id: window_id,
+      value: %{
+        x: data["x"],
+        y: data["y"],
+        captured: data["captured"] || false
+      }
+    }
   end
 
   defp dispatch(%{"type" => "event", "family" => "exit", "id" => _id} = msg) do
     {local, scope, window_id, _family} = event_identity!(msg)
-    %WidgetEvent{type: :exit, id: local, scope: scope, window_id: window_id}
+    data = msg["value"] || %{}
+
+    %WidgetEvent{
+      type: :exit,
+      id: local,
+      scope: scope,
+      window_id: window_id,
+      value: %{
+        x: data["x"],
+        y: data["y"],
+        captured: data["captured"] || false
+      }
+    }
   end
 
   defp dispatch(
