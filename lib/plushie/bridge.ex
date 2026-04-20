@@ -593,16 +593,6 @@ defmodule Plushie.Bridge do
   end
 
   @impl GenServer
-  def handle_info({:stop_protocol_mismatch, got, expected}, state) do
-    {:stop, {:protocol_mismatch, got, expected}, state}
-  end
-
-  @impl GenServer
-  def handle_info({:stop_buffer_overflow, size}, state) do
-    {:stop, {:buffer_overflow, size, @max_buffer_size}, state}
-  end
-
-  @impl GenServer
   def handle_info(:heartbeat_timeout, %{awaiting_resync: true} = state) do
     # Renderer is already restarting; ignore stale timer.
     {:noreply, state}
@@ -707,10 +697,9 @@ defmodule Plushie.Bridge do
     end
   end
 
-  # Emit a typed `BufferOverflow` diagnostic to the runtime and shut
-  # down the bridge. Called from the two overflow paths Framing
-  # doesn't cover (port-mode JSON buffer accumulation and post-
-  # reassembly msgpack/json size check).
+  # Emit a typed `BufferOverflow` diagnostic to the runtime. Returns
+  # the cleared state. The caller is responsible for stopping the
+  # bridge with `{:buffer_overflow, size, @max_buffer_size}`.
   defp emit_buffer_overflow(state, size) do
     diag = %Plushie.Event.Diagnostic.BufferOverflow{
       size: size,
@@ -731,14 +720,20 @@ defmodule Plushie.Bridge do
        }}
     )
 
-    send(self(), {:stop_buffer_overflow, size})
     state
   end
 
+  # Process a single decoded protocol message. Returns `{:continue,
+  # state}` on the happy path, or `{:stop, reason, state}` when the
+  # message signals a fatal bridge condition (protocol version
+  # mismatch, oversize frame). Returning `:stop` directly from the
+  # calling `handle_info` avoids a scheduler round-trip through a
+  # self-sent "please stop" message, which under heavy async-test
+  # load could miss the test's `assert_receive` window.
   defp dispatch_message(data, format, state) do
     cond do
       format == :json and String.trim(data) == "" ->
-        state
+        {:continue, state}
 
       byte_size(data) > @max_buffer_size ->
         # Transport-level framing only enforces overflow when
@@ -750,34 +745,33 @@ defmodule Plushie.Bridge do
         # same event channel as other overflow detections so apps
         # observe a structured event, then stop the bridge.
         size = byte_size(data)
-        emit_buffer_overflow(state, size)
+        state = emit_buffer_overflow(state, size)
+        {:stop, {:buffer_overflow, size, @max_buffer_size}, state}
 
       true ->
         :telemetry.execute([:plushie, :bridge, :receive], %{byte_size: byte_size(data)}, %{})
 
         try do
-          state =
-            case Plushie.Protocol.decode_message!(data, format) do
-              {:hello, %{protocol: protocol} = hello} ->
-                expected = Plushie.Protocol.protocol_version()
+          case Plushie.Protocol.decode_message!(data, format) do
+            {:hello, %{protocol: protocol} = hello} ->
+              expected = Plushie.Protocol.protocol_version()
 
-                if protocol != expected do
-                  err =
-                    Plushie.Protocol.ProtocolVersionMismatchError.exception(
-                      expected: expected,
-                      got: protocol
-                    )
+              if protocol != expected do
+                err =
+                  Plushie.Protocol.ProtocolVersionMismatchError.exception(
+                    expected: expected,
+                    got: protocol
+                  )
 
-                  Logger.error("plushie bridge: #{Exception.message(err)}. Stopping bridge.")
-                  send(state.runtime, {:protocol_version_mismatch, err})
-                  send(self(), {:stop_protocol_mismatch, protocol, expected})
-                  state
-                else
-                  send(state.runtime, {:renderer_event, {:hello, hello}})
-                  state
-                end
+                Logger.error("plushie bridge: #{Exception.message(err)}. Stopping bridge.")
+                {:stop, {:protocol_mismatch, protocol, expected}, state}
+              else
+                send(state.runtime, {:renderer_event, {:hello, hello}})
+                {:continue, reset_heartbeat_timer(state)}
+              end
 
-              {:screenshot_response, response} ->
+            {:screenshot_response, response} ->
+              state =
                 case state.pending_screenshot do
                   nil ->
                     send(state.runtime, {:renderer_event, {:screenshot_response, response}})
@@ -788,12 +782,12 @@ defmodule Plushie.Bridge do
                     %{state | pending_screenshot: nil}
                 end
 
-              event ->
-                send(state.runtime, {:renderer_event, event})
-                state
-            end
+              {:continue, reset_heartbeat_timer(state)}
 
-          reset_heartbeat_timer(state)
+            event ->
+              send(state.runtime, {:renderer_event, event})
+              {:continue, reset_heartbeat_timer(state)}
+          end
         rescue
           error in Plushie.Protocol.Error ->
             :telemetry.execute([:plushie, :bridge, :protocol_error], %{}, %{
@@ -802,7 +796,7 @@ defmodule Plushie.Bridge do
             })
 
             Logger.error("plushie bridge: #{Exception.message(error)}")
-            state
+            {:continue, state}
         end
     end
   end
@@ -810,8 +804,7 @@ defmodule Plushie.Bridge do
   # Handle transport data. Msgpack delivers complete binaries directly.
   # JSON delivers :eol/:noeol tuples that need buffering.
   defp handle_transport_data(binary, %{format: :msgpack} = state) when is_binary(binary) do
-    state = dispatch_message(binary, :msgpack, state)
-    {:noreply, state}
+    finalize_dispatch(dispatch_message(binary, :msgpack, state))
   end
 
   defp handle_transport_data({:eol, _chunk}, %{discard_next_eol: true} = state) do
@@ -820,8 +813,7 @@ defmodule Plushie.Bridge do
 
   defp handle_transport_data({:eol, chunk}, state) do
     line = state.buffer <> chunk
-    state = dispatch_message(line, :json, %{state | buffer: ""})
-    {:noreply, state}
+    finalize_dispatch(dispatch_message(line, :json, %{state | buffer: ""}))
   end
 
   defp handle_transport_data({:noeol, _chunk}, %{discard_next_eol: true} = state) do
@@ -840,7 +832,7 @@ defmodule Plushie.Bridge do
       # matching the Framing-backed socket transport's behaviour.
       size = byte_size(new_buffer)
       state = emit_buffer_overflow(%{state | buffer: "", discard_next_eol: true}, size)
-      {:noreply, state}
+      {:stop, {:buffer_overflow, size, @max_buffer_size}, state}
     else
       {:noreply, %{state | buffer: new_buffer}}
     end
@@ -848,9 +840,13 @@ defmodule Plushie.Bridge do
 
   # IOStream delivers complete protocol messages as raw binaries.
   defp handle_transport_data(binary, state) when is_binary(binary) do
-    state = dispatch_message(binary, state.format, state)
-    {:noreply, state}
+    finalize_dispatch(dispatch_message(binary, state.format, state))
   end
+
+  # Translate dispatch_message/3's tagged return into a GenServer
+  # handle_info reply tuple.
+  defp finalize_dispatch({:continue, state}), do: {:noreply, state}
+  defp finalize_dispatch({:stop, reason, state}), do: {:stop, reason, state}
 
   # Transport closed cleanly or via iostream. Non-restartable transports
   # shut down; restartable ones (spawn) go through exit handling.
