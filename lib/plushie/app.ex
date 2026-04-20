@@ -206,6 +206,11 @@ defmodule Plushie.App do
     Each key matches a widget's `namespace()` on the Rust side. The
     config is passed to `PlushieWidget::init()` via `InitCtx.config`.
     Also configurable via `config :plushie, :widget_config`.
+  - `required_widgets`: list of native widget type names this app
+    requires the renderer to have registered. The renderer emits a
+    `required_widgets_missing` diagnostic on the Settings handshake
+    for any names it does not recognize (non-fatal; the app keeps
+    running).
 
   Default: `%{}` (renderer uses its own defaults).
   """

@@ -1324,6 +1324,14 @@ defmodule Plushie.Runtime do
         settings
       end
 
+    settings =
+      case Map.get(settings, :required_widgets) do
+        nil -> settings
+        [] -> Map.delete(settings, :required_widgets)
+        list when is_list(list) -> Map.put(settings, :required_widgets, list)
+        _ -> Map.delete(settings, :required_widgets)
+      end
+
     # Include token if one was provided (for --listen socket auth).
     settings =
       if state.token do
