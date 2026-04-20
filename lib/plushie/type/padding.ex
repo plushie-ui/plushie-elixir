@@ -118,18 +118,40 @@ defmodule Plushie.Type.Padding do
   end
 
   @impl Plushie.Type
+  def encode(n) when is_number(n) and n < 0 do
+    raise ArgumentError, "padding must be non-negative, got: #{n}"
+  end
+
   def encode(n) when is_number(n), do: n
 
   def encode({vertical, horizontal}) when is_number(vertical) and is_number(horizontal) do
+    if vertical < 0 or horizontal < 0 do
+      raise ArgumentError,
+            "padding must be non-negative, got: {#{vertical}, #{horizontal}}"
+    end
+
     %{top: vertical, right: horizontal, bottom: vertical, left: horizontal}
   end
 
   def encode(%__MODULE__{} = padding) do
-    padding
-    |> Map.from_struct()
-    |> Enum.reject(fn {_, v} -> is_nil(v) end)
-    |> Map.new()
+    map =
+      padding
+      |> Map.from_struct()
+      |> Enum.reject(fn {_, v} -> is_nil(v) end)
+      |> Map.new()
+
+    reject_negative!(map)
+    map
   end
 
-  def encode(%{top: _, right: _, bottom: _, left: _} = map), do: map
+  def encode(%{top: _, right: _, bottom: _, left: _} = map) do
+    reject_negative!(map)
+    map
+  end
+
+  defp reject_negative!(map) do
+    for {side, value} <- map, is_number(value) and value < 0 do
+      raise ArgumentError, "padding must be non-negative, got: #{side}=#{value}"
+    end
+  end
 end

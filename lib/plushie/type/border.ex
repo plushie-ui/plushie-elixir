@@ -142,11 +142,23 @@ defmodule Plushie.Type.Border do
   @impl Plushie.Type
   @spec encode(border :: t()) :: map()
   def encode(%__MODULE__{} = border) do
+    if is_number(border.width) and border.width < 0 do
+      raise ArgumentError, "border width must be non-negative, got: #{border.width}"
+    end
+
     %{color: border.color, width: border.width, radius: encode_radius(border.radius)}
   end
 
-  defp encode_radius(%{top_left: tl, top_right: tr, bottom_right: br, bottom_left: bl}) do
+  defp encode_radius(%{top_left: tl, top_right: tr, bottom_right: br, bottom_left: bl} = map) do
+    for {corner, value} <- map, is_number(value) and value < 0 do
+      raise ArgumentError, "border radius must be non-negative, got: #{corner}=#{value}"
+    end
+
     %{top_left: tl, top_right: tr, bottom_right: br, bottom_left: bl}
+  end
+
+  defp encode_radius(radius) when is_number(radius) and radius < 0 do
+    raise ArgumentError, "border radius must be non-negative, got: #{radius}"
   end
 
   defp encode_radius(radius), do: radius
