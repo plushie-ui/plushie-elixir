@@ -2,6 +2,19 @@ defmodule Plushie.Widget.RichText do
   @moduledoc """
   Rich text display with individually styled spans.
 
+  Spans are typed via `Plushie.Widget.RichText.Span`. Construct them
+  with `span/1` plus chained setters or pass a plain map for ad-hoc
+  cases. Typed spans are encoded automatically; plain maps fall
+  through unchanged.
+
+      alias Plushie.Widget.RichText.Span
+
+      rich_text "status",
+        spans: [
+          Span.new("Build ") |> Span.color("#000000"),
+          Span.new("ok") |> Span.color("#22aa22") |> Span.underline(true)
+        ]
+
   ## Accessibility
 
   Screen readers see individual spans but cannot infer the overall
@@ -25,7 +38,7 @@ defmodule Plushie.Widget.RichText do
 
   widget :rich_text do
     field :spans, {:list, :map},
-      doc: "List of span descriptors with text, size, color, font, etc."
+      doc: "List of span descriptors. Use `Plushie.Widget.RichText.Span` or plain maps."
 
     field :width, Plushie.Type.Length, doc: "Widget width. Default: shrink."
     field :height, Plushie.Type.Length, doc: "Widget height. Default: shrink."

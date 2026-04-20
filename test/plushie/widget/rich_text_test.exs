@@ -143,4 +143,70 @@ defmodule Plushie.Widget.RichTextTest do
       end
     end
   end
+
+  describe "Span typed builder" do
+    alias Plushie.Widget.RichText.Span
+
+    test "new/1 stores text and leaves all styling unset" do
+      span = Span.new("hello")
+      assert span.text == "hello"
+
+      assert [
+               span.size,
+               span.font,
+               span.color,
+               span.line_height,
+               span.link,
+               span.underline,
+               span.strikethrough,
+               span.padding,
+               span.highlight
+             ] == [nil, nil, nil, nil, nil, nil, nil, nil, nil]
+    end
+
+    test "setters apply Color and Padding casts" do
+      span =
+        Span.new("hi")
+        |> Span.color(:red)
+        |> Span.padding(4)
+        |> Span.underline(true)
+
+      assert is_binary(span.color)
+      assert span.padding == 4
+      assert span.underline == true
+    end
+
+    test "padding cast accepts a per-side map" do
+      span =
+        Span.new("hi")
+        |> Span.padding(%{top: 1, right: 2, bottom: 3, left: 4})
+
+      assert span.padding == %{top: 1, right: 2, bottom: 3, left: 4}
+    end
+
+    test "encode/1 omits unset fields and snake_cases struct keys" do
+      wire =
+        Span.new("hi")
+        |> Span.color("#001122")
+        |> Span.size(14.0)
+        |> Span.underline(true)
+        |> Span.encode()
+
+      assert wire == %{text: "hi", color: "#001122", size: 14.0, underline: true}
+    end
+
+    test "encoded as part of a rich_text node via Type.encode_value" do
+      spans = [
+        Span.new("Build ") |> Span.color("#000000"),
+        Span.new("ok") |> Span.color("#22aa22") |> Span.underline(true)
+      ]
+
+      encoded = Plushie.Type.encode_value(spans)
+
+      assert encoded == [
+               %{text: "Build ", color: "#000000"},
+               %{text: "ok", color: "#22aa22", underline: true}
+             ]
+    end
+  end
 end
