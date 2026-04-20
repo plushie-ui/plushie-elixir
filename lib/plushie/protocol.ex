@@ -67,7 +67,7 @@ defmodule Plushie.Protocol do
           | {:register_effect_stub, String.t(), term()}
           | {:unregister_effect_stub, String.t()}
           | {:effect_stub_ack, String.t()}
-          | {:session_error, String.t(), term()}
+          | {:session_error, String.t(), String.t() | nil, term()}
           | {:session_closed, String.t(), term()}
 
   @typedoc """

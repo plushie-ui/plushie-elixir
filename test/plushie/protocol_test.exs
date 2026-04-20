@@ -1606,7 +1606,21 @@ defmodule Plushie.ProtocolTest do
   end
 
   describe "decode_message/1 -- session events" do
-    test "decodes session_error" do
+    test "decodes session_error with code" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "session_error",
+          session: "s1",
+          id: "",
+          value: %{code: "session_panic", error: "session panicked"}
+        })
+
+      assert {:session_error, "s1", "session_panic", "session panicked"} =
+               Protocol.decode_message(json, :json)
+    end
+
+    test "decodes session_error when code is absent" do
       json =
         Jason.encode!(%{
           type: "event",
@@ -1616,7 +1630,8 @@ defmodule Plushie.ProtocolTest do
           value: %{error: "session panicked"}
         })
 
-      assert {:session_error, "s1", "session panicked"} = Protocol.decode_message(json, :json)
+      assert {:session_error, "s1", nil, "session panicked"} =
+               Protocol.decode_message(json, :json)
     end
 
     test "decodes session_closed" do

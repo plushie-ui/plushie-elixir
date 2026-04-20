@@ -1174,7 +1174,7 @@ defmodule Plushie.Protocol.Decode do
          "session" => session,
          "value" => data
        }) do
-    {:session_error, session, data["error"]}
+    {:session_error, session, data["code"], data["error"]}
   end
 
   defp dispatch(%{
