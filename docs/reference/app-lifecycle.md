@@ -21,7 +21,7 @@ callbacks are required; four are optional.
 | `subscribe/1` | `subscribe(model)` | `[Subscription.t()]` | no |
 | `settings/0` | `settings()` | `map()` | no |
 | `window_config/1` | `window_config(model)` | `map()` | no |
-| `handle_renderer_exit/2` | `handle_renderer_exit(model, %RendererExit{})` | `model` | no |
+| `handle_renderer_exit/2` | `handle_renderer_exit(model, %RendererExitError{})` | `model` | no |
 
 Where `command` is `Plushie.Command.t()` or `[Plushie.Command.t()]`.
 
@@ -107,7 +107,7 @@ Default: `%{}` (only per-window props from the tree apply).
 ### handle_renderer_exit/2
 
 Called when the renderer process crashes or is restarted (e.g. during
-Rust hot reload). Receives the current model and a `%Plushie.RendererExit{}`
+Rust hot reload). Receives the current model and a `%Plushie.RendererExitError{}`
 struct with `:type` (`:crash`, `:shutdown`, `:heartbeat_timeout`, or
 `:connection_lost`), `:message`, and `:details`.
 Returns a potentially adjusted model.

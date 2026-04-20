@@ -1372,7 +1372,7 @@ defmodule Plushie.Runtime do
     notify_bridge(state, &Plushie.Bridge.send_settings(&1, settings))
   end
 
-  # Converts a raw renderer exit reason into a structured %RendererExit{}.
+  # Converts a raw renderer exit reason into a structured %RendererExitError{}.
   @spec build_renderer_exit(term()) :: Plushie.RendererExitError.t()
   defp build_renderer_exit(:normal),
     do: %Plushie.RendererExitError{type: :shutdown, message: "renderer shut down normally"}
