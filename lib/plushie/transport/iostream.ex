@@ -37,7 +37,9 @@ defmodule Plushie.Transport.IOStream do
   def send_data(%{io_pid: io_pid} = state, data) do
     send(io_pid, {:iostream_send, data})
 
-    :telemetry.execute([:plushie, :bridge, :send], %{byte_size: IO.iodata_length(data)}, %{})
+    :telemetry.execute([:plushie, :bridge, :send], %{byte_size: IO.iodata_length(data)}, %{
+      bridge: self()
+    })
 
     {:ok, state}
   rescue

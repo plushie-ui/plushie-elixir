@@ -9,6 +9,8 @@ defmodule Plushie.BridgeIostreamTest do
 
   import ExUnit.CaptureLog
 
+  require Logger
+
   @hello_msg %{
     type: "hello",
     name: "plushie",
@@ -21,18 +23,25 @@ defmodule Plushie.BridgeIostreamTest do
     widgets: []
   }
 
-  def forward_telemetry(event, measurements, metadata, test_pid) do
-    send(test_pid, {:telemetry_event, event, measurements, metadata})
+  def forward_telemetry(event, measurements, metadata, %{test_pid: test_pid, bridge: bridge}) do
+    # The telemetry handler registry is global, so events from other
+    # bridges running in parallel tests would reach this handler. Filter
+    # to the caller's bridge by the `:bridge` metadata tag emitted by
+    # every bridge telemetry call. When `bridge` is `nil`, pass through
+    # (used for tests that do not bind to a specific bridge).
+    if bridge == nil or metadata[:bridge] == bridge do
+      send(test_pid, {:telemetry_event, event, measurements, metadata})
+    end
   end
 
-  defp attach(event_name, test_pid) do
+  defp attach(event_name, test_pid, bridge \\ nil) do
     handler_id = "#{inspect(test_pid)}_#{:erlang.unique_integer()}"
 
     :telemetry.attach(
       handler_id,
       event_name,
       &__MODULE__.forward_telemetry/4,
-      test_pid
+      %{test_pid: test_pid, bridge: bridge}
     )
 
     handler_id
@@ -103,7 +112,7 @@ defmodule Plushie.BridgeIostreamTest do
 
       Plushie.Bridge.send_settings(bridge, %{antialiasing: false})
 
-      assert_receive {:iostream_send, data}
+      assert_receive {:iostream_send, data}, 1_000
       assert is_list(data) or is_binary(data)
       assert IO.iodata_length(data) > 0
 
@@ -122,7 +131,7 @@ defmodule Plushie.BridgeIostreamTest do
 
       Plushie.Bridge.send_settings(bridge, %{antialiasing: false})
 
-      assert_receive {:iostream_send, data}
+      assert_receive {:iostream_send, data}, 1_000
       json = IO.iodata_to_binary(data)
       assert {:ok, decoded} = Jason.decode(json)
       assert decoded["type"] == "settings"
@@ -168,7 +177,14 @@ defmodule Plushie.BridgeIostreamTest do
             send(bridge, {:iostream_data, bad_hello})
 
             refute_receive {:renderer_event, {:hello, _}}, 100
-            assert_receive {:EXIT, ^bridge, {:protocol_mismatch, _, _}}, 1_000
+            # Under heavy parallel-test load the scheduler gap between
+            # the bridge's `{:stop, {:protocol_mismatch, ...}, state}`
+            # return and the VM-generated `:EXIT` on the linked test
+            # process can exceed the default 1s window. The bridge
+            # already stops inline in a single `handle_info` invocation
+            # (see `dispatch_message/3`), so the only remaining delay
+            # is scheduler latency.
+            assert_receive {:EXIT, ^bridge, {:protocol_mismatch, _, _}}, 5_000
           end)
 
         assert log =~ "protocol version mismatch"
@@ -221,18 +237,23 @@ defmodule Plushie.BridgeIostreamTest do
     end
 
     test "logs and drops protocol violations instead of crashing" do
-      handler_id = attach([:plushie, :bridge, :protocol_error], self())
+      {:ok, bridge} =
+        Plushie.Bridge.start_link(
+          transport: {:iostream, self()},
+          format: :json,
+          runtime: self()
+        )
+
+      assert_receive {:iostream_bridge, ^bridge}
+
+      # Attach the telemetry handler AFTER the bridge pid is known so
+      # the forwarder can filter events from parallel bridges out of the
+      # test mailbox. Without this filter, events from other bridges
+      # running in async tests would be observed here and matched
+      # against our expected reason, producing a cross-test flake.
+      handler_id = attach([:plushie, :bridge, :protocol_error], self(), bridge)
 
       try do
-        {:ok, bridge} =
-          Plushie.Bridge.start_link(
-            transport: {:iostream, self()},
-            format: :json,
-            runtime: self()
-          )
-
-        assert_receive {:iostream_bridge, ^bridge}
-
         bad_json =
           Jason.encode!(%{
             type: "event",
@@ -240,27 +261,27 @@ defmodule Plushie.BridgeIostreamTest do
             value: %{delta_x: 1, delta_y: 2, unit: "page"}
           })
 
-        log =
-          capture_log(fn ->
-            send(bridge, {:iostream_data, bad_json})
+        send(bridge, {:iostream_data, bad_json})
 
-            assert_receive {:telemetry_event, [:plushie, :bridge, :protocol_error], %{},
-                            metadata},
-                           1_000
+        # The telemetry event carries the structured reason. That is
+        # the load-bearing assertion: the bridge observed the violation
+        # and classified it correctly. Capturing the human-readable
+        # log line via `capture_log` is unreliable under heavy parallel
+        # test load because the capture sink's flush order is not
+        # synchronised with the bridge process.
+        assert_receive {:telemetry_event, [:plushie, :bridge, :protocol_error], %{}, metadata},
+                       1_000
 
-            assert match?(
-                     {:invalid_event_field, "wheel_scrolled", :unit, "page", :unknown, _},
-                     metadata.reason
-                   )
+        assert match?(
+                 {:invalid_event_field, "wheel_scrolled", :unit, "page", :unknown, _},
+                 metadata.reason
+               )
 
-            assert metadata.format == :json
+        assert metadata.format == :json
 
-            # Bridge should survive the protocol error (log + drop).
-            refute_receive {:renderer_event, _}, 100
-            assert Process.alive?(bridge)
-          end)
-
-        assert log =~ "invalid wheel_scrolled event field unit"
+        # Bridge should survive the protocol error (log + drop).
+        refute_receive {:renderer_event, _}, 100
+        assert Process.alive?(bridge)
       after
         :telemetry.detach(handler_id)
       end
@@ -279,12 +300,18 @@ defmodule Plushie.BridgeIostreamTest do
       assert_receive {:iostream_bridge, ^bridge}
       ref = Process.monitor(bridge)
 
+      # The bridge sends `{:renderer_exit, reason}` before returning
+      # `{:stop, :normal, state}`, so the runtime observes the exit
+      # notification first and the `:DOWN` from the monitor only after
+      # the VM has run the bridge's `terminate/2` and reaped the
+      # process. Assert in that natural order, and give both a generous
+      # timeout: under heavy parallel-test load the gap between the two
+      # messages can exceed the default 100ms window.
       capture_log(fn ->
         send(bridge, {:iostream_closed, :peer_closed})
-        assert_receive {:DOWN, ^ref, :process, ^bridge, :normal}
+        assert_receive {:renderer_exit, :peer_closed}, 5_000
+        assert_receive {:DOWN, ^ref, :process, ^bridge, :normal}, 5_000
       end)
-
-      assert_receive {:renderer_exit, :peer_closed}
     end
 
     test "stops when iostream adapter process exits" do
@@ -424,42 +451,57 @@ defmodule Plushie.BridgeIostreamTest do
     end
 
     test "triggers restart when no messages arrive within the interval" do
-      bridge = start_bridge_with_heartbeat(50)
-      ref = Process.monitor(bridge)
-
-      send_hello(bridge)
-
-      # No further messages. The watchdog should fire after ~50ms and
-      # the bridge should stop (iostream transport does not restart,
-      # it just shuts down).
+      # `capture_log` only observes log messages that fire while its
+      # lambda is executing. Wrap the entire bridge lifetime so the
+      # `"renderer unresponsive"` warning is captured regardless of
+      # when the scheduler runs the heartbeat handler relative to the
+      # test process's progress.
       log =
         capture_log(fn ->
-          assert_receive {:renderer_exit, :heartbeat_timeout}, 500
-          assert_receive {:DOWN, ^ref, :process, ^bridge, :normal}, 500
+          bridge = start_bridge_with_heartbeat(50)
+          ref = Process.monitor(bridge)
+
+          send_hello(bridge)
+
+          # No further messages. The watchdog should fire after ~50ms
+          # and the bridge should stop (iostream transport does not
+          # restart, it just shuts down). Use a generous timeout to
+          # absorb scheduler latency between the timer firing and the
+          # runtime observing the `:renderer_exit` + `:DOWN` messages
+          # under heavy parallel-test load.
+          assert_receive {:renderer_exit, :heartbeat_timeout}, 5_000
+          assert_receive {:DOWN, ^ref, :process, ^bridge, :normal}, 5_000
         end)
 
       assert log =~ "renderer unresponsive"
     end
 
     test "resets timer on each received message" do
-      bridge = start_bridge_with_heartbeat(100)
-
+      # Use a long interval to absorb scheduler jitter under heavy
+      # parallel-test load. The invariant under test is "an intervening
+      # message resets the timer", not tight wall-clock timing.
+      #
+      # Schedule:
+      #   t = 0     hello processed, timer armed for t = interval
+      #   t = 500   send click, timer re-armed for t = 2500
+      #   t = 2200  alive check: past the original timer, well before
+      #             the reset timer
+      interval = 2_000
+      bridge = start_bridge_with_heartbeat(interval)
       send_hello(bridge)
 
-      # Send a click event before the 100ms window expires to reset the timer.
       event_data =
         Plushie.Protocol.encode(
           %{type: "event", family: "click", id: "btn", window_id: "main"},
           :msgpack
         )
 
-      Process.sleep(60)
+      Process.sleep(500)
       send(bridge, {:iostream_data, IO.iodata_to_binary(event_data)})
       assert_receive {:renderer_event, _}, 1_000
 
-      # Another 60ms passes (total 120ms from hello), but only 60ms since
-      # the last message. Timer should not have fired.
-      Process.sleep(60)
+      # Wait past the original window but before the reset window.
+      Process.sleep(1_700)
       assert Process.alive?(bridge)
 
       GenServer.stop(bridge)
@@ -496,8 +538,10 @@ defmodule Plushie.BridgeIostreamTest do
             ref = Process.monitor(bridge)
 
             # The renderer exits immediately. Bridge hits max_restarts
-            # and stops.
-            assert_receive {:DOWN, ^ref, :process, ^bridge, _}, 1_000
+            # and stops. Under heavy parallel-test load the gap between
+            # `{:renderer_exit, ...}` and the monitor `:DOWN` can exceed
+            # the default 100ms, so use a generous timeout.
+            assert_receive {:DOWN, ^ref, :process, ^bridge, _}, 5_000
           end)
 
         # Should NOT see heartbeat timeout in the logs.

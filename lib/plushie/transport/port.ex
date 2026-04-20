@@ -48,7 +48,9 @@ defmodule Plushie.Transport.Port do
   def send_data(%{port: port} = state, data) when is_port(port) do
     Port.command(port, data)
 
-    :telemetry.execute([:plushie, :bridge, :send], %{byte_size: IO.iodata_length(data)}, %{})
+    :telemetry.execute([:plushie, :bridge, :send], %{byte_size: IO.iodata_length(data)}, %{
+      bridge: self()
+    })
 
     {:ok, state}
   rescue

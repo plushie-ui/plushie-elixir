@@ -574,7 +574,7 @@ defmodule Plushie.Bridge do
     case state.transport_mod.reopen(state.transport_state) do
       {:ok, transport_state} ->
         new_count = state.restart_count + 1
-        :telemetry.execute([:plushie, :bridge, :restart], %{count: new_count}, %{})
+        :telemetry.execute([:plushie, :bridge, :restart], %{count: new_count}, %{bridge: self()})
         send(state.runtime, :renderer_restarted)
 
         {:noreply,
@@ -749,7 +749,9 @@ defmodule Plushie.Bridge do
         {:stop, {:buffer_overflow, size, @max_buffer_size}, state}
 
       true ->
-        :telemetry.execute([:plushie, :bridge, :receive], %{byte_size: byte_size(data)}, %{})
+        :telemetry.execute([:plushie, :bridge, :receive], %{byte_size: byte_size(data)}, %{
+          bridge: self()
+        })
 
         try do
           case Plushie.Protocol.decode_message!(data, format) do
@@ -791,6 +793,7 @@ defmodule Plushie.Bridge do
         rescue
           error in Plushie.Protocol.Error ->
             :telemetry.execute([:plushie, :bridge, :protocol_error], %{}, %{
+              bridge: self(),
               reason: error.reason,
               format: format
             })
@@ -894,6 +897,7 @@ defmodule Plushie.Bridge do
       """)
 
       :telemetry.execute([:plushie, :bridge, :max_restarts_reached], %{}, %{
+        bridge: self(),
         reason: reason,
         max_restarts: state.max_restarts
       })
