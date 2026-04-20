@@ -177,6 +177,49 @@ defmodule Plushie.BridgeIostreamTest do
       end
     end
 
+    test "surfaces typed BufferOverflow diagnostic when a msgpack message exceeds the cap" do
+      Process.flag(:trap_exit, true)
+
+      try do
+        {:ok, bridge} =
+          Plushie.Bridge.start_link(
+            transport: {:iostream, self()},
+            format: :msgpack,
+            runtime: self()
+          )
+
+        assert_receive {:iostream_bridge, ^bridge}
+
+        # A `{:packet, 4}` transport can legitimately deliver up to 4
+        # GiB per packet; the bridge backstop enforces the protocol's
+        # 64 MiB cap for the port-based path (Framing is not on this
+        # path). Hand the bridge a complete msgpack-shaped binary
+        # larger than the cap and assert the typed diagnostic lands
+        # on the renderer_event channel and the bridge stops.
+        cap = Plushie.Transport.Framing.max_message_size()
+        expected_size = cap + 1
+        oversize = :binary.copy("x", expected_size)
+
+        capture_log(fn ->
+          send(bridge, {:iostream_data, oversize})
+
+          assert_receive {:renderer_event,
+                          %Plushie.Event.DiagnosticMessage{
+                            level: :error,
+                            diagnostic: %Plushie.Event.Diagnostic.BufferOverflow{
+                              size: ^expected_size,
+                              limit: ^cap
+                            }
+                          }},
+                         2_000
+
+          assert_receive {:EXIT, ^bridge, {:buffer_overflow, ^expected_size, ^cap}}, 2_000
+        end)
+      after
+        Process.flag(:trap_exit, false)
+      end
+    end
+
     test "logs and drops protocol violations instead of crashing" do
       handler_id = attach([:plushie, :bridge, :protocol_error], self())
 

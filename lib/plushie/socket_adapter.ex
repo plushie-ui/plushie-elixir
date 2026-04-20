@@ -18,8 +18,6 @@ defmodule Plushie.SocketAdapter do
 
   alias Plushie.Transport.Framing
 
-  @max_buffer_size 64 * 1024 * 1024
-
   @doc """
   Connects to the renderer's socket and returns the adapter pid.
 
@@ -102,10 +100,7 @@ defmodule Plushie.SocketAdapter do
   def handle_info({:tcp, socket, data}, %{socket: socket, format: :json} = state) do
     new_buffer = state.buffer <> data
 
-    if byte_size(new_buffer) > @max_buffer_size do
-      if state.bridge, do: send(state.bridge, {:iostream_closed, :json_buffer_overflow})
-      {:stop, :json_buffer_overflow, %{state | buffer: ""}}
-    else
+    try do
       {lines, buffer} = Framing.decode_lines(new_buffer)
 
       Enum.each(lines, fn line ->
@@ -113,6 +108,13 @@ defmodule Plushie.SocketAdapter do
       end)
 
       {:noreply, %{state | buffer: buffer}}
+    rescue
+      err in Plushie.Transport.BufferOverflowError ->
+        # A line (or the unterminated tail) exceeded the protocol's
+        # per-message cap. Notify the bridge with the typed error so
+        # the overflow surfaces as a structured diagnostic, then stop.
+        if state.bridge, do: send(state.bridge, {:iostream_closed, {:buffer_overflow, err}})
+        {:stop, {:buffer_overflow, err}, %{state | buffer: ""}}
     end
   end
 

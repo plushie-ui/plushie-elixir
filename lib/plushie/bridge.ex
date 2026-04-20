@@ -598,6 +598,11 @@ defmodule Plushie.Bridge do
   end
 
   @impl GenServer
+  def handle_info({:stop_buffer_overflow, size}, state) do
+    {:stop, {:buffer_overflow, size, @max_buffer_size}, state}
+  end
+
+  @impl GenServer
   def handle_info(:heartbeat_timeout, %{awaiting_resync: true} = state) do
     # Renderer is already restarting; ignore stale timer.
     {:noreply, state}
@@ -702,17 +707,50 @@ defmodule Plushie.Bridge do
     end
   end
 
+  # Emit a typed `BufferOverflow` diagnostic to the runtime and shut
+  # down the bridge. Called from the two overflow paths Framing
+  # doesn't cover (port-mode JSON buffer accumulation and post-
+  # reassembly msgpack/json size check).
+  defp emit_buffer_overflow(state, size) do
+    diag = %Plushie.Event.Diagnostic.BufferOverflow{
+      size: size,
+      limit: @max_buffer_size
+    }
+
+    Logger.error(
+      "plushie bridge: wire frame of #{size} bytes exceeds #{@max_buffer_size} byte limit; stopping bridge"
+    )
+
+    send(
+      state.runtime,
+      {:renderer_event,
+       %Plushie.Event.DiagnosticMessage{
+         session: "",
+         level: :error,
+         diagnostic: diag
+       }}
+    )
+
+    send(self(), {:stop_buffer_overflow, size})
+    state
+  end
+
   defp dispatch_message(data, format, state) do
     cond do
       format == :json and String.trim(data) == "" ->
         state
 
       byte_size(data) > @max_buffer_size ->
-        Logger.error(
-          "plushie bridge: dropping oversized #{format} message (#{byte_size(data)} bytes)"
-        )
-
-        state
+        # Transport-level framing only enforces overflow when
+        # `Plushie.Transport.Framing` is on the decode path (TCP/Unix
+        # socket via `SocketAdapter`). The Erlang Port {:packet, 4}
+        # path bypasses Framing; `{:packet, 4}` allows up to 4 GiB, so
+        # this is the backstop that enforces the protocol's 64 MiB
+        # per-message cap there. Surface the typed diagnostic on the
+        # same event channel as other overflow detections so apps
+        # observe a structured event, then stop the bridge.
+        size = byte_size(data)
+        emit_buffer_overflow(state, size)
 
       true ->
         :telemetry.execute([:plushie, :bridge, :receive], %{byte_size: byte_size(data)}, %{})
@@ -794,11 +832,15 @@ defmodule Plushie.Bridge do
     new_buffer = state.buffer <> chunk
 
     if byte_size(new_buffer) > @max_buffer_size do
-      Logger.error(
-        "plushie bridge: JSON buffer exceeded #{@max_buffer_size} bytes, dropping message"
-      )
-
-      {:noreply, %{state | buffer: "", discard_next_eol: true}}
+      # An unterminated JSON line has already grown past the cap, so
+      # it can never decode legitimately. This path is not covered by
+      # `Plushie.Transport.Framing` (the Port mode delivers
+      # `:eol/:noeol` tuples directly and never calls Framing). Emit
+      # the typed diagnostic so apps observe a structured event,
+      # matching the Framing-backed socket transport's behaviour.
+      size = byte_size(new_buffer)
+      state = emit_buffer_overflow(%{state | buffer: "", discard_next_eol: true}, size)
+      {:noreply, state}
     else
       {:noreply, %{state | buffer: new_buffer}}
     end

@@ -115,6 +115,43 @@ defmodule Plushie.SocketAdapterTest do
       Process.flag(:trap_exit, true)
       assert {:error, _} = SocketAdapter.start_link("/tmp/nonexistent.sock", :msgpack)
     end
+
+    test "surfaces the typed BufferOverflowError when a json line exceeds the cap" do
+      Process.flag(:trap_exit, true)
+      {listener, path} = create_listener(:json)
+
+      {:ok, adapter} = SocketAdapter.start_link(path, :json)
+      {:ok, renderer_socket} = :gen_tcp.accept(listener, 5_000)
+      :gen_tcp.close(listener)
+
+      send(adapter, {:iostream_bridge, self()})
+      Process.sleep(10)
+
+      # Deliver an oversized unterminated buffer. The socket adapter
+      # decodes through Plushie.Transport.Framing, which raises the
+      # typed BufferOverflowError as soon as the accumulated tail
+      # passes the cap; the adapter rescues, surfaces the error
+      # through the iostream channel, and stops.
+      #
+      # We send the bytes in a background task because a 64 MiB write
+      # on a Unix domain socket easily exceeds the kernel's send
+      # buffer, so gen_tcp.send will block until the receiver drains;
+      # the receiver will have already raised before the sender
+      # finishes.
+      cap = Plushie.Transport.Framing.max_message_size()
+      oversize = :binary.copy("x", cap + 1)
+
+      Task.start(fn ->
+        :gen_tcp.send(renderer_socket, oversize)
+      end)
+
+      assert_receive {:iostream_closed, {:buffer_overflow, err}}, 15_000
+      assert %Plushie.Transport.BufferOverflowError{size: size, limit: ^cap} = err
+      assert size > cap
+
+      :gen_tcp.close(renderer_socket)
+      cleanup(path)
+    end
   end
 
   # -- Helpers ----------------------------------------------------------------
