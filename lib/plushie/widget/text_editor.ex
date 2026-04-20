@@ -26,8 +26,10 @@ defmodule Plushie.Widget.TextEditor do
     field :padding, :float, doc: "Uniform padding in pixels."
     field :wrapping, Plushie.Type.Wrapping, doc: "Text wrapping mode."
 
-    field :input_purpose, {:enum, [:normal, :secure, :terminal]},
-      doc: "Input purpose: `:normal`, `:secure`, `:terminal`."
+    field :input_purpose,
+          {:enum, [:normal, :secure, :terminal, :number, :decimal, :phone, :email, :url, :search]},
+          doc:
+            "Input purpose: `:normal`, `:secure`, `:terminal`, `:number`, `:decimal`, `:phone`, `:email`, `:url`, `:search`."
 
     field :highlight_syntax, :string,
       doc: "Language extension for syntax highlighting (e.g. \"rs\", \"py\", \"ex\")."

@@ -10,6 +10,10 @@ defmodule Plushie.Widget.Rule do
   widget :rule do
     field :height, :float, doc: "Line thickness in pixels (for horizontal rules)."
     field :width, :float, doc: "Line thickness in pixels (for vertical rules)."
+    field :thickness, :float,
+      doc:
+        "Direction-agnostic line thickness in pixels. Used when the direction-specific width/height isn't set."
+
     field :direction, Plushie.Type.Direction, doc: "`:horizontal` (default) or `:vertical`."
     field :style, Plushie.Type.Style, doc: "Named preset or custom `StyleMap`."
     field :event_rate, :integer, doc: "Max events per second for coalescable events."
