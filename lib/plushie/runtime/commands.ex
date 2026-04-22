@@ -175,9 +175,11 @@ defmodule Plushie.Runtime.Commands do
       Logger.warning("plushie runtime: effect #{kind} (#{id}) without bridge")
     end
 
-    # Start a timeout timer for this effect request, using a per-effect default
-    # if one is configured.
-    timeout = Plushie.Effect.default_timeout(kind) || @effect_timeout_ms
+    # Start a timeout timer for this effect request, using a per-effect
+    # override from opts, then the kind default, then the module default.
+    timeout =
+      Map.get(opts, :timeout) || Plushie.Effect.default_timeout(kind) || @effect_timeout_ms
+
     ref = Process.send_after(self(), {:effect_timeout, id}, timeout)
     put_in(state.pending_effects[id], %{tag: tag, kind: kind, timer_ref: ref})
   end

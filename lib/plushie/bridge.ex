@@ -963,9 +963,11 @@ defmodule Plushie.Bridge do
 
   # Settings, snapshots, patches, subscriptions, and window ops are rebuilt
   # by the runtime during resync. These command-like messages are not.
+  # Effects are NOT queued: the runtime flushes pending effects with
+  # RendererRestarted results on restart, so queued effect wire messages
+  # would cause duplicate execution on the new renderer.
   defp queue_during_restart?(kind) do
     kind in [
-      :effect,
       :widget_op,
       :image_op,
       :command,
