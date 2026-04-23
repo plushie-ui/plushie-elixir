@@ -4,7 +4,9 @@ defmodule Plushie.Data do
   supporting filter, search, sort, group, and pagination.
 
   All operations are applied in order: filter, search, sort, then paginate.
-  Grouping is applied to the paginated results.
+  Grouping is applied to the paginated results. Repeated `:filter` and
+  repeated `:search` entries compose in keyword-list order as successive
+  narrowing steps within their stage.
 
   Each pipeline step creates intermediate list copies. For small to moderate
   collections (up to a few thousand records) this is fine. For very large
@@ -49,9 +51,11 @@ defmodule Plushie.Data do
 
   ## Options
 
-  - `:filter` - a function `(record -> boolean)` to filter records.
+  - `:filter` - a function `(record -> boolean)` to filter records. Repeated
+    `:filter` entries are applied in keyword-list order.
   - `:search` - a `{fields, query_string}` tuple. `fields` is a list of
     map keys to search; `query_string` is case-insensitive substring-matched.
+    Repeated `:search` entries are applied in keyword-list order.
   - `:sort` - a `{direction, field}` tuple or list of tuples.
     Direction is `:asc` or `:desc`. Field is a map key.
   - `:group` - a map key to group paginated results by.
@@ -63,17 +67,17 @@ defmodule Plushie.Data do
   """
   @spec query(records :: [map()], opts :: keyword()) :: result()
   def query(records, opts \\ []) when is_list(records) do
-    filter_fn = Keyword.get(opts, :filter)
+    filter_fns = Keyword.get_values(opts, :filter)
     sort_spec = Keyword.get(opts, :sort)
     group_field = Keyword.get(opts, :group)
-    search_opts = Keyword.get(opts, :search)
+    search_opts = Keyword.get_values(opts, :search)
     page = Keyword.get(opts, :page, 1)
     page_size = Keyword.get(opts, :page_size, 25)
 
     result =
       records
-      |> maybe_filter(filter_fn)
-      |> maybe_search(search_opts)
+      |> apply_filters(filter_fns)
+      |> apply_searches(search_opts)
       |> maybe_sort(sort_spec)
 
     offset = (page - 1) * page_size
@@ -96,8 +100,16 @@ defmodule Plushie.Data do
     %{entries: entries, total: total, page: page, page_size: page_size, groups: groups}
   end
 
+  defp apply_filters(records, filters) do
+    Enum.reduce(filters, records, fn filter, acc -> maybe_filter(acc, filter) end)
+  end
+
   defp maybe_filter(records, nil), do: records
   defp maybe_filter(records, fun), do: Enum.filter(records, fun)
+
+  defp apply_searches(records, searches) do
+    Enum.reduce(searches, records, fn search, acc -> maybe_search(acc, search) end)
+  end
 
   defp maybe_search(records, nil), do: records
 

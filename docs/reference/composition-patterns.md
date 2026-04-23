@@ -507,7 +507,9 @@ end
 
 ### Data query with sort controls
 
-Use `Plushie.Data` to filter, sort, and paginate in-memory collections:
+Use `Plushie.Data` to filter, sort, and paginate in-memory collections.
+Repeated `:filter` and `:search` entries compose as successive narrowing
+steps within their stage:
 
 ```elixir
 defp query_items(model) do

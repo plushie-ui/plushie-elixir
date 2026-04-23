@@ -43,6 +43,17 @@ defmodule Plushie.DataTest do
       assert result.entries == []
       assert result.total == 0
     end
+
+    test "repeated filters compose as successive narrowing" do
+      result =
+        Data.query(@records,
+          filter: &(&1.dept == "field"),
+          filter: &(&1.age > 100)
+        )
+
+      assert result.total == 1
+      assert result.entries == [%{id: 5, name: "Marvin", age: 999, dept: "field"}]
+    end
   end
 
   describe "sort" do
@@ -106,6 +117,17 @@ defmodule Plushie.DataTest do
 
       assert result.entries == []
       assert result.total == 0
+    end
+
+    test "repeated searches compose as successive narrowing" do
+      result =
+        Data.query(@records,
+          search: {[:name, :dept], "r"},
+          search: {[:name], "ar"}
+        )
+
+      assert result.total == 2
+      assert Enum.map(result.entries, & &1.name) == ["Arthur", "Marvin"]
     end
   end
 

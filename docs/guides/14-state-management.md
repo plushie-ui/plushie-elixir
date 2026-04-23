@@ -121,12 +121,14 @@ result.total    # 2
 ```
 
 The pipeline runs in order: filter -> search -> sort -> paginate -> group.
-All options are optional.
+Repeated `:filter` and `:search` entries compose as successive narrowing
+steps within their stage, preserving keyword-list order among repeated
+entries of the same type. All options are optional.
 
 | Option | Type | Description |
 |---|---|---|
-| `:filter` | `(record -> boolean)` | Predicate function |
-| `:search` | `{[field_keys], query}` | Case-insensitive substring match |
+| `:filter` | `(record -> boolean)` | Predicate function. Repeated entries compose in stage order |
+| `:search` | `{[field_keys], query}` | Case-insensitive substring match. Repeated entries compose in stage order |
 | `:sort` | `{:asc \| :desc, field}` or list | Sort by field(s) |
 | `:page` | integer | 1-based page number |
 | `:page_size` | integer | Records per page (default 25) |
