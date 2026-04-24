@@ -102,17 +102,14 @@ defmodule Plushie.Tree.Diff do
   end
 
   defp diff_children(old_children, new_children, path) do
-    old_by_id = old_children |> Enum.with_index() |> Map.new(fn {c, i} -> {c.id, {c, i}} end)
-    new_by_id = new_children |> Enum.with_index() |> Map.new(fn {c, i} -> {c.id, {c, i}} end)
-
+    old_ids = Enum.map(old_children, & &1.id)
     new_ids = Enum.map(new_children, & &1.id)
 
-    if length(new_ids) != map_size(new_by_id) do
-      dupes = new_ids -- Enum.uniq(new_ids)
-      raise ArgumentError, "duplicate child IDs in diff: #{inspect(Enum.uniq(dupes))}"
-    end
+    check_duplicate_child_ids!(old_ids)
+    check_duplicate_child_ids!(new_ids)
 
-    old_ids = Enum.map(old_children, & &1.id)
+    old_by_id = old_children |> Enum.with_index() |> Map.new(fn {c, i} -> {c.id, {c, i}} end)
+    new_by_id = new_children |> Enum.with_index() |> Map.new(fn {c, i} -> {c.id, {c, i}} end)
 
     # Common IDs in old and new order
     common_old = Enum.filter(old_ids, &Map.has_key?(new_by_id, &1))
@@ -146,6 +143,31 @@ defmodule Plushie.Tree.Diff do
         )
       end
     end
+  end
+
+  defp check_duplicate_child_ids!(ids) do
+    case duplicate_ids(ids) do
+      [] -> :ok
+      dupes -> raise ArgumentError, "duplicate child IDs in diff: #{inspect(dupes)}"
+    end
+  end
+
+  defp duplicate_ids(ids) do
+    {_seen, dupes} =
+      Enum.reduce(ids, {MapSet.new(), []}, fn id, {seen, dupes} ->
+        cond do
+          MapSet.member?(seen, id) and id not in dupes ->
+            {seen, [id | dupes]}
+
+          MapSet.member?(seen, id) ->
+            {seen, dupes}
+
+          true ->
+            {MapSet.put(seen, id), dupes}
+        end
+      end)
+
+    Enum.reverse(dupes)
   end
 
   # Fast path: old and new have identical ID lists. Diff props per child.

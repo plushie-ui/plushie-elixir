@@ -37,6 +37,38 @@ defmodule Plushie.MemoTest do
       assert first_memo_child === second_memo_child
     end
 
+    test "map deps hit cache regardless of insertion order" do
+      body_fn = fn ->
+        [%{id: "child", type: "text", props: %{content: "hello"}, children: []}]
+      end
+
+      deps_a = Map.new([{:first, 1}, {:second, %{nested: 2}}])
+      deps_b = Map.new([{:second, %{nested: 2}}, {:first, 1}])
+
+      {first, memo_cache} = normalize_with_memo(memo_tree(deps_a, body_fn))
+      {second, _cache2} = normalize_with_memo(memo_tree(deps_b, body_fn), memo_cache)
+
+      assert hd(first.children) === hd(second.children)
+    end
+
+    test "map deps do not collide with tuple deps" do
+      body_v1 = fn ->
+        [%{id: "child", type: "text", props: %{content: "map"}, children: []}]
+      end
+
+      body_v2 = fn ->
+        [%{id: "child", type: "text", props: %{content: "tuple"}, children: []}]
+      end
+
+      map_deps = %{first: 1}
+      tuple_deps = {:map, [first: 1]}
+
+      {_first, memo_cache} = normalize_with_memo(memo_tree(map_deps, body_v1))
+      {second, _cache2} = normalize_with_memo(memo_tree(tuple_deps, body_v2), memo_cache)
+
+      assert hd(second.children).props.content == "tuple"
+    end
+
     test "deps change triggers re-evaluation" do
       body_v1 = fn ->
         [%{id: "child", type: "text", props: %{content: "v1"}, children: []}]

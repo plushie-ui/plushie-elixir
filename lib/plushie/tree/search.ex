@@ -61,7 +61,7 @@ defmodule Plushie.Tree.Search do
   @doc false
   @spec window_id_for(tree :: tree_node(), id :: String.t()) :: String.t() | nil
   def window_id_for(tree, target_id) do
-    case collect_window_ids(tree, target_id, nil, []) |> Enum.uniq() do
+    case collect_window_ids(tree, target_id, nil, []) do
       [] ->
         nil
 
@@ -221,12 +221,11 @@ defmodule Plushie.Tree.Search do
   defp find_window(_, _window_id), do: nil
 
   defp collect_window_ids(%{type: "window", id: id, children: children}, target_id, _current, acc) do
-    acc = if id == target_id, do: [id | acc], else: acc
     Enum.reduce(children, acc, &collect_window_ids(&1, target_id, id, &2))
   end
 
   defp collect_window_ids(%{id: id, children: children}, target_id, current_window, acc) do
-    acc = if id == target_id and current_window, do: [current_window | acc], else: acc
+    acc = if id == target_id and current_window, do: add_window_id(acc, current_window), else: acc
 
     Enum.reduce(children, acc, &collect_window_ids(&1, target_id, current_window, &2))
   end
@@ -242,12 +241,11 @@ defmodule Plushie.Tree.Search do
          _current,
          acc
        ) do
-    acc = if id == target_id, do: [id | acc], else: acc
     Enum.reduce(children, acc, &collect_window_ids(&1, target_id, id, &2))
   end
 
   defp collect_window_ids(%{"id" => id, "children" => children}, target_id, current_window, acc) do
-    acc = if id == target_id and current_window, do: [current_window | acc], else: acc
+    acc = if id == target_id and current_window, do: add_window_id(acc, current_window), else: acc
 
     Enum.reduce(children, acc, &collect_window_ids(&1, target_id, current_window, &2))
   end
@@ -258,6 +256,10 @@ defmodule Plushie.Tree.Search do
   end
 
   defp collect_window_ids(_node, _target_id, _current_window, acc), do: acc
+
+  defp add_window_id(window_ids, window_id) do
+    if window_id in window_ids, do: window_ids, else: [window_id | window_ids]
+  end
 
   defp do_find_all(%{children: children} = node, fun, acc) do
     acc = if fun.(node), do: [node | acc], else: acc

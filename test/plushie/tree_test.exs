@@ -398,6 +398,32 @@ defmodule Plushie.TreeTest do
     end
   end
 
+  describe "window_id_for/2" do
+    test "returns containing window when a child local id matches its window id" do
+      tree = %{
+        id: "root",
+        type: "container",
+        props: %{},
+        children: [
+          %{
+            id: "main",
+            type: "window",
+            props: %{},
+            children: [%{id: "main#main", type: "button", props: %{}, children: []}]
+          },
+          %{
+            id: "main#main",
+            type: "window",
+            props: %{},
+            children: []
+          }
+        ]
+      }
+
+      assert Tree.window_id_for(tree, "main#main") == "main"
+    end
+  end
+
   describe "find_all/2" do
     setup do
       tree = %{
@@ -618,6 +644,23 @@ defmodule Plushie.TreeTest do
       old = %{id: "root-a", type: "container", props: %{}, children: []}
       new = %{id: "root-b", type: "container", props: %{}, children: []}
       assert Tree.diff(old, new) == [%{op: "replace_node", path: [], node: new}]
+    end
+  end
+
+  describe "diff/2 duplicate child IDs" do
+    test "old duplicate child IDs raise before diffing" do
+      child_a = %{id: "dup", type: "text", props: %{content: "a"}, children: []}
+      child_b = %{id: "dup", type: "text", props: %{content: "b"}, children: []}
+
+      old = %{id: "root", type: "container", props: %{}, children: [child_a, child_b]}
+      new = %{id: "root", type: "container", props: %{}, children: []}
+
+      error =
+        assert_raise ArgumentError, fn ->
+          Tree.diff(old, new)
+        end
+
+      assert error.message == ~s(duplicate child IDs in diff: ["dup"])
     end
   end
 

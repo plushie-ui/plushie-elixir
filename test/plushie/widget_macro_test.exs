@@ -243,6 +243,22 @@ defmodule Plushie.WidgetMacroTest do
       assert node.children == []
     end
 
+    test "native widget rejects missing id during node conversion" do
+      widget = %GaugeWidget{id: nil}
+
+      assert_raise ArgumentError, ~r/requires a non-empty id/, fn ->
+        Plushie.Widget.to_node(widget)
+      end
+    end
+
+    test "leaf widget rejects empty id during node conversion" do
+      widget = %BadgeWidget{id: "", label: "Badge"}
+
+      assert_raise ArgumentError, ~r/requires a non-empty id/, fn ->
+        Plushie.Widget.to_node(widget)
+      end
+    end
+
     test "container widget accepts children via :do" do
       child = %{id: "c", type: "text", props: %{}, children: []}
       node = CardWidget.new("card1", title: "Hello", do: [child]) |> CardWidget.build()
@@ -453,6 +469,22 @@ defmodule Plushie.WidgetMacroTest do
     test "view/3 widget produces struct" do
       widget = Wrapper.new("w1", border: true)
       assert %Wrapper{id: "w1", border: true} = widget
+    end
+
+    test "stateful widget placeholder rejects missing id" do
+      widget = %StatefulBlockWidget{id: nil}
+
+      assert_raise ArgumentError, ~r/requires a non-empty id/, fn ->
+        Plushie.Widget.to_node(widget)
+      end
+    end
+
+    test "stateful widget placeholder rejects empty id" do
+      widget = %StatefulBlockWidget{id: ""}
+
+      assert_raise ArgumentError, ~r/requires a non-empty id/, fn ->
+        Plushie.Widget.to_node(widget)
+      end
     end
   end
 

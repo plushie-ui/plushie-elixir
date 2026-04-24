@@ -223,7 +223,7 @@ defmodule Plushie.Tree do
     deps = Map.fetch!(meta, :__memo_deps__)
     memo_fun = Map.fetch!(meta, :__memo_fun__)
     node_id = Map.fetch!(node, :id)
-    cache_key = {node_id, ctx.scope, ctx.window_id, deps}
+    cache_key = {node_id, ctx.scope, ctx.window_id, canonicalize_memo_deps(deps)}
 
     case Map.get(ctx.memo_prev, cache_key) do
       {cached_tree, delta_handlers, delta_events, delta_windows} ->
@@ -365,6 +365,30 @@ defmodule Plushie.Tree do
 
     {result, %{ctx | depth: ctx.depth - 1}}
   end
+
+  defp canonicalize_memo_deps(deps) when is_map(deps) do
+    deps
+    |> Enum.map(fn {key, value} ->
+      {canonicalize_memo_deps(key), canonicalize_memo_deps(value)}
+    end)
+    |> Enum.sort()
+    |> then(&{__MODULE__, :memo_dep, :map, &1})
+  end
+
+  defp canonicalize_memo_deps(deps) when is_list(deps) do
+    {__MODULE__, :memo_dep, :list, Enum.map(deps, &canonicalize_memo_deps/1)}
+  end
+
+  defp canonicalize_memo_deps(deps) when is_tuple(deps) do
+    canonicalized =
+      deps
+      |> Tuple.to_list()
+      |> Enum.map(&canonicalize_memo_deps/1)
+
+    {__MODULE__, :memo_dep, :tuple, canonicalized}
+  end
+
+  defp canonicalize_memo_deps(deps), do: {__MODULE__, :memo_dep, :value, deps}
 
   # Render a stateful widget placeholder with stored or initial state.
   # Returns {:rendered, fully_normalized_node, ctx} or {:not_a_widget_placeholder, ctx}.

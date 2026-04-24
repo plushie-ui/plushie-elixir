@@ -335,6 +335,19 @@ defmodule Plushie.DSL.Widget.Codegen do
         from a previous cycle, or initial defaults for new widgets).
         """
         def to_node(widget) do
+          case widget.id do
+            nil ->
+              raise ArgumentError,
+                    "stateful widget #{inspect(unquote(module))} requires a non-empty id"
+
+            "" ->
+              raise ArgumentError,
+                    "stateful widget #{inspect(unquote(module))} requires a non-empty id"
+
+            _ ->
+              :ok
+          end
+
           props =
             widget
             |> Map.from_struct()
@@ -557,6 +570,19 @@ defmodule Plushie.DSL.Widget.Codegen do
     quote do
       defimpl Plushie.Tree.Node do
         def to_node(var!(widget)) do
+          case var!(widget).id do
+            nil ->
+              raise ArgumentError,
+                    "widget #{inspect(unquote(type_string))} requires a non-empty id"
+
+            "" ->
+              raise ArgumentError,
+                    "widget #{inspect(unquote(type_string))} requires a non-empty id"
+
+            _ ->
+              :ok
+          end
+
           var!(props) = %{}
           unquote_splicing(put_calls)
           unquote(meta_put)
