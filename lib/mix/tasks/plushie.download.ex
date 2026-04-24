@@ -95,13 +95,15 @@ defmodule Mix.Tasks.Plushie.Download do
       case download_to_file(url, dest_path) do
         :ok ->
           File.chmod!(dest_path, 0o755)
-          verify_checksum!(dest_path, url <> ".sha256")
+          verify_checksum!(dest_path, url <> ".sha256", "mix plushie.build")
           create_symlink(dest_path)
           Mix.shell().info("Installed native binary to #{dest_path}")
 
         {:error, reason} ->
+          error = format_download_error_reason(reason)
+
           Mix.raise("""
-          Download failed: #{inspect(reason)}
+          Download failed: #{error}
 
           To build from source instead:
             mix plushie.build
@@ -150,14 +152,16 @@ defmodule Mix.Tasks.Plushie.Download do
 
       case download_to_file(url, tarball_path) do
         :ok ->
-          verify_checksum!(tarball_path, url <> ".sha256")
+          verify_checksum!(tarball_path, url <> ".sha256", "mix plushie.build --wasm")
           extract_tarball!(tarball_path, extract_dir)
           File.rm(tarball_path)
           Mix.shell().info("Installed WASM files to #{extract_dir}")
 
         {:error, reason} ->
+          error = format_download_error_reason(reason)
+
           Mix.raise("""
-          WASM download failed: #{inspect(reason)}
+          WASM download failed: #{error}
 
           To build from source instead:
             mix plushie.build --wasm
@@ -196,6 +200,39 @@ defmodule Mix.Tasks.Plushie.Download do
       {:error, reason} ->
         {:error, reason}
     end
+  end
+
+  @doc false
+  def format_download_error_reason({:http_status, status}) do
+    "server returned HTTP #{status}"
+  end
+
+  def format_download_error_reason(:too_many_redirects) do
+    "too many redirects while following the download URL"
+  end
+
+  def format_download_error_reason({:redirect_without_location, status}) do
+    "server returned HTTP #{status} redirect without a Location header"
+  end
+
+  def format_download_error_reason(reason)
+      when reason in [:nxdomain, :timeout, :econnrefused, :closed] do
+    format_transport_reason(reason)
+  end
+
+  def format_download_error_reason({:failed_connect, details}) do
+    case find_transport_reason(details) do
+      nil -> "could not connect to the download host: #{format_nested_reason(details)}"
+      reason -> format_transport_reason(reason)
+    end
+  end
+
+  def format_download_error_reason({:failed_connect, _details, reason}) do
+    format_download_error_reason(reason)
+  end
+
+  def format_download_error_reason(reason) do
+    "unexpected download error: #{inspect(reason)}"
   end
 
   @max_redirects 5
@@ -253,7 +290,7 @@ defmodule Mix.Tasks.Plushie.Download do
     ]
   end
 
-  defp verify_checksum!(file_path, checksum_url) do
+  defp verify_checksum!(file_path, checksum_url, build_command) do
     case fetch(checksum_url) do
       {:ok, body} ->
         expected = body |> to_string() |> String.trim() |> String.split(" ") |> hd()
@@ -271,11 +308,63 @@ defmodule Mix.Tasks.Plushie.Download do
 
       {:error, reason} ->
         File.rm(file_path)
+        error = format_download_error_reason(reason)
 
-        Mix.raise(
-          "SHA256 checksum file could not be downloaded (#{inspect(reason)}). " <>
-            "Refusing to use unverified artifact. URL: #{checksum_url}"
-        )
+        Mix.raise("""
+        SHA256 checksum file could not be downloaded: #{error}
+
+        Refusing to use unverified artifact.
+        URL: #{checksum_url}
+
+        To build from source instead:
+          #{build_command}
+        """)
     end
   end
+
+  defp format_transport_reason(:nxdomain), do: "download host could not be resolved"
+  defp format_transport_reason(:timeout), do: "network request timed out"
+  defp format_transport_reason(:econnrefused), do: "connection was refused by the download host"
+  defp format_transport_reason(:closed), do: "connection closed before the download finished"
+
+  defp format_transport_reason({:tls_alert, details}) do
+    "TLS handshake failed: #{inspect(details)}"
+  end
+
+  defp format_transport_reason(reason) do
+    "network request failed: #{inspect(reason)}"
+  end
+
+  defp find_transport_reason(reason)
+       when reason in [:nxdomain, :timeout, :econnrefused, :closed] do
+    reason
+  end
+
+  defp find_transport_reason({:tls_alert, _details} = reason), do: reason
+
+  defp find_transport_reason(tuple) when is_tuple(tuple) do
+    tuple
+    |> Tuple.to_list()
+    |> find_transport_reason()
+  end
+
+  defp find_transport_reason(list) when is_list(list) do
+    Enum.find_value(list, &find_transport_reason/1)
+  end
+
+  defp find_transport_reason(_reason), do: nil
+
+  defp format_nested_reason([_ | _] = list) do
+    list
+    |> Enum.reject(fn
+      {:to_address, _address} -> true
+      _other -> false
+    end)
+    |> case do
+      [] -> "no detailed reason was provided"
+      remaining -> inspect(remaining)
+    end
+  end
+
+  defp format_nested_reason(reason), do: inspect(reason)
 end
