@@ -68,6 +68,12 @@ like `primary_strong`, `background_weakest`, `danger_base_text`) that target
 specific shade levels in the generated palette. See `Plushie.Type.Theme` for
 the full list of shade keys.
 
+Custom themes also accept `cursor_color`, `scrollbar_color`, and
+`scroller_color` colour tokens. They are validated like the palette colours
+and sent with the theme. Scrollbar tokens become scrollable defaults, while
+widget scrollbar props still win. `cursor_color` applies to focused text
+entry widgets unless explicit widget text styling overrides it.
+
 ## Subtree theming
 
 The `themer` widget applies a different theme to its children without

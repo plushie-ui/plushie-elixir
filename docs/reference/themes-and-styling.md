@@ -126,6 +126,20 @@ by iced's palette generator. To customize it, use shade overrides
 (`secondary_base`, `secondary_weak`, `secondary_strong`, plus `_text`
 variants) rather than a core seed.
 
+Custom themes also accept chrome colour tokens:
+
+| Key | Purpose |
+|---|---|
+| `:cursor_color` | Text cursor colour |
+| `:scrollbar_color` | Scrollbar track colour |
+| `:scroller_color` | Scrollbar handle colour |
+
+These values are passed through `Color.cast/1` and sent with the custom
+theme. Scrollbar tokens become defaults for scrollable widgets, and explicit
+widget `scrollbar_color` or `scroller_color` props still win. `cursor_color`
+applies to focused text entry widgets through iced's focused text style, so
+explicit widget text styling still wins.
+
 ### Extending built-in themes
 
 Provide `:base` to start from an existing theme and override only the
@@ -164,7 +178,10 @@ Plushie.Type.Theme.custom("Custom",
   base: :dark,
   primary: "#3b82f6",
   primary_strong: "#1d4ed8",
-  background_weakest: "#0f0f1a"
+  background_weakest: "#0f0f1a",
+  cursor_color: "#ffffff",
+  scrollbar_color: "#1f2937",
+  scroller_color: "#6b7280"
 )
 ```
 

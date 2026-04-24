@@ -47,6 +47,20 @@ defmodule Plushie.Type.Theme do
       }
 
   Any shade key you omit keeps the auto-generated value.
+
+  ## Widget chrome colour tokens
+
+  Custom themes can also carry theme-level colour tokens for cursor and
+  scrollbar styling:
+
+  * `cursor_color`
+  * `scrollbar_color`
+  * `scroller_color`
+
+  These values are cast as colours and sent in the custom theme map.
+  The renderer uses scrollbar tokens as scrollable defaults. The cursor
+  token applies to focused text entry widgets through iced's focused text
+  style, and explicit widget text styling still wins.
   """
 
   @themes [
@@ -138,6 +152,9 @@ defmodule Plushie.Type.Theme do
     * `:success`    - success color
     * `:danger`     - danger color
     * `:warning`    - warning color
+    * `:cursor_color` - text cursor color
+    * `:scrollbar_color` - scrollbar track color
+    * `:scroller_color` - scrollbar handle color
 
   All color values accept any form `Color.cast/1` supports (hex
   strings or named atoms). Shade override keys (e.g. `primary_strong`,
@@ -203,7 +220,12 @@ defmodule Plushie.Type.Theme do
                              suffix <- ["", "_text"],
                              do: :"#{shade}#{suffix}"
 
-  @valid_custom_keys MapSet.new(@core_seeds ++ @color_shade_keys ++ @background_shade_keys)
+  @chrome_color_keys [:cursor_color, :scrollbar_color, :scroller_color]
+
+  @valid_custom_keys MapSet.new(
+                       @core_seeds ++
+                         @color_shade_keys ++ @background_shade_keys ++ @chrome_color_keys
+                     )
 
   @doc """
   Returns the set of valid keys for `custom/2` (excluding `:base`, which
