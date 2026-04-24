@@ -157,4 +157,30 @@ defmodule Plushie.Automation.SelectorTest do
       assert sel["window_id"] == "main"
     end
   end
+
+  describe "parse_selector/1 pseudo-selectors" do
+    test "preserves focused pseudo-selector" do
+      assert {nil, :focused} = Selector.parse_selector(":focused")
+      assert {"main", :focused} = Selector.parse_selector("main#:focused")
+    end
+
+    test "unknown pseudo-selector does not raise" do
+      assert {nil, {:unknown_pseudo, "not_a_real_selector"}} =
+               Selector.parse_selector(":not_a_real_selector")
+    end
+
+    test "unknown pseudo-selector does not match or crash during encode" do
+      tree = %{
+        type: "root",
+        id: "root",
+        props: %{},
+        children: [%{type: "button", id: "save", props: %{}, children: []}]
+      }
+
+      assert Selector.find(tree, ":not_a_real_selector") == nil
+
+      assert %{"by" => "unknown_pseudo", "value" => "not_a_real_selector"} =
+               Selector.encode(":not_a_real_selector", tree)
+    end
+  end
 end

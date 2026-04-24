@@ -9,6 +9,8 @@ defmodule Plushie.Automation.Selector do
   alias Plushie.Automation.Element
   alias Plushie.Automation.Session
 
+  @typep parsed_selector :: Session.selector() | {:unknown_pseudo, String.t()}
+
   @doc """
   Parses a window-qualified selector string into its components.
 
@@ -57,9 +59,10 @@ defmodule Plushie.Automation.Selector do
 
   Returns `{window_id, resolved_selector}` where resolved_selector
   is one of: `"#id"` (string), `:focused` (atom), `{:text, "Save"}`
-  (tuple), etc.
+  (tuple), etc. Unknown pseudo-selectors resolve to
+  `{:unknown_pseudo, name}` so lookup can fail without raising.
   """
-  @spec parse_selector(String.t()) :: {String.t() | nil, Session.selector()}
+  @spec parse_selector(String.t()) :: {String.t() | nil, parsed_selector()}
   def parse_selector(selector) when is_binary(selector) do
     # Split window qualifier on #
     {window_id, target} =
@@ -76,7 +79,7 @@ defmodule Plushie.Automation.Selector do
     resolved =
       cond do
         String.starts_with?(target, ":") ->
-          target |> String.trim_leading(":") |> String.to_existing_atom()
+          parse_pseudo_selector(target)
 
         String.starts_with?(target, "[") and String.ends_with?(target, "]") ->
           inner = target |> String.trim_leading("[") |> String.trim_trailing("]")
@@ -160,6 +163,8 @@ defmodule Plushie.Automation.Selector do
             "Use Session.find(session, :focused) instead of Selector.find(tree, :focused)"
   end
 
+  def find(_tree, {:unknown_pseudo, _name}), do: nil
+
   @doc """
   Finds the raw tree node for selectors that resolve directly to a widget.
   """
@@ -185,7 +190,7 @@ defmodule Plushie.Automation.Selector do
   specific window for multi-window apps.
   """
   @spec encode(
-          selector :: Session.selector() | nil,
+          selector :: parsed_selector() | nil,
           tree :: map() | nil,
           window_id :: String.t() | nil
         ) ::
@@ -221,6 +226,11 @@ defmodule Plushie.Automation.Selector do
   end
 
   def encode(:focused, _tree, _window_id), do: %{"by" => "focused"}
+
+  def encode({:unknown_pseudo, name}, _tree, window_id) when is_binary(name) do
+    sel = %{"by" => "unknown_pseudo", "value" => name}
+    if window_id, do: Map.put(sel, "window_id", window_id), else: sel
+  end
 
   def encode({:text, text}, _tree, window_id) when is_binary(text) do
     sel = %{"by" => "text", "value" => text}
@@ -318,6 +328,13 @@ defmodule Plushie.Automation.Selector do
 
   defp maybe_wrap(nil), do: nil
   defp maybe_wrap(node), do: Element.from_node(node)
+
+  defp parse_pseudo_selector(":" <> name) do
+    case name do
+      "focused" -> :focused
+      unknown -> {:unknown_pseudo, unknown}
+    end
+  end
 
   defp find_selector_node(nil, _id), do: nil
 

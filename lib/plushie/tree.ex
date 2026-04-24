@@ -1415,8 +1415,7 @@ defmodule Plushie.Tree do
           {:hit, map(), normalize_ctx()} | {:miss, normalize_ctx()}
   defp widget_view_cache_lookup(module, scoped_id, props, state, ctx) do
     if function_exported?(module, :__cache_key__, 2) do
-      key = module.__cache_key__(props, state)
-      cache_key = {module, scoped_id, key}
+      cache_key = widget_view_cache_key(module, scoped_id, props, state)
 
       case Map.get(ctx.widget_view_prev, cache_key) do
         {cached_tree, delta_handlers, delta_events, delta_windows} ->
@@ -1465,8 +1464,7 @@ defmodule Plushie.Tree do
     {pre_handlers, pre_events, pre_windows} = Keyword.fetch!(opts, :pre)
 
     if function_exported?(module, :__cache_key__, 2) do
-      key = module.__cache_key__(props, state)
-      cache_key = {module, scoped_id, key}
+      cache_key = widget_view_cache_key(module, scoped_id, props, state)
 
       delta_handlers = Map.drop(ctx.widget_handlers, Map.keys(pre_handlers))
       delta_events = Map.drop(ctx.widget_events, Map.keys(pre_events))
@@ -1484,6 +1482,10 @@ defmodule Plushie.Tree do
     else
       ctx
     end
+  end
+
+  defp widget_view_cache_key(module, scoped_id, props, state) do
+    {module, scoped_id, module.__cache_key__(props, state), state}
   end
 
   # Evaluate the memo body function and normalize the result. If the body

@@ -46,6 +46,27 @@ defmodule Plushie.WidgetCacheKeyTest do
     end
   end
 
+  defmodule StateRenderedWidget do
+    use Plushie.Widget
+
+    widget :state_rendered_thing
+
+    field :data_version, :integer, default: 0
+
+    state do
+      field :zoom, :float, default: 1.0
+    end
+
+    cache_key(fn props, _state ->
+      props.data_version
+    end)
+
+    @impl true
+    def view(id, _props, state) do
+      %{id: id, type: "text", props: %{content: "zoom: #{state.zoom}"}, children: []}
+    end
+  end
+
   # ---------------------------------------------------------------------------
   # Tests
   # ---------------------------------------------------------------------------
@@ -103,6 +124,20 @@ defmodule Plushie.WidgetCacheKeyTest do
 
       child = hd(second.children)
       assert child.props.content == "v2"
+    end
+
+    test "state changes trigger re-render even when custom cache_key ignores state" do
+      tree = widget_tree(StateRenderedWidget, "w1", data_version: 1)
+      {_first, wvc} = normalize_with_widget_cache(tree)
+
+      widget_states = %{
+        "main#w1" => %{module: StateRenderedWidget, state: %{zoom: 2.0}}
+      }
+
+      {second, _wvc2} = normalize_with_widget_cache(tree, wvc, widget_states)
+
+      child = hd(second.children)
+      assert child.props.content == "zoom: 2.0"
     end
 
     test "widget without cache_key always re-renders" do
@@ -185,11 +220,12 @@ defmodule Plushie.WidgetCacheKeyTest do
     Tree.normalize(tree, %{})
   end
 
-  defp normalize_with_widget_cache(tree, widget_view_prev \\ %{}) do
+  defp normalize_with_widget_cache(tree, widget_view_prev \\ %{}, widget_states \\ %{}) do
     ctx = %Plushie.Tree.NormalizeCtx{
       scope: "",
       window_id: nil,
-      widget_view_prev: widget_view_prev
+      widget_view_prev: widget_view_prev,
+      widget_states: widget_states
     }
 
     {result, nctx} = Tree.normalize_with_caches(tree, ctx)
