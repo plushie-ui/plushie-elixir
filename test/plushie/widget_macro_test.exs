@@ -466,9 +466,36 @@ defmodule Plushie.WidgetMacroTest do
       assert node.type == "widget_placeholder"
     end
 
+    test "omitted nil composite props are absent from metadata" do
+      widget = StatusIndicator.new("si1", status: :ok)
+      node = Plushie.Widget.to_node(widget)
+
+      props = node.props[:__widget__].props
+      assert props[:status] == :ok
+      refute Map.has_key?(props, :label)
+    end
+
+    test "explicit nil composite props are present in metadata" do
+      widget = StatusIndicator.new("si1", status: :ok, label: nil)
+      node = Plushie.Widget.to_node(widget)
+
+      props = node.props[:__widget__].props
+      assert props[:status] == :ok
+      assert Map.has_key?(props, :label)
+      assert props[:label] == nil
+    end
+
     test "view/3 widget produces struct" do
       widget = Wrapper.new("w1", border: true)
       assert %Wrapper{id: "w1", border: true} = widget
+    end
+
+    test "non-nil composite defaults stay in metadata" do
+      widget = Wrapper.new("w1")
+      node = Plushie.Widget.to_node(widget)
+
+      props = node.props[:__widget__].props
+      assert props[:border] == false
     end
 
     test "stateful widget placeholder rejects missing id" do

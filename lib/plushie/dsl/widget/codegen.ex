@@ -271,14 +271,8 @@ defmodule Plushie.DSL.Widget.Codegen do
         state_fields,
         prop_extract
       ) do
-    prop_struct_fields =
-      for {name, _type, opts} <- props do
-        default = Keyword.get(opts, :default)
-        {name, default}
-      end
-
-    # Struct fields: :id + declared props
-    struct_fields = [{:id, nil} | prop_struct_fields]
+    prop_struct_fields = prop_struct_fields(props)
+    struct_fields = composite_struct_fields(prop_struct_fields)
 
     state_defaults = Macro.escape(Map.new(state_fields))
 
@@ -286,29 +280,8 @@ defmodule Plushie.DSL.Widget.Codegen do
     has_view_3 = Module.defines?(module, {:view, 3})
     has_view_2 = Module.defines?(module, {:view, 2})
     participates_in_dispatch = participates_in_dispatch?(has_handle_event, events, state_fields)
-
-    default_handle_event =
-      unless has_handle_event do
-        # Widgets with event declarations are opaque by default (consume all
-        # events). Render-only widgets without events are transparent (events
-        # pass through to the app's update/2).
-        default_action = if events != [], do: :consumed, else: :ignored
-
-        quote do
-          @doc false
-          def handle_event(_event, _state), do: unquote(default_action)
-        end
-      end
-
-    # Composites with view/2 need a view/3 wrapper so the unified
-    # normalization path can call view(id, props, state) uniformly.
-    view_adapter =
-      if has_view_2 and not has_view_3 do
-        quote do
-          @doc false
-          def view(id, props, _state), do: view(id, props)
-        end
-      end
+    default_handle_event = default_handle_event(has_handle_event, events)
+    view_adapter = composite_view_adapter(has_view_2, has_view_3)
 
     quote do
       unquote(view_adapter)
@@ -348,12 +321,22 @@ defmodule Plushie.DSL.Widget.Codegen do
               :ok
           end
 
-          props =
+          struct_props =
             widget
             |> Map.from_struct()
             |> Map.delete(:id)
+            |> Map.delete(:__explicit_nil_props__)
+
+          props =
+            struct_props
             |> Enum.reject(fn {_k, v} -> is_nil(v) end)
             |> Map.new()
+            |> Map.merge(
+              widget.__explicit_nil_props__
+              |> Enum.filter(fn key -> Map.get(struct_props, key) == nil end)
+              |> Enum.map(fn key -> {key, nil} end)
+              |> Map.new()
+            )
 
           %{
             id: widget.id,
@@ -386,18 +369,65 @@ defmodule Plushie.DSL.Widget.Codegen do
         prop_defaults = unquote(Macro.escape(prop_struct_fields))
         unquote(prop_extract)
 
+        explicit_nil_props =
+          prop_defaults
+          |> Enum.map(fn {name, _default} -> name end)
+          |> Enum.filter(fn name ->
+            Keyword.has_key?(var!(opts), name) and is_nil(var!(opts)[name])
+          end)
+          |> MapSet.new()
+
         props_map =
           prop_defaults
           |> Enum.map(fn {name, default} ->
             {name, Keyword.get(var!(opts), name, default)}
           end)
-          |> Enum.reject(fn {_name, val} -> is_nil(val) end)
+          |> Enum.reject(fn {name, val} ->
+            is_nil(val) and not MapSet.member?(explicit_nil_props, name)
+          end)
           |> Map.new()
 
-        struct!(__MODULE__, Map.put(props_map, :id, id))
+        props_map =
+          props_map
+          |> Map.put(:id, id)
+          |> Map.put(:__explicit_nil_props__, explicit_nil_props)
+
+        struct!(__MODULE__, props_map)
       end
     end
   end
+
+  defp prop_struct_fields(props) do
+    for {name, _type, opts} <- props do
+      {name, Keyword.get(opts, :default)}
+    end
+  end
+
+  defp composite_struct_fields(prop_struct_fields) do
+    [{:id, nil}, {:__explicit_nil_props__, MapSet.new()} | prop_struct_fields]
+  end
+
+  defp default_handle_event(true, _events), do: nil
+
+  defp default_handle_event(false, events) do
+    default_action = if events != [], do: :consumed, else: :ignored
+
+    quote do
+      @doc false
+      def handle_event(_event, _state), do: unquote(default_action)
+    end
+  end
+
+  # Composites with view/2 need a view/3 wrapper so the unified
+  # normalization path can call view(id, props, state) uniformly.
+  defp composite_view_adapter(true, false) do
+    quote do
+      @doc false
+      def view(id, props, _state), do: view(id, props)
+    end
+  end
+
+  defp composite_view_adapter(_has_view_2, _has_view_3), do: nil
 
   # -- Commands ----------------------------------------------------------------
 
