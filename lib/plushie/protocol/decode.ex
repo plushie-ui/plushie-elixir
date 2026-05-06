@@ -675,16 +675,11 @@ defmodule Plushie.Protocol.Decode do
          "family" => "window_opened",
          "value" => %{"window_id" => window_id, "width" => width, "height" => height} = data
        }) do
-    pos =
-      case data do
-        %{"position" => %{"x" => x, "y" => y}} -> {x, y}
-        _ -> nil
-      end
-
     %WindowEvent{
       type: :opened,
       window_id: window_id,
-      position: pos,
+      x: data["x"],
+      y: data["y"],
       width: width,
       height: height,
       scale_factor: data["scale_factor"]

@@ -28,7 +28,6 @@ defmodule Plushie.Event.WindowEvent do
           y: number() | nil,
           width: number() | nil,
           height: number() | nil,
-          position: {number(), number()} | nil,
           path: String.t() | nil,
           scale_factor: number() | nil
         }
@@ -37,5 +36,5 @@ defmodule Plushie.Event.WindowEvent do
   @type delivered_t :: t()
 
   @enforce_keys [:type, :window_id]
-  defstruct [:type, :window_id, :x, :y, :width, :height, :position, :path, :scale_factor]
+  defstruct [:type, :window_id, :x, :y, :width, :height, :path, :scale_factor]
 end

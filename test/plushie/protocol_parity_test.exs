@@ -536,7 +536,8 @@ defmodule Plushie.ProtocolParityTest do
           family: "window_opened",
           value: %{
             window_id: "main",
-            position: %{x: 100, y: 200},
+            x: 100,
+            y: 200,
             width: 800,
             height: 600,
             scale_factor: 2.0
@@ -546,7 +547,8 @@ defmodule Plushie.ProtocolParityTest do
       assert %WindowEvent{
                type: :opened,
                window_id: "main",
-               position: {100, 200},
+               x: 100,
+               y: 200,
                width: 800,
                height: 600,
                scale_factor: 2.0
@@ -554,18 +556,19 @@ defmodule Plushie.ProtocolParityTest do
                Protocol.decode_message(json, :json)
     end
 
-    test "decodes window opened with nil position" do
+    test "decodes window opened without position (x/y absent)" do
       json =
         Jason.encode!(%{
           type: "event",
           family: "window_opened",
-          value: %{window_id: "main", position: nil, width: 1024, height: 768, scale_factor: 1.0}
+          value: %{window_id: "main", width: 1024, height: 768, scale_factor: 1.0}
         })
 
       assert %WindowEvent{
                type: :opened,
                window_id: "main",
-               position: nil,
+               x: nil,
+               y: nil,
                width: 1024,
                height: 768,
                scale_factor: 1.0
