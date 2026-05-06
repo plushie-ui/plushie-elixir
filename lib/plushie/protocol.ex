@@ -168,6 +168,16 @@ defmodule Plushie.Protocol do
   defdelegate encode_widget_op(op, payload, format \\ :msgpack), to: Plushie.Protocol.Encode
 
   @doc """
+  Encodes a font-load message as a protocol message.
+
+  Typed binary message: the renderer receives `type: "load_font"` with a
+  `payload` carrying the font `family` and raw font `data`. JSON encodes
+  `data` as a base64 string; MessagePack encodes it as a native binary.
+  """
+  @spec encode_load_font(family :: String.t(), data :: binary(), format :: format()) :: iodata()
+  defdelegate encode_load_font(family, data, format \\ :msgpack), to: Plushie.Protocol.Encode
+
+  @doc """
   Encodes a subscribe message as a protocol message.
 
   An optional `max_rate` (events per second) can be included to enable

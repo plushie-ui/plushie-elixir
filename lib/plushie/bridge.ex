@@ -115,6 +115,13 @@ defmodule Plushie.Bridge do
     GenServer.cast(bridge, {:send_widget_op, op, payload})
   end
 
+  @doc "Sends a font-load message to the renderer."
+  @spec send_load_font(bridge :: GenServer.server(), family :: String.t(), data :: binary()) ::
+          :ok
+  def send_load_font(bridge, family, data) do
+    GenServer.cast(bridge, {:send_load_font, family, data})
+  end
+
   @doc "Subscribes to a renderer-side event source."
   @spec send_subscribe(
           bridge :: GenServer.server(),
@@ -418,6 +425,14 @@ defmodule Plushie.Bridge do
     {:noreply,
      encode_and_send(state, :widget_op, fn fmt ->
        Plushie.Protocol.encode_widget_op(op, payload, fmt)
+     end)}
+  end
+
+  @impl GenServer
+  def handle_cast({:send_load_font, family, data}, state) do
+    {:noreply,
+     encode_and_send(state, :load_font, fn fmt ->
+       Plushie.Protocol.encode_load_font(family, data, fmt)
      end)}
   end
 
@@ -969,6 +984,7 @@ defmodule Plushie.Bridge do
   defp queue_during_restart?(kind) do
     kind in [
       :widget_op,
+      :load_font,
       :image_op,
       :command,
       :commands,

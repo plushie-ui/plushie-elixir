@@ -98,6 +98,30 @@ defmodule Plushie.Protocol.Encode do
   end
 
   @doc """
+  Encodes a font-load message as a protocol message.
+
+  Typed binary message: the renderer receives `type: "load_font"` with a
+  `payload` carrying the font `family` and raw font `data`. JSON encodes
+  `data` as a base64 string; MessagePack encodes it as a native binary
+  (`Msgpax.Bin`).
+
+  ## Example
+
+      Plushie.Protocol.Encode.encode_load_font("Inter", <<1, 2, 3>>, :json)
+      #=> ~s({"payload":{"data":"AQID","family":"Inter"},"session":"","type":"load_font"}) <> "\\n"
+  """
+  @spec encode_load_font(
+          family :: String.t(),
+          data :: binary(),
+          format :: Plushie.Protocol.format()
+        ) :: iodata()
+  def encode_load_font(family, data, format \\ :msgpack)
+      when is_binary(family) and is_binary(data) do
+    payload = encode_binary_fields(%{family: family, data: data}, format, [:data])
+    serialize(%{type: "load_font", payload: payload}, format)
+  end
+
+  @doc """
   Encodes a subscribe message as a protocol message.
 
   An optional `max_rate` (events per second) can be included to enable

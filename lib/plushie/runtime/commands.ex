@@ -214,6 +214,17 @@ defmodule Plushie.Runtime.Commands do
     state
   end
 
+  defp execute_command(
+         %Plushie.Command{type: :load_font, payload: %{family: family, data: data}},
+         state
+       ) do
+    if state.bridge do
+      Plushie.Bridge.send_load_font(state.bridge, family, data)
+    end
+
+    state
+  end
+
   defp execute_command(%Plushie.Command{type: :exit, payload: _payload}, state) do
     Logger.info("plushie runtime: exit command received, stopping")
     send(self(), {:renderer_exit, :normal})

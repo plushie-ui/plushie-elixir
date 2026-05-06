@@ -494,8 +494,8 @@ defmodule Plushie.Command do
   @spec load_font(family :: String.t(), data :: binary()) :: %__MODULE__{}
   def load_font(family, data) when is_binary(family) and is_binary(data) do
     %__MODULE__{
-      type: :widget_op,
-      payload: %{op: "load_font", family: family, data: data}
+      type: :load_font,
+      payload: %{family: family, data: data}
     }
   end
 
