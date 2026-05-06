@@ -34,7 +34,7 @@ defmodule Plushie.BridgeIostreamTest do
     end
   end
 
-  defp attach(event_name, test_pid, bridge \\ nil) do
+  defp attach(event_name, test_pid, bridge) do
     handler_id = "#{inspect(test_pid)}_#{:erlang.unique_integer()}"
 
     :telemetry.attach(

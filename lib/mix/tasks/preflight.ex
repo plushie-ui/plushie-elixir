@@ -8,12 +8,24 @@ defmodule Mix.Tasks.Preflight do
 
   ## What it runs
 
-  1. `mix format --check-formatted`
-  2. `mix compile --warnings-as-errors`
-  3. `mix credo --strict`
-  4. `mix test`
-  5. `mix docs --warnings-as-errors`
-  6. `mix dialyzer`
+  1. Renderer rebuild (when `PLUSHIE_RUST_SOURCE_PATH` is set)
+  2. `mix format --check-formatted`
+  3. `mix compile --warnings-as-errors`
+  4. `mix credo --strict`
+  5. `mix test`
+  6. `mix test` (headless backend)
+  7. `mix docs --warnings-as-errors`
+  8. `mix dialyzer`
+
+  ## Renderer freshness
+
+  Tests exercise the real renderer binary, so a stale binary hides real
+  bugs and surfaces phantom ones. When `PLUSHIE_RUST_SOURCE_PATH` is set
+  to a plushie-rust checkout, the first preflight step rebuilds
+  `plushie-renderer` from source via `cargo build --release -p plushie-renderer`
+  and exports `PLUSHIE_BINARY_PATH` so the test runs use the fresh binary.
+  Without `PLUSHIE_RUST_SOURCE_PATH` the existing binary resolution
+  (env -> config -> custom build -> downloaded) is used unchanged.
   """
 
   use Mix.Task
@@ -24,15 +36,23 @@ defmodule Mix.Tasks.Preflight do
 
   @impl Mix.Task
   def run(_args) do
-    steps = [
-      {"mix format --check-formatted", fn -> mix_cmd(["format", "--check-formatted"]) end},
-      {"mix compile --warnings-as-errors", fn -> mix_compile() end},
-      {"mix credo --strict", fn -> mix_cmd(["credo", "--strict"]) end},
-      {"mix test", fn -> mix_cmd(["test"]) end},
-      {"mix test (headless)", fn -> mix_test_headless() end},
-      {"mix docs --warnings-as-errors", fn -> mix_docs() end},
-      {"mix dialyzer", fn -> mix_cmd(["dialyzer"]) end}
-    ]
+    rebuild_step =
+      case Mix.PlushieHelpers.source_path() do
+        nil -> []
+        source -> [{"cargo build -p plushie-renderer", fn -> rebuild_renderer(source) end}]
+      end
+
+    steps =
+      rebuild_step ++
+        [
+          {"mix format --check-formatted", fn -> mix_cmd(["format", "--check-formatted"]) end},
+          {"mix compile --warnings-as-errors", fn -> mix_compile() end},
+          {"mix credo --strict", fn -> mix_cmd(["credo", "--strict"]) end},
+          {"mix test", fn -> mix_cmd(["test"]) end},
+          {"mix test (headless)", fn -> mix_test_headless() end},
+          {"mix docs --warnings-as-errors", fn -> mix_docs() end},
+          {"mix dialyzer", fn -> mix_cmd(["dialyzer"]) end}
+        ]
 
     Enum.each(steps, fn {label, fun} ->
       Mix.shell().info([:cyan, "==> ", :reset, label])
@@ -48,6 +68,56 @@ defmodule Mix.Tasks.Preflight do
     end)
 
     Mix.shell().info([:green, "\nAll checks passed.", :reset])
+  end
+
+  # Rebuilds plushie-renderer from a local source checkout and exports
+  # PLUSHIE_BINARY_PATH so the rest of preflight runs against the fresh
+  # binary. The release profile mirrors what users actually ship. Cargo
+  # is invoked with CWD set to the plushie-rust workspace so its
+  # `.cargo/config.toml` (which carries the local plushie-iced
+  # `[patch.crates-io]` overrides) is picked up.
+  @spec rebuild_renderer(String.t()) :: step_result()
+  defp rebuild_renderer(source) do
+    expanded = Path.expand(source)
+    manifest = Path.join(expanded, "Cargo.toml")
+
+    if File.exists?(manifest) do
+      run_cargo_build(expanded)
+    else
+      Mix.shell().error("    PLUSHIE_RUST_SOURCE_PATH=#{source} but no Cargo.toml at #{manifest}")
+      {:error, 1}
+    end
+  end
+
+  @spec run_cargo_build(String.t()) :: step_result()
+  defp run_cargo_build(workspace) do
+    args = ["build", "--release", "-p", "plushie-renderer"]
+
+    case stream_cmd("cargo", args, cd: workspace) do
+      0 -> install_built_binary(workspace)
+      code -> {:error, code}
+    end
+  end
+
+  @spec install_built_binary(String.t()) :: step_result()
+  defp install_built_binary(workspace) do
+    binary = Path.join([workspace, "target", "release", binary_name()])
+
+    if File.exists?(binary) do
+      System.put_env("PLUSHIE_BINARY_PATH", binary)
+      :ok
+    else
+      Mix.shell().error("    cargo build succeeded but #{binary} is missing")
+      {:error, 1}
+    end
+  end
+
+  @spec binary_name() :: String.t()
+  defp binary_name do
+    case :os.type() do
+      {:win32, _} -> "plushie-renderer.exe"
+      _ -> "plushie-renderer"
+    end
   end
 
   # -- Steps -------------------------------------------------------------------
@@ -99,6 +169,12 @@ defmodule Mix.Tasks.Preflight do
             {:env, Enum.map(env, fn {k, v} -> {String.to_charlist(k), String.to_charlist(v)} end)}
             | port_opts
           ]
+      end
+
+    port_opts =
+      case opts[:cd] do
+        nil -> port_opts
+        cd -> [{:cd, String.to_charlist(cd)} | port_opts]
       end
 
     port = Port.open({:spawn_executable, executable}, port_opts)
