@@ -42,8 +42,9 @@ follow them by name. The naming is a cross-SDK contract.
   affecting bugs. `PLUSHIE_TEST_BACKEND=headless mix test`.
 - **windowed**: seconds per test. Full iced rendering with a
   real display (headless weston on Linux, native display
-  elsewhere). Used when the test cares about full window
-  lifecycle, focus events, or platform-specific behavior.
+  elsewhere; Xvfb works for X11-only environments). Used when
+  the test cares about full window lifecycle, focus events, or
+  platform-specific behavior.
 
 The names mean the same thing in plushie-rust, plushie-gleam,
 plushie-typescript, plushie-python, plushie-ruby. Findings about

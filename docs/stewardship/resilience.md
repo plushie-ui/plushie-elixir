@@ -30,14 +30,13 @@ holds up that half.
   `Plushie.Runtime.health/1` reports `:degraded` while frozen.
 - **Renderer crash auto-recovery.** The bridge owns the Port. On
   unexpected exit it sends `Plushie.RendererExitError` to the
-  runtime, restarts the renderer process, replays settings, and
-  the runtime sends a fresh full snapshot to re-sync the tree.
-  The user's `handle_renderer_exit/2` callback can adjust the
-  model before re-sync (e.g., reset transient UI state). Restart
-  is unconditional: there is no backoff loop. If the binary
-  cannot start, the supervisor lets the bridge crash and
-  `:rest_for_one` brings down the runtime; the supervising
-  parent decides recovery.
+  runtime, restarts the renderer with bounded exponential
+  backoff, replays settings, and the runtime sends a fresh full
+  snapshot to re-sync the tree. The user's
+  `handle_renderer_exit/2` callback can adjust the model before
+  re-sync (e.g., reset transient UI state). After the configured
+  max-restart limit the bridge gives up; the supervising parent
+  decides further recovery.
 - **Bridge/Runtime supervision.** `:rest_for_one`. If Bridge
   crashes, Runtime restarts too (fresh start). If Runtime
   crashes alone, only Runtime restarts; it re-sends settings
