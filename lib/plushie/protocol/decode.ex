@@ -1120,7 +1120,7 @@ defmodule Plushie.Protocol.Decode do
          "type" => "op_query_response",
          "kind" => "system_info",
          "tag" => tag,
-         "value" => data
+         "data" => data
        }) do
     %SystemEvent{type: :system_info, tag: tag, value: safe_atomize_keys(data)}
   end
@@ -1129,7 +1129,7 @@ defmodule Plushie.Protocol.Decode do
          "type" => "op_query_response",
          "kind" => "system_theme",
          "tag" => tag,
-         "value" => data
+         "data" => data
        }) do
     %SystemEvent{type: :system_theme, tag: tag, value: safe_atomize_keys(data)}
   end
@@ -1138,7 +1138,7 @@ defmodule Plushie.Protocol.Decode do
          "type" => "op_query_response",
          "kind" => "list_images",
          "tag" => tag,
-         "value" => data
+         "data" => data
        }) do
     %SystemEvent{type: :image_list, tag: tag, value: safe_atomize_keys(data)}
   end
@@ -1147,7 +1147,7 @@ defmodule Plushie.Protocol.Decode do
          "type" => "op_query_response",
          "kind" => "tree_hash",
          "tag" => tag,
-         "value" => data
+         "data" => data
        }) do
     %SystemEvent{type: :tree_hash, tag: tag, value: safe_atomize_keys(data)}
   end
@@ -1156,7 +1156,7 @@ defmodule Plushie.Protocol.Decode do
          "type" => "op_query_response",
          "kind" => "find_focused",
          "tag" => tag,
-         "value" => data
+         "data" => data
        }) do
     %SystemEvent{type: :find_focused, tag: tag, value: safe_atomize_keys(data)}
   end
