@@ -191,12 +191,7 @@ defmodule Plushie.Test.SessionPool.Multiplexed do
     end
   end
 
-  defp dispatch_response(%{"type" => "event", "session" => session_id} = msg, state) do
-    forward_to_session(state, session_id, msg)
-  end
-
-  defp dispatch_response(%{"type" => type, "session" => session_id} = msg, state)
-       when type in ["effect_stub_register_ack", "effect_stub_unregister_ack"] do
+  defp dispatch_response(%{"session" => session_id} = msg, state) do
     forward_to_session(state, session_id, msg)
   end
 
