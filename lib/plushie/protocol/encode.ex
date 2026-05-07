@@ -26,8 +26,34 @@ defmodule Plushie.Protocol.Encode do
   """
   @spec encode_settings(settings :: map(), format :: Plushie.Protocol.format()) :: iodata()
   def encode_settings(settings, format \\ :msgpack) when is_map(settings) do
-    settings = Map.put_new(settings, :protocol_version, @protocol_version)
+    settings =
+      settings
+      |> Map.put_new(:protocol_version, @protocol_version)
+      |> normalize_default_font()
+
     serialize(%{type: "settings", settings: settings}, format)
+  end
+
+  # The renderer reads `default_font` strictly as an object with at
+  # least a `family` key; a bare string is silently dropped (`Font::DEFAULT`
+  # falls through). `Plushie.Type.Font.encode/1` returns a string for the
+  # `:default` and `:monospace` shorthands but a map for everything else,
+  # so we wrap any string result back into the canonical map shape.
+  defp normalize_default_font(%{default_font: font} = settings) do
+    %{settings | default_font: encode_default_font(font)}
+  end
+
+  defp normalize_default_font(%{"default_font" => font} = settings) do
+    Map.put(settings, "default_font", encode_default_font(font))
+  end
+
+  defp normalize_default_font(settings), do: settings
+
+  defp encode_default_font(font) do
+    case Plushie.Type.Font.encode(font) do
+      family when is_binary(family) -> %{family: family}
+      %{} = obj -> obj
+    end
   end
 
   @doc """

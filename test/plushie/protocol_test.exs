@@ -1080,6 +1080,74 @@ defmodule Plushie.ProtocolTest do
     end
   end
 
+  describe "encode_settings default_font normalisation" do
+    # The renderer parses default_font strictly as an object with a
+    # `family` key; it silently drops a bare string and falls back to
+    # the platform default font. The encoder normalises every accepted
+    # input shape (atom shorthand, family-name string, struct, plain
+    # map) into the canonical object form so the renderer always sees
+    # the same wire shape.
+
+    test "wraps the :default atom into a family object" do
+      encoded = Protocol.encode_settings(%{default_font: :default}, :json)
+      decoded = Jason.decode!(encoded)
+      assert decoded["settings"]["default_font"] == %{"family" => "default"}
+    end
+
+    test "wraps the :monospace atom into a family object" do
+      encoded = Protocol.encode_settings(%{default_font: :monospace}, :json)
+      decoded = Jason.decode!(encoded)
+      assert decoded["settings"]["default_font"] == %{"family" => "monospace"}
+    end
+
+    test "wraps a bare family-name string into a family object" do
+      encoded = Protocol.encode_settings(%{default_font: "Fira Code"}, :json)
+      decoded = Jason.decode!(encoded)
+      assert decoded["settings"]["default_font"] == %{"family" => "Fira Code"}
+    end
+
+    test "passes a map default_font through unchanged" do
+      font = %{family: "Inter", weight: :bold}
+      encoded = Protocol.encode_settings(%{default_font: font}, :json)
+      decoded = Jason.decode!(encoded)
+      assert decoded["settings"]["default_font"] == %{"family" => "Inter", "weight" => "bold"}
+    end
+
+    test "encodes a Plushie.Type.Font struct as a family object" do
+      font = %Plushie.Type.Font{family: "Cascadia", style: :italic}
+      encoded = Protocol.encode_settings(%{default_font: font}, :json)
+      decoded = Jason.decode!(encoded)
+
+      assert decoded["settings"]["default_font"] == %{
+               "family" => "Cascadia",
+               "style" => "italic"
+             }
+    end
+
+    test "supports string-keyed settings maps" do
+      encoded = Protocol.encode_settings(%{"default_font" => :monospace}, :json)
+      decoded = Jason.decode!(encoded)
+      assert decoded["settings"]["default_font"] == %{"family" => "monospace"}
+    end
+
+    test "default_font shape is the same in msgpack and json" do
+      settings = %{default_font: :monospace}
+
+      json = Jason.decode!(Protocol.encode_settings(settings, :json))
+      msgpack_iodata = Protocol.encode_settings(settings, :msgpack)
+      {:ok, msgpack} = Msgpax.unpack(IO.iodata_to_binary(msgpack_iodata))
+
+      assert json["settings"]["default_font"] == msgpack["settings"]["default_font"]
+      assert json["settings"]["default_font"] == %{"family" => "monospace"}
+    end
+
+    test "leaves settings without default_font alone" do
+      encoded = Protocol.encode_settings(%{antialiasing: true}, :json)
+      decoded = Jason.decode!(encoded)
+      refute Map.has_key?(decoded["settings"], "default_font")
+    end
+  end
+
   describe "msgpack encode/decode roundtrips" do
     test "settings roundtrip" do
       settings = %{"theme" => "dark"}
