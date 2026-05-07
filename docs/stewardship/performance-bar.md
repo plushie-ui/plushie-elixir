@@ -116,7 +116,7 @@ project that depends on plushie. Adding compile-time validation
 is welcome when it catches a real class of bugs; adding it
 because "we could check this at compile time" without a real
 class of bugs is the same kind of compounding cost the runtime
-side worries about. See `macro-dsl.md`.
+side worries about. See `dsl-discipline.md`.
 
 ## Tree diff is the load-bearing piece
 

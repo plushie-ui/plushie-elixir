@@ -49,13 +49,14 @@ in play.
   and the runtime: `init/update/view` shapes, return-shape
   validation, commands as pure data, subscription diffing,
   widget event flow, scoped IDs.
-- `macro-dsl.md` describes when a new macro form earns its
-  place, the compile-time vs runtime tradeoff, generated-code
-  readability, the type system as a single behaviour, and the
-  bar for error messages produced by the DSL.
-- `otp-shape.md` describes the Bridge/Runtime split, the
-  rest_for_one supervision discipline, why GenServer over Task,
-  the transport behaviour, the SessionPool architecture, and
+- `dsl-discipline.md` describes the macro DSL surface specifically:
+  when a new macro form earns its place, the compile-time vs
+  runtime tradeoff, generated-code readability, the type system as
+  a single behaviour, and the bar for error messages produced by
+  the DSL.
+- `concurrency-shape.md` describes the Bridge/Runtime split under
+  OTP, the rest_for_one supervision discipline, why GenServer over
+  Task, the transport behaviour, the SessionPool architecture, and
   what is deliberately not used.
 - `triage.md` consolidates the routing logic from the other docs
   into a single first-match-wins flow for evaluating proposed

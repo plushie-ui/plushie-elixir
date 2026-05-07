@@ -1,4 +1,4 @@
-# Macro DSL discipline
+# DSL discipline
 
 The macro DSL is the largest user-facing surface in plushie-elixir.
 `Plushie.UI` (the import surface), `Plushie.Widget` (custom widget

@@ -38,7 +38,7 @@ real work.
   codebase. It is held to the same readability bar as runtime
   code: generated functions read like hand-written ones,
   compile-time validation produces clear messages, scope checks
-  point at the offending call site. See `macro-dsl.md`.
+  point at the offending call site. See `dsl-discipline.md`.
 
 ## Non-goals
 

@@ -9,7 +9,7 @@ observations from review passes. The flow below applies regardless
 of source. The underlying docs (`posture.md`, `goals-and-non-goals.md`,
 `trust-model.md`, `resilience.md`, `performance-bar.md`,
 `test-discipline.md`, `simplicity.md`, `elm-invariants.md`,
-`macro-dsl.md`, `otp-shape.md`) are the authority on each axis;
+`dsl-discipline.md`, `concurrency-shape.md`) are the authority on each axis;
 this file is a consolidated routing tool.
 
 ## Outcomes
@@ -93,16 +93,16 @@ wins.
 
 9. **Macro DSL extension.** Does the proposal add a new macro
    form, a new field shape, a new event spec form, a new block
-   scope? Run the criteria in `macro-dsl.md` (two real users,
+   scope? Run the criteria in `dsl-discipline.md` (two real users,
    real bug class, generated code reads cleanly, error messages
    point at the call site). If it does not pass, decline or
    defer.
 
-10. **OTP shape change.** Does the work introduce a new long-
-    lived process, change supervision strategy, alter the
-    Bridge/Runtime split, add registry-based dynamic
-    supervision, or move work between Bridge and Runtime? Treat
-    as a stewardship-level question; reference `otp-shape.md`.
+10. **Concurrency shape change.** Does the work introduce a new
+    long-lived process, change supervision strategy, alter the
+    Bridge/Runtime split, add registry-based dynamic supervision,
+    or move work between Bridge and Runtime? Treat as a
+    stewardship-level question; reference `concurrency-shape.md`.
 
 11. **Simplicity axis.** Single-user abstraction extracted as a
     behaviour or protocol? Module split without a forcing

@@ -3,7 +3,7 @@
 The bar code in plushie-elixir has to clear, and the recurring
 tradeoffs about structure and abstraction that decide what earns
 its place. The other stewardship docs (`performance-bar.md`,
-`resilience.md`, `test-discipline.md`, `macro-dsl.md`) each carry
+`resilience.md`, `test-discipline.md`, `dsl-discipline.md`) each carry
 a flavor of this implicitly; this doc states it directly so
 questions about "should we extract this" or "is this clear
 enough" have an explicit reference.
@@ -57,7 +57,7 @@ Working rules:
   Generic code written for hypothetical future users is the
   recurring source of half-built abstractions that nobody fully
   understands later. The DSL is especially vulnerable here; see
-  `macro-dsl.md`.
+  `dsl-discipline.md`.
 - **Generic where specific would do is harder to read.** A
   concrete struct beats a parameterized one when the
   parameterization does not have at least two real uses.

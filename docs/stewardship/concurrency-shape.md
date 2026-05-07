@@ -1,10 +1,10 @@
-# OTP shape
+# Concurrency shape
 
 How plushie-elixir's runtime is structured under OTP, why the
 parts split the way they do, and the supervision discipline that
 holds them together. Other host SDKs have their own concurrency
-shape; this is plushie-elixir's, and it is downstream of Elixir
-and BEAM idioms rather than cross-SDK convergence.
+shape; plushie-elixir's is downstream of Elixir and BEAM idioms
+rather than cross-SDK convergence.
 
 ## The Bridge/Runtime split
 

@@ -43,7 +43,7 @@ holds up that half.
   crashes alone, only Runtime restarts; it re-sends settings
   and snapshot to the still-running Bridge. The Task supervisor
   starts before both so async commands always have a parent.
-  See `otp-shape.md`.
+  See `concurrency-shape.md`.
 - **Defensive parsing on the wire.** The codec assumes its input
   could be wrong: malformed MessagePack, unknown event variants,
   missing required fields, type-coercion mismatches. Rejection
