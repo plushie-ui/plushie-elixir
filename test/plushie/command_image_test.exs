@@ -140,6 +140,52 @@ defmodule Plushie.CommandImageTest do
     end
   end
 
+  describe "list_images/1" do
+    test "returns an image_op command with op \"list\" and string tag" do
+      cmd = Command.list_images(:my_tag)
+
+      assert %Command{type: :image_op} = cmd
+      assert cmd.payload.op == "list"
+      assert cmd.payload.tag == "my_tag"
+    end
+
+    test "encodes to the typed image_op wire envelope (json)" do
+      encoded = Protocol.encode_image_op("list", %{tag: "my_tag"}, :json)
+
+      decoded = Jason.decode!(encoded)
+      assert decoded["type"] == "image_op"
+      assert decoded["op"] == "list"
+      assert decoded["payload"] == %{"tag" => "my_tag"}
+    end
+
+    test "encodes to the typed image_op wire envelope (msgpack)" do
+      encoded = Protocol.encode_image_op("list", %{tag: "my_tag"}, :msgpack)
+
+      {:ok, decoded} = Msgpax.unpack(encoded)
+      assert decoded["type"] == "image_op"
+      assert decoded["op"] == "list"
+      assert decoded["payload"] == %{"tag" => "my_tag"}
+    end
+  end
+
+  describe "clear_images/0" do
+    test "returns an image_op command with op \"clear\"" do
+      cmd = Command.clear_images()
+
+      assert %Command{type: :image_op} = cmd
+      assert cmd.payload == %{op: "clear"}
+    end
+
+    test "encodes to the typed image_op wire envelope (json)" do
+      encoded = Protocol.encode_image_op("clear", %{}, :json)
+
+      decoded = Jason.decode!(encoded)
+      assert decoded["type"] == "image_op"
+      assert decoded["op"] == "clear"
+      assert decoded["payload"] == %{}
+    end
+  end
+
   describe "pixel buffer validation" do
     test "create_image_rgba/4 rejects wrong buffer size" do
       assert_raise ArgumentError, ~r/pixel buffer size mismatch/, fn ->

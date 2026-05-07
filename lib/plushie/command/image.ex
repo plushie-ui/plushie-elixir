@@ -141,8 +141,8 @@ defmodule Plushie.Command.Image do
   @spec list_images(tag :: Command.event_tag()) :: Command.t()
   def list_images(tag) when is_atom(tag) do
     %Command{
-      type: :widget_op,
-      payload: %{op: "list_images", tag: Atom.to_string(tag)}
+      type: :image_op,
+      payload: %{op: "list", tag: Atom.to_string(tag)}
     }
   end
 
@@ -150,8 +150,8 @@ defmodule Plushie.Command.Image do
   @spec clear_images() :: Command.t()
   def clear_images do
     %Command{
-      type: :widget_op,
-      payload: %{op: "clear_images"}
+      type: :image_op,
+      payload: %{op: "clear"}
     }
   end
 end

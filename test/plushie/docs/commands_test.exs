@@ -169,7 +169,7 @@ defmodule Plushie.Docs.CommandsTest do
 
   test "commands_clear_images_construct_test" do
     cmd = Command.clear_images()
-    assert %Command{type: :widget_op, payload: %{op: "clear_images"}} = cmd
+    assert %Command{type: :image_op, payload: %{op: "clear"}} = cmd
   end
 
   # -- PaneGrid operations ----------------------------------------------------
