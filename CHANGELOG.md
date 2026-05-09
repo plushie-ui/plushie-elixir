@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.7.2] - 2026-05-09
+
+### Fixed
+
+- **`mix plushie.gui` crashed on every invocation** with `BadBooleanError`
+  because `resolve_binary!/1` used the strict `and`/`not` operators with
+  keyword list lookups that return `nil` when a flag is absent. Replaced
+  with `&&`/`!`. This made `mix plushie.gui` (and any task that calls
+  `resolve_binary!/1`) completely unusable in 0.7.1 without `--release`
+  or `--build` flags.
+
 ## [0.7.1] - 2026-05-09
 
 ### Fixed
