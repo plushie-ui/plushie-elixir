@@ -40,7 +40,7 @@ defmodule Plushie.SocketAdapter do
 
     case connect(addr, socket_opts) do
       {:ok, socket} ->
-        {:ok, %{socket: socket, bridge: nil, format: format, buffer: ""}}
+        {:ok, %{socket: socket, bridge: nil, format: format, buffer: [], buffer_size: 0}}
 
       {:error, reason} ->
         {:stop, {:connect_failed, reason}}
@@ -98,23 +98,40 @@ defmodule Plushie.SocketAdapter do
   end
 
   def handle_info({:tcp, socket, data}, %{socket: socket, format: :json} = state) do
-    new_buffer = state.buffer <> data
+    new_size = state.buffer_size + byte_size(data)
+    cap = Framing.max_message_size()
 
-    try do
-      {lines, buffer} = Framing.decode_lines(new_buffer)
+    if new_size > cap do
+      # Detect overflow before concatenating to avoid O(n²) binary
+      # copies when an unterminated line grows past the cap in small
+      # chunks.  Raise immediately without materializing the buffer.
+      err = Plushie.Transport.BufferOverflowError.exception(size: new_size, limit: cap)
+      if state.bridge, do: send(state.bridge, {:iostream_closed, {:buffer_overflow, err}})
+      {:stop, {:buffer_overflow, err}, %{state | buffer: [], buffer_size: 0}}
+    else
+      # Append chunk to iolist (O(1) per chunk).  Only materialize
+      # the binary when we know there are complete lines to decode.
+      chunks = [state.buffer, data]
 
-      Enum.each(lines, fn line ->
-        if state.bridge, do: send(state.bridge, {:iostream_data, line})
-      end)
+      if :binary.match(data, "\n") == :nomatch do
+        {:noreply, %{state | buffer: chunks, buffer_size: new_size}}
+      else
+        binary = IO.iodata_to_binary(chunks)
 
-      {:noreply, %{state | buffer: buffer}}
-    rescue
-      err in Plushie.Transport.BufferOverflowError ->
-        # A line (or the unterminated tail) exceeded the protocol's
-        # per-message cap. Notify the bridge with the typed error so
-        # the overflow surfaces as a structured diagnostic, then stop.
-        if state.bridge, do: send(state.bridge, {:iostream_closed, {:buffer_overflow, err}})
-        {:stop, {:buffer_overflow, err}, %{state | buffer: ""}}
+        try do
+          {lines, remaining} = Framing.decode_lines(binary)
+
+          Enum.each(lines, fn line ->
+            if state.bridge, do: send(state.bridge, {:iostream_data, line})
+          end)
+
+          {:noreply, %{state | buffer: remaining, buffer_size: byte_size(remaining)}}
+        rescue
+          err in Plushie.Transport.BufferOverflowError ->
+            if state.bridge, do: send(state.bridge, {:iostream_closed, {:buffer_overflow, err}})
+            {:stop, {:buffer_overflow, err}, %{state | buffer: [], buffer_size: 0}}
+        end
+      end
     end
   end
 
