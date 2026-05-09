@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
-## [Unreleased]
+## [0.7.0] - 2026-05-09
 
 ### Breaking
 
@@ -15,17 +15,124 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
   `binary_version/0`.
 - **`PLUSHIE_SOURCE_PATH` renamed to `PLUSHIE_RUST_SOURCE_PATH`.** The
   application config key `:source_path` is unchanged.
+- **`Command.async/1,2` renamed to `Command.task/1,2`.** Converges
+  with Python, TypeScript, Gleam, and Ruby SDKs. The internal `:async`
+  command type atom becomes `:task`. `AsyncEvent` is unchanged.
+- **`grid.columns` renamed to `grid.num_columns`.** Matches the
+  renderer field name and avoids the collision with `table.columns`
+  (column spec lists).
+- **Window query functions drop the `get_` prefix.**
+  `Command.get_window_size` -> `Command.window_size`,
+  `Command.get_window_position` -> `Command.window_position`,
+  `Command.get_mode` -> `Command.window_mode`,
+  `Command.get_scale_factor` -> `Command.scale_factor`,
+  `Command.get_system_theme` -> `Command.system_theme`,
+  `Command.get_system_info` -> `Command.system_info`.
+- **`WidgetCommandError` renamed to `CommandError`.** Fields renamed:
+  `node_id` -> `id`, `op` -> `family`. Update pattern matches and any
+  `@impl Plushie.App` clauses that matched the old struct.
+- **`SystemEvent.data` renamed to `SystemEvent.value`.** Consistent
+  with `WidgetEvent.value` and `StreamEvent.value`.
+- **Angles throughout the canvas API are now in degrees.** Previously
+  `Plushie.Canvas.Angle` normalized to radians; it now normalizes to
+  degrees. The `arc`, `ellipse`, and `rotate` builders and the
+  `image.rotation` field all send degrees to the renderer.
+  Use `Plushie.Canvas.Angle.to_radians/1` when a radian value is needed.
+- **Renderer subscriptions drop the tag parameter.** Key, pointer,
+  window, and touch subscriptions now take keyword opts only:
+  `Subscription.on_key_press(window: "main", max_rate: 60)`. The old
+  `tag:` opt was management-only and never appeared in events. Timer
+  subscriptions retain their positional tag.
+- **Command renames.** `Command.request_user_attention/1` ->
+  `Command.request_attention/1`, `Command.done/2` ->
+  `Command.dispatch/2`, `Command.widget_commands/1` ->
+  `Command.widget_batch/1`.
+- **`ime_purpose` renamed to `input_purpose`** on `TextInput` and
+  `TextEditor`, matching the renderer field rename.
+- **`data:` renamed to `fields:` in inline widget event declarations.**
+  The widget DSL `event :name, data: [field: type]` form now uses
+  `fields:`. Do-block event declarations are unaffected.
+- **`LinearGradient` renamed to `Plushie.Canvas.Gradient`.** The
+  module was `Plushie.Canvas.Shape.LinearGradient`. The
+  `Plushie.Type.Gradient` module (widget background gradients) is
+  unchanged.
+- **`Command.scroll_to` signature changed.** `(id, offset)` ->
+  `(id, x, y)` with separate typed float parameters. `snap_to/2` and
+  `scroll_by/2` lose their default-argument overloads.
+- **`Command.select_range` field names changed** to `start_pos` and
+  `end_pos` (the old names shadow Elixir reserved words in pattern
+  matching contexts).
+- **Table rows are now children, not a prop.** The `rows:` keyword
+  prop is removed. Use `table_row "id" do cell "col", content end`
+  DSL macros in a do-block. The `separator` field changed from boolean
+  to float (thickness in pixels). Table gains `selected`, `striped`,
+  and `height` fields and a `row_click` event.
+- **`gain_focus/1` renamed to `focus_window/1`.** The deprecated alias
+  will be removed in a future release.
+- **Renderer binary version** bumped to 0.7.0. Run
+  `mix plushie.download --force` after updating.
+
+### Added
+
+- **`memo/2` DSL primitive** for subtree memoization. Wraps a widget
+  view with a `cache_key`; the subtree is not re-rendered when the key
+  is unchanged. Combine with `cache_key` state declaration for
+  widget-level view caching.
+- **Typed `RichText.Span` builder.** `Plushie.RichText.Span` provides
+  a typed struct instead of raw maps.
+- **`:link_click` event type** on rich_text. Clicked links deliver a
+  `WidgetEvent` with `type: :link_click`.
+- **`on_focus`/`on_blur` props** on text_input and text_editor;
+  `:focused` and `:blurred` event types delivered on focus change.
+- **`pointer_captured`, `pointer_lost`, `coords` fields** on pointer
+  events where the renderer provides them.
+- **Typed effect result variants.** `EffectEvent.result` is a tagged
+  tuple per kind (e.g., `{:file_open, {:ok, path}}`).
+- **Typed diagnostic exceptions.** `Plushie.Runtime.BufferOverflowError`
+  and `Plushie.Runtime.VersionMismatchError` raised as structured
+  exceptions.
+- **`rule.thickness` prop** - direction-agnostic line thickness;
+  avoids choosing between `width` and `height` based on orientation.
+- **Full `input_purpose` set** on text_input and text_editor. Supports
+  all nine renderer purposes: `normal`, `secure`, `terminal`,
+  `number`, `decimal`, `phone`, `email`, `url`, `search`.
+- **A11y improvements.** `resolved_a11y/1` helper for scoped ref
+  resolution; builder defaults populate `role` automatically; canvas
+  radio groups auto-infer `position_in_set`/`size_of_set`; focus
+  commands scoped to canvas elements; `announce` politeness on `a11y`
+  props.
+- **`Plushie.Canvas.Angle` type** for explicit angle values with
+  `to_degrees/1` and `to_radians/1` converters.
+- **Bridge heartbeat watchdog.** Detects unresponsive renderers and
+  triggers restart rather than hanging indefinitely.
+- **`use Plushie.Command` standalone DSL** for defining command modules
+  with the same `command`/`field` macro infrastructure as native
+  widgets.
+- **`:page` scroll unit.** Scroll events now carry `unit: :page` for
+  page-delta events from the renderer.
+- **Telemetry counters** on normalize, diff, command execution, and
+  subscription lifecycle.
+
+### Fixed
+
+- `default_font` always emitted as a family object.
+- Image `list`/`clear` sent through the typed `image_op` channel.
+- `op_query_response` decoded from the canonical `"data"` field.
+- `window_opened` decoded from the top-level `x`/`y` fields.
+- `prop_validation` events from debug renderer builds silently dropped
+  rather than logged as protocol errors.
 
 ### Changed
 
-- **`mix plushie.build` delegates to cargo-plushie.** Workspace
+- **`mix plushie.build` delegates to `cargo-plushie`.** Workspace
   generation, widget collision checks, main.rs emission, and Cargo.lock
   shepherding moved to the `cargo-plushie` Cargo subcommand in the
   plushie-rust workspace. The Mix task writes a "renderer spec"
   Cargo.toml listing native widget crates and shells out. Widget
   crates must declare `[package.metadata.plushie.widget]` in their own
-  Cargo.toml for discovery. See `docs/versioning.md` and the
-  "Building the renderer binary" section of `CLAUDE.md`.
+  Cargo.toml for discovery. Install with
+  `cargo install cargo-plushie --version 0.7.0 --locked`.
+  See `docs/versioning.md` for the version correspondence table.
 - **`Plushie.Dev.DevServer`** now triggers incremental Rust builds
   through `cargo plushie build` instead of driving `cargo build`
   directly.
