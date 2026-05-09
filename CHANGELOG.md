@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.7.1] - 2026-05-09
+
+### Fixed
+
+- **Screenshot requests now include the required `id` field**, matching
+  the renderer 0.7.1 wire protocol. Without it the renderer logged a
+  decode error and `Bridge.screenshot` timed out after 30 seconds.
+- **Screenshot assertions now save a PNG alongside the `.sha256` hash.**
+  The PNG is written when `rgba_data` is present (headless and windowed
+  backends). Pass `png: false` to `assert_screenshot/2` or
+  `assert_screenshot_match/3` to write the hash only. The `.sha256` file
+  is the actual CI assertion; the PNG is a human convenience for visual
+  inspection.
+- **`SocketAdapter` JSON buffer accumulation is now O(n)** instead of
+  O(n^2). Incoming TCP chunks are accumulated in an iolist and only
+  materialized to binary when a newline arrives. The overflow check now
+  runs against the tracked size before any allocation, preventing
+  timeouts on slow networks or tight socket buffers.
+
 ## [0.7.0] - 2026-05-09
 
 ### Breaking
