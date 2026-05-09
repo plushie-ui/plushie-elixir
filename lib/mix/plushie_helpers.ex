@@ -93,7 +93,7 @@ defmodule Mix.PlushieHelpers do
   """
   @spec resolve_binary!(opts :: keyword()) :: String.t()
   def resolve_binary!(opts) do
-    if opts[:release] and not opts[:build] do
+    if opts[:release] && !opts[:build] do
       Mix.raise("--release requires --build (it controls the build profile)")
     end
 
