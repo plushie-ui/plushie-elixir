@@ -1,8 +1,6 @@
 defmodule Plushie.RuntimeRerenderTest do
   use ExUnit.Case, async: true
 
-  import ExUnit.CaptureLog
-
   alias Plushie.Event.WidgetEvent
 
   # ---------------------------------------------------------------------------
@@ -95,86 +93,80 @@ defmodule Plushie.RuntimeRerenderTest do
   # ---------------------------------------------------------------------------
 
   describe "force_rerender" do
+    @describetag capture_log: true
+
     test "re-renders view with existing model, no update/2 call" do
-      capture_log(fn ->
-        {runtime, bridge} = start_runtime(CounterApp)
+      {runtime, bridge} = start_runtime(CounterApp)
 
-        # Mutate model via normal event first.
-        dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "inc"})
-        dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "inc"})
+      # Mutate model via normal event first.
+      dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "inc"})
+      dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "inc"})
 
-        assert Plushie.Runtime.get_model(runtime).count == 2
+      assert Plushie.Runtime.get_model(runtime).count == 2
 
-        patches_before = length(Plushie.Test.InternalMockBridge.get_patches(bridge))
+      patches_before = length(Plushie.Test.InternalMockBridge.get_patches(bridge))
 
-        # Force re-render; model should not change (no update/2 called).
-        force_rerender_and_wait(runtime)
+      # Force re-render; model should not change (no update/2 called).
+      force_rerender_and_wait(runtime)
 
-        assert Plushie.Runtime.get_model(runtime).count == 2
+      assert Plushie.Runtime.get_model(runtime).count == 2
 
-        # Since the model didn't change and the module code is the same,
-        # the tree is identical; no new patch should be sent.
-        patches_after = length(Plushie.Test.InternalMockBridge.get_patches(bridge))
-        assert patches_after == patches_before
-      end)
+      # Since the model didn't change and the module code is the same,
+      # the tree is identical; no new patch should be sent.
+      patches_after = length(Plushie.Test.InternalMockBridge.get_patches(bridge))
+      assert patches_after == patches_before
     end
 
     test "model is preserved across force_rerender" do
-      capture_log(fn ->
-        {runtime, _bridge} = start_runtime(CounterApp)
+      {runtime, _bridge} = start_runtime(CounterApp)
 
-        dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "inc"})
-        dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "inc"})
-        dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "inc"})
+      dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "inc"})
+      dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "inc"})
+      dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "inc"})
 
-        model_before = Plushie.Runtime.get_model(runtime)
+      model_before = Plushie.Runtime.get_model(runtime)
 
-        force_rerender_and_wait(runtime)
+      force_rerender_and_wait(runtime)
 
-        model_after = Plushie.Runtime.get_model(runtime)
-        assert model_before == model_after
-      end)
+      model_after = Plushie.Runtime.get_model(runtime)
+      assert model_before == model_after
     end
 
     test "runtime stays alive when view/1 raises during force_rerender" do
-      capture_log(fn ->
-        {runtime, _bridge} = start_runtime(CrashyViewApp)
+      {runtime, _bridge} = start_runtime(CrashyViewApp)
 
-        # Arm the crash.
-        dispatch_and_wait(runtime, :arm)
+      # Arm the crash.
+      dispatch_and_wait(runtime, :arm)
 
-        # Force re-render with a crashing view; should not kill the runtime.
-        force_rerender_and_wait(runtime)
-        assert Process.alive?(runtime)
+      # Force re-render with a crashing view; should not kill the runtime.
+      force_rerender_and_wait(runtime)
+      assert Process.alive?(runtime)
 
-        # Old tree should be preserved.
-        tree = Plushie.Runtime.get_tree(runtime)
-        text_node = find_by_type(tree, "text")
-        assert text_node.props[:content] == "all good"
+      # Old tree should be preserved.
+      tree = Plushie.Runtime.get_tree(runtime)
+      text_node = find_by_type(tree, "text")
+      assert text_node.props[:content] == "all good"
 
-        # Disarm and verify the runtime recovers.
-        dispatch_and_wait(runtime, :disarm)
-        force_rerender_and_wait(runtime)
+      # Disarm and verify the runtime recovers.
+      dispatch_and_wait(runtime, :disarm)
+      force_rerender_and_wait(runtime)
 
-        tree = Plushie.Runtime.get_tree(runtime)
-        text_node = find_by_type(tree, "text")
-        assert text_node.props[:content] == "all good"
-      end)
+      tree = Plushie.Runtime.get_tree(runtime)
+      text_node = find_by_type(tree, "text")
+      assert text_node.props[:content] == "all good"
     end
 
     test "runtime continues processing events after force_rerender" do
-      capture_log(fn ->
-        {runtime, _bridge} = start_runtime(CounterApp)
+      {runtime, _bridge} = start_runtime(CounterApp)
 
-        force_rerender_and_wait(runtime)
+      force_rerender_and_wait(runtime)
 
-        dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "inc"})
+      dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "inc"})
 
-        assert Plushie.Runtime.get_model(runtime).count == 1
+      assert Plushie.Runtime.get_model(runtime).count == 1
 
-        text_node = find_by_type(Plushie.Runtime.get_tree(runtime), "text")
-        assert text_node.props[:content] == "count:1"
-      end)
+      text_node = find_by_type(Plushie.Runtime.get_tree(runtime), "text")
+      assert text_node.props[:content] == "count:1"
     end
   end
 
@@ -224,37 +216,35 @@ defmodule Plushie.RuntimeRerenderTest do
 
   describe "widget :update_state re-render" do
     test "re-renders tree immediately when handle_event returns {:update_state, ...}" do
-      capture_log(fn ->
-        {runtime, _bridge} = start_runtime(WidgetStateApp)
+      {runtime, _bridge} = start_runtime(WidgetStateApp)
 
-        # Before any click the widget renders "clicks:0".
-        tree = Plushie.Runtime.get_tree(runtime)
-        text_node = find_by_type(tree, "text")
-        assert text_node.props[:content] == "clicks:0"
+      # Before any click the widget renders "clicks:0".
+      tree = Plushie.Runtime.get_tree(runtime)
+      text_node = find_by_type(tree, "text")
+      assert text_node.props[:content] == "clicks:0"
 
-        # Dispatch a click scoped to the widget. The widget's
-        # handle_event returns {:update_state, ...} (no emit),
-        # so the event is consumed and update/2 is never called.
-        dispatch_and_wait(
-          runtime,
-          %WidgetEvent{type: :click, id: "counter", scope: [], window_id: "main"}
-        )
+      # Dispatch a click scoped to the widget. The widget's
+      # handle_event returns {:update_state, ...} (no emit),
+      # so the event is consumed and update/2 is never called.
+      dispatch_and_wait(
+        runtime,
+        %WidgetEvent{type: :click, id: "counter", scope: [], window_id: "main"}
+      )
 
-        # The tree should reflect the updated widget state immediately.
-        tree = Plushie.Runtime.get_tree(runtime)
-        text_node = find_by_type(tree, "text")
-        assert text_node.props[:content] == "clicks:1"
+      # The tree should reflect the updated widget state immediately.
+      tree = Plushie.Runtime.get_tree(runtime)
+      text_node = find_by_type(tree, "text")
+      assert text_node.props[:content] == "clicks:1"
 
-        # A second click should also re-render.
-        dispatch_and_wait(
-          runtime,
-          %WidgetEvent{type: :click, id: "counter", scope: [], window_id: "main"}
-        )
+      # A second click should also re-render.
+      dispatch_and_wait(
+        runtime,
+        %WidgetEvent{type: :click, id: "counter", scope: [], window_id: "main"}
+      )
 
-        tree = Plushie.Runtime.get_tree(runtime)
-        text_node = find_by_type(tree, "text")
-        assert text_node.props[:content] == "clicks:2"
-      end)
+      tree = Plushie.Runtime.get_tree(runtime)
+      text_node = find_by_type(tree, "text")
+      assert text_node.props[:content] == "clicks:2"
     end
   end
 end

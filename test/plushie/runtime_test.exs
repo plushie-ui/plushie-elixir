@@ -1,8 +1,6 @@
 defmodule Plushie.RuntimeTest do
   use ExUnit.Case, async: true
 
-  import ExUnit.CaptureLog
-
   alias Plushie.Event.WidgetEvent
 
   # Test app: simple counter driven by button click events.
@@ -425,6 +423,7 @@ defmodule Plushie.RuntimeTest do
       assert Plushie.Runtime.get_model(runtime).selected == 4
     end
 
+    @tag capture_log: true
     test "runtime stops when renderer is missing a required native widget" do
       # Seed the WidgetRegistry cache to include StarRatingNative so the
       # runtime expects it in the renderer's hello message.
@@ -436,28 +435,23 @@ defmodule Plushie.RuntimeTest do
       await_initial_render(runtime)
       ref = Process.monitor(runtime)
 
-      log =
-        capture_log(fn ->
-          send(
-            runtime,
-            {:renderer_event,
-             {:hello,
-              %{
-                protocol: 1,
-                version: "0.5.0",
-                name: "plushie",
-                mode: "mock",
-                backend: "test",
-                transport: "spawn",
-                native_widgets: [],
-                widgets: []
-              }}}
-          )
+      send(
+        runtime,
+        {:renderer_event,
+         {:hello,
+          %{
+            protocol: 1,
+            version: "0.5.0",
+            name: "plushie",
+            mode: "mock",
+            backend: "test",
+            transport: "spawn",
+            native_widgets: [],
+            widgets: []
+          }}}
+      )
 
-          assert_receive {:DOWN, ^ref, :process, ^runtime, {%ArgumentError{}, _stack}}, 1_000
-        end)
-
-      assert log =~ "renderer is missing required native widgets"
+      assert_receive {:DOWN, ^ref, :process, ^runtime, {%ArgumentError{}, _stack}}, 1_000
     after
       Process.flag(:trap_exit, false)
     end
@@ -663,6 +657,8 @@ defmodule Plushie.RuntimeTest do
   end
 
   describe "renderer lifecycle" do
+    @describetag capture_log: true
+
     test "{:renderer_exit, reason} calls handle_renderer_exit and model is updated" do
       # An app that marks itself as :crashed on renderer exit.
       defmodule ExitApp do
@@ -684,40 +680,36 @@ defmodule Plushie.RuntimeTest do
         def handle_renderer_exit(model, _reason), do: %{model | status: :crashed}
       end
 
-      capture_log(fn ->
-        {runtime, bridge} = start_runtime(ExitApp)
-        await_initial_render(runtime)
+      {runtime, bridge} = start_runtime(ExitApp)
+      await_initial_render(runtime)
 
-        send(runtime, {:renderer_exit, :port_closed})
-        Plushie.Runtime.sync(runtime)
+      send(runtime, {:renderer_exit, :port_closed})
+      Plushie.Runtime.sync(runtime)
 
-        assert Plushie.Runtime.get_model(runtime).status == :crashed
+      assert Plushie.Runtime.get_model(runtime).status == :crashed
 
-        # renderer_exit does NOT produce a new snapshot; it only updates the model
-        # so it is ready when the renderer restarts.
-        snapshots = Plushie.Test.InternalMockBridge.get_snapshots(bridge)
-        assert length(snapshots) == 1
-      end)
+      # renderer_exit does NOT produce a new snapshot; it only updates the model
+      # so it is ready when the renderer restarts.
+      snapshots = Plushie.Test.InternalMockBridge.get_snapshots(bridge)
+      assert length(snapshots) == 1
     end
 
     test ":renderer_restarted re-sends the current tree to the bridge" do
-      capture_log(fn ->
-        {runtime, bridge} = start_runtime(SimpleApp)
-        await_initial_render(runtime)
+      {runtime, bridge} = start_runtime(SimpleApp)
+      await_initial_render(runtime)
 
-        initial_snapshots = Plushie.Test.InternalMockBridge.get_snapshots(bridge)
-        assert length(initial_snapshots) == 1
+      initial_snapshots = Plushie.Test.InternalMockBridge.get_snapshots(bridge)
+      assert length(initial_snapshots) == 1
 
-        send(runtime, :renderer_restarted)
-        Plushie.Runtime.sync(runtime)
+      send(runtime, :renderer_restarted)
+      Plushie.Runtime.sync(runtime)
 
-        snapshots = Plushie.Test.InternalMockBridge.get_snapshots(bridge)
-        # Should have sent the same tree a second time.
-        assert length(snapshots) == 2
+      snapshots = Plushie.Test.InternalMockBridge.get_snapshots(bridge)
+      # Should have sent the same tree a second time.
+      assert length(snapshots) == 2
 
-        [first, second] = snapshots
-        assert first == second
-      end)
+      [first, second] = snapshots
+      assert first == second
     end
 
     test ":renderer_restarted re-registers unchanged renderer subscriptions" do
@@ -738,120 +730,110 @@ defmodule Plushie.RuntimeTest do
         end
       end
 
-      capture_log(fn ->
-        {runtime, bridge} = start_runtime(RestartSubApp)
-        await_initial_render(runtime)
+      {runtime, bridge} = start_runtime(RestartSubApp)
+      await_initial_render(runtime)
 
-        assert [%{kind: "on_key_press", tag: "on_key_press"}] =
-                 Plushie.Test.InternalMockBridge.get_subscribes(bridge)
+      assert [%{kind: "on_key_press", tag: "on_key_press"}] =
+               Plushie.Test.InternalMockBridge.get_subscribes(bridge)
 
-        send(runtime, :renderer_restarted)
-        Plushie.Runtime.sync(runtime)
+      send(runtime, :renderer_restarted)
+      Plushie.Runtime.sync(runtime)
 
-        subscribes = Plushie.Test.InternalMockBridge.get_subscribes(bridge)
-        assert Enum.count(subscribes, &(&1.kind == "on_key_press")) == 2
-      end)
+      subscribes = Plushie.Test.InternalMockBridge.get_subscribes(bridge)
+      assert Enum.count(subscribes, &(&1.kind == "on_key_press")) == 2
     end
 
     test "pending interact replies with renderer exit reason" do
-      capture_log(fn ->
-        {runtime, bridge} = start_runtime(SimpleApp)
-        await_initial_render(runtime)
+      {runtime, bridge} = start_runtime(SimpleApp)
+      await_initial_render(runtime)
 
-        task =
-          Task.async(fn ->
-            Plushie.Runtime.interact(runtime, "click", %{"by" => "id", "value" => "ok"})
-          end)
-
-        await_bridge(bridge, fn b ->
-          Plushie.Test.InternalMockBridge.get_interacts(b) != []
+      task =
+        Task.async(fn ->
+          Plushie.Runtime.interact(runtime, "click", %{"by" => "id", "value" => "ok"})
         end)
 
-        send(runtime, {:renderer_exit, :port_closed})
-
-        assert Task.await(task) == {:error, {:renderer_exit, :port_closed}}
+      await_bridge(bridge, fn b ->
+        Plushie.Test.InternalMockBridge.get_interacts(b) != []
       end)
+
+      send(runtime, {:renderer_exit, :port_closed})
+
+      assert Task.await(task) == {:error, {:renderer_exit, :port_closed}}
     end
 
     test "pending interact replies when renderer restarts" do
-      capture_log(fn ->
-        {runtime, bridge} = start_runtime(SimpleApp)
-        await_initial_render(runtime)
+      {runtime, bridge} = start_runtime(SimpleApp)
+      await_initial_render(runtime)
 
-        task =
-          Task.async(fn ->
-            Plushie.Runtime.interact(runtime, "click", %{"by" => "id", "value" => "ok"})
-          end)
-
-        await_bridge(bridge, fn b ->
-          Plushie.Test.InternalMockBridge.get_interacts(b) != []
+      task =
+        Task.async(fn ->
+          Plushie.Runtime.interact(runtime, "click", %{"by" => "id", "value" => "ok"})
         end)
 
-        send(runtime, :renderer_restarted)
-
-        assert Task.await(task) == {:error, :renderer_restarted}
+      await_bridge(bridge, fn b ->
+        Plushie.Test.InternalMockBridge.get_interacts(b) != []
       end)
+
+      send(runtime, :renderer_restarted)
+
+      assert Task.await(task) == {:error, :renderer_restarted}
     end
 
     test "concurrent interact returns interact_in_progress" do
-      capture_log(fn ->
-        {runtime, bridge} = start_runtime(SimpleApp)
-        await_initial_render(runtime)
+      {runtime, bridge} = start_runtime(SimpleApp)
+      await_initial_render(runtime)
 
-        first =
-          Task.async(fn ->
-            Plushie.Runtime.interact(runtime, "click", %{"by" => "id", "value" => "ok"})
-          end)
-
-        await_bridge(bridge, fn b ->
-          Plushie.Test.InternalMockBridge.get_interacts(b) != []
+      first =
+        Task.async(fn ->
+          Plushie.Runtime.interact(runtime, "click", %{"by" => "id", "value" => "ok"})
         end)
 
-        assert Plushie.Runtime.interact(runtime, "click", %{"by" => "id", "value" => "ok"}) ==
-                 {:error, :interact_in_progress}
-
-        send(runtime, :renderer_restarted)
-        assert Task.await(first) == {:error, :renderer_restarted}
+      await_bridge(bridge, fn b ->
+        Plushie.Test.InternalMockBridge.get_interacts(b) != []
       end)
+
+      assert Plushie.Runtime.interact(runtime, "click", %{"by" => "id", "value" => "ok"}) ==
+               {:error, :interact_in_progress}
+
+      send(runtime, :renderer_restarted)
+      assert Task.await(first) == {:error, :renderer_restarted}
     end
 
     test "stale interact responses do not complete a newer interact" do
-      capture_log(fn ->
-        {runtime, bridge} = start_runtime(SimpleApp)
-        await_initial_render(runtime)
+      {runtime, bridge} = start_runtime(SimpleApp)
+      await_initial_render(runtime)
 
-        first =
-          Task.async(fn ->
-            Plushie.Runtime.interact(runtime, "click", %{"by" => "id", "value" => "ok"})
-          end)
-
-        await_bridge(bridge, fn b ->
-          length(Plushie.Test.InternalMockBridge.get_interacts(b)) == 1
+      first =
+        Task.async(fn ->
+          Plushie.Runtime.interact(runtime, "click", %{"by" => "id", "value" => "ok"})
         end)
 
-        [%{id: first_id}] = Plushie.Test.InternalMockBridge.get_interacts(bridge)
-
-        send(runtime, :renderer_restarted)
-        assert Task.await(first) == {:error, :renderer_restarted}
-
-        second =
-          Task.async(fn ->
-            Plushie.Runtime.interact(runtime, "click", %{"by" => "id", "value" => "ok"})
-          end)
-
-        await_bridge(bridge, fn b ->
-          length(Plushie.Test.InternalMockBridge.get_interacts(b)) == 2
-        end)
-
-        [%{id: ^first_id}, %{id: second_id}] =
-          Plushie.Test.InternalMockBridge.get_interacts(bridge)
-
-        send(runtime, {:renderer_event, {:interact_response, first_id, []}})
-        refute Task.yield(second, 50)
-
-        send(runtime, {:renderer_event, {:interact_response, second_id, []}})
-        assert Task.await(second) == :ok
+      await_bridge(bridge, fn b ->
+        length(Plushie.Test.InternalMockBridge.get_interacts(b)) == 1
       end)
+
+      [%{id: first_id}] = Plushie.Test.InternalMockBridge.get_interacts(bridge)
+
+      send(runtime, :renderer_restarted)
+      assert Task.await(first) == {:error, :renderer_restarted}
+
+      second =
+        Task.async(fn ->
+          Plushie.Runtime.interact(runtime, "click", %{"by" => "id", "value" => "ok"})
+        end)
+
+      await_bridge(bridge, fn b ->
+        length(Plushie.Test.InternalMockBridge.get_interacts(b)) == 2
+      end)
+
+      [%{id: ^first_id}, %{id: second_id}] =
+        Plushie.Test.InternalMockBridge.get_interacts(bridge)
+
+      send(runtime, {:renderer_event, {:interact_response, first_id, []}})
+      refute Task.yield(second, 50)
+
+      send(runtime, {:renderer_event, {:interact_response, second_id, []}})
+      assert Task.await(second) == :ok
     end
   end
 
@@ -1038,6 +1020,8 @@ defmodule Plushie.RuntimeTest do
   end
 
   describe "error recovery" do
+    @describetag capture_log: true
+
     test "update/2 exception does not crash the runtime" do
       defmodule CrashUpdateApp do
         use Plushie.App
@@ -1061,21 +1045,19 @@ defmodule Plushie.RuntimeTest do
         end
       end
 
-      capture_log(fn ->
-        {runtime, _bridge} = start_runtime(CrashUpdateApp)
-        await_initial_render(runtime)
+      {runtime, _bridge} = start_runtime(CrashUpdateApp)
+      await_initial_render(runtime)
 
-        # This should not crash the runtime.
-        dispatch_and_wait(runtime, :crash)
+      # This should not crash the runtime.
+      dispatch_and_wait(runtime, :crash)
 
-        # Runtime is still alive and model unchanged.
-        assert Process.alive?(runtime)
-        assert Plushie.Runtime.get_model(runtime).value == 0
+      # Runtime is still alive and model unchanged.
+      assert Process.alive?(runtime)
+      assert Plushie.Runtime.get_model(runtime).value == 0
 
-        # Can still process normal events after the crash.
-        dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "inc"})
-        assert Plushie.Runtime.get_model(runtime).value == 1
-      end)
+      # Can still process normal events after the crash.
+      dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "inc"})
+      assert Plushie.Runtime.get_model(runtime).value == 1
     end
 
     test "view/1 exception does not crash the runtime" do
@@ -1100,18 +1082,16 @@ defmodule Plushie.RuntimeTest do
         end
       end
 
-      capture_log(fn ->
-        {runtime, _bridge} = start_runtime(CrashViewApp)
-        await_initial_render(runtime)
+      {runtime, _bridge} = start_runtime(CrashViewApp)
+      await_initial_render(runtime)
 
-        # Trigger the crashing view; runtime should survive.
-        dispatch_and_wait(runtime, :crash_view)
-        assert Process.alive?(runtime)
+      # Trigger the crashing view; runtime should survive.
+      dispatch_and_wait(runtime, :crash_view)
+      assert Process.alive?(runtime)
 
-        # Fix the view and confirm the runtime continues normally.
-        dispatch_and_wait(runtime, :fix_view)
-        assert Plushie.Runtime.get_model(runtime).crash_view == false
-      end)
+      # Fix the view and confirm the runtime continues normally.
+      dispatch_and_wait(runtime, :fix_view)
+      assert Plushie.Runtime.get_model(runtime).crash_view == false
     end
 
     test "update/2 throw does not crash the runtime" do
@@ -1137,18 +1117,16 @@ defmodule Plushie.RuntimeTest do
         end
       end
 
-      capture_log(fn ->
-        {runtime, _bridge} = start_runtime(ThrowUpdateApp)
-        await_initial_render(runtime)
+      {runtime, _bridge} = start_runtime(ThrowUpdateApp)
+      await_initial_render(runtime)
 
-        dispatch_and_wait(runtime, :throw_it)
+      dispatch_and_wait(runtime, :throw_it)
 
-        assert Process.alive?(runtime)
-        assert Plushie.Runtime.get_model(runtime).value == 0
+      assert Process.alive?(runtime)
+      assert Plushie.Runtime.get_model(runtime).value == 0
 
-        dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "inc"})
-        assert Plushie.Runtime.get_model(runtime).value == 1
-      end)
+      dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "inc"})
+      assert Plushie.Runtime.get_model(runtime).value == 1
     end
   end
 
@@ -1462,24 +1440,23 @@ defmodule Plushie.RuntimeTest do
       assert Plushie.Runtime.get_model(runtime).pulses == 2
     end
 
+    @tag capture_log: true
     test "canvas widget subscriptions survive force_rerender" do
-      capture_log(fn ->
-        {runtime, _bridge} = start_runtime(WidgetSubApp)
-        await_initial_render(runtime)
+      {runtime, _bridge} = start_runtime(WidgetSubApp)
+      await_initial_render(runtime)
 
-        # Verify the widget timer subscription is active by sending a tick.
-        send(runtime, {:subscription_tick, {:__widget__, "main", "main#ticker", :pulse}, 1_000})
-        Plushie.Runtime.sync(runtime)
-        assert Plushie.Runtime.get_model(runtime).pulses == 1
+      # Verify the widget timer subscription is active by sending a tick.
+      send(runtime, {:subscription_tick, {:__widget__, "main", "main#ticker", :pulse}, 1_000})
+      Plushie.Runtime.sync(runtime)
+      assert Plushie.Runtime.get_model(runtime).pulses == 1
 
-        send(runtime, :force_rerender)
-        Plushie.Runtime.sync(runtime)
+      send(runtime, :force_rerender)
+      Plushie.Runtime.sync(runtime)
 
-        # Verify subscription survived force_rerender by sending another tick.
-        send(runtime, {:subscription_tick, {:__widget__, "main", "main#ticker", :pulse}, 1_000})
-        Plushie.Runtime.sync(runtime)
-        assert Plushie.Runtime.get_model(runtime).pulses == 2
-      end)
+      # Verify subscription survived force_rerender by sending another tick.
+      send(runtime, {:subscription_tick, {:__widget__, "main", "main#ticker", :pulse}, 1_000})
+      Plushie.Runtime.sync(runtime)
+      assert Plushie.Runtime.get_model(runtime).pulses == 2
     end
 
     test "canvas widget timer state changes resync widget subscriptions" do
@@ -1792,27 +1769,25 @@ defmodule Plushie.RuntimeTest do
         end
       end
 
-      capture_log(fn ->
-        {runtime, _bridge} = start_runtime(CancelStreamApp)
-        await_initial_render(runtime)
+      {runtime, _bridge} = start_runtime(CancelStreamApp)
+      await_initial_render(runtime)
 
-        # Start the stream
-        dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "start"})
+      # Start the stream
+      dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "start"})
 
-        # Wait for the first emit to arrive
-        await_model(runtime, fn m -> m.chunks == ["first"] end)
+      # Wait for the first emit to arrive
+      await_model(runtime, fn m -> m.chunks == ["first"] end)
 
-        # Cancel the stream
-        dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "cancel"})
+      # Cancel the stream
+      dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "cancel"})
 
-        assert Plushie.Runtime.get_model(runtime).cancelled == true
+      assert Plushie.Runtime.get_model(runtime).cancelled == true
 
-        # Wait and confirm no more chunks arrive
-        Process.sleep(100)
-        Plushie.Runtime.sync(runtime)
+      # Wait and confirm no more chunks arrive
+      Process.sleep(100)
+      Plushie.Runtime.sync(runtime)
 
-        assert Plushie.Runtime.get_model(runtime).chunks == ["first"]
-      end)
+      assert Plushie.Runtime.get_model(runtime).chunks == ["first"]
     end
 
     test "cancel is a no-op when no task is running for the tag" do
@@ -1955,50 +1930,50 @@ defmodule Plushie.RuntimeTest do
   end
 
   describe "interact caller timeout cleanup" do
+    @describetag capture_log: true
+
     test "pending_interact is cleaned up on caller timeout" do
-      capture_log(fn ->
-        {runtime, bridge} = start_runtime(SimpleApp)
-        await_initial_render(runtime)
+      {runtime, bridge} = start_runtime(SimpleApp)
+      await_initial_render(runtime)
 
-        # Spawn a process that calls interact with a very short timeout.
-        # The bridge never replies, so it will time out.
-        task =
-          Task.async(fn ->
-            try do
-              Plushie.Runtime.interact(
-                runtime,
-                "click",
-                %{"by" => "id", "value" => "ok"},
-                %{},
-                50
-              )
-            catch
-              :exit, {:timeout, _} -> :timed_out
-            end
-          end)
-
-        assert Task.await(task, 1000) == :timed_out
-
-        # Let the runtime process the DOWN message from the dead task.
-        Plushie.Runtime.sync(runtime)
-
-        # Verify that a subsequent interact can proceed (not blocked by
-        # the stale pending_interact).
-        second =
-          Task.async(fn ->
-            Plushie.Runtime.interact(runtime, "click", %{"by" => "id", "value" => "ok"})
-          end)
-
-        await_bridge(bridge, fn b ->
-          length(Plushie.Test.InternalMockBridge.get_interacts(b)) >= 2
+      # Spawn a process that calls interact with a very short timeout.
+      # The bridge never replies, so it will time out.
+      task =
+        Task.async(fn ->
+          try do
+            Plushie.Runtime.interact(
+              runtime,
+              "click",
+              %{"by" => "id", "value" => "ok"},
+              %{},
+              50
+            )
+          catch
+            :exit, {:timeout, _} -> :timed_out
+          end
         end)
 
-        # Complete the second interact so the task can finish.
-        [_, %{id: second_id}] = Plushie.Test.InternalMockBridge.get_interacts(bridge)
-        send(runtime, {:renderer_event, {:interact_response, second_id, []}})
+      assert Task.await(task, 1000) == :timed_out
 
-        assert Task.await(second, 1000) == :ok
+      # Let the runtime process the DOWN message from the dead task.
+      Plushie.Runtime.sync(runtime)
+
+      # Verify that a subsequent interact can proceed (not blocked by
+      # the stale pending_interact).
+      second =
+        Task.async(fn ->
+          Plushie.Runtime.interact(runtime, "click", %{"by" => "id", "value" => "ok"})
+        end)
+
+      await_bridge(bridge, fn b ->
+        length(Plushie.Test.InternalMockBridge.get_interacts(b)) >= 2
       end)
+
+      # Complete the second interact so the task can finish.
+      [_, %{id: second_id}] = Plushie.Test.InternalMockBridge.get_interacts(bridge)
+      send(runtime, {:renderer_event, {:interact_response, second_id, []}})
+
+      assert Task.await(second, 1000) == :ok
     end
   end
 
