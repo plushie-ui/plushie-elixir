@@ -69,6 +69,7 @@ defmodule Plushie.Protocol do
           | {:effect_stub_ack, String.t()}
           | {:session_error, String.t(), String.t() | nil, term()}
           | {:session_closed, String.t(), term()}
+          | {:prop_validation, String.t(), map() | nil}
 
   @typedoc """
   Structured decode error returned by `decode_message/2`.

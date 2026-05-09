@@ -1448,6 +1448,15 @@ defmodule Plushie.Protocol.Decode do
     {:unregister_effect_stub, kind}
   end
 
+  # -- Renderer diagnostic events --
+
+  # prop_validation: emitted by the renderer when validate_props is enabled
+  # (debug builds auto-enable it). These are SDK-internal diagnostics and
+  # never delivered to the app's update/2.
+  defp dispatch(%{"type" => "event", "family" => "prop_validation", "id" => id} = msg) do
+    {:prop_validation, id, msg["value"]}
+  end
+
   # -- Explicit widget events --
 
   defp dispatch(%{"type" => "event", "family" => family, "id" => _id} = msg) do

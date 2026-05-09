@@ -55,7 +55,11 @@ defmodule Plushie.Test.ProtocolRoundtripTest do
               %{
                 id: "country",
                 type: "pick_list",
-                props: %{options: ["NZ", "AU", "GB"], selected: model.selected},
+                props:
+                  %{options: ["NZ", "AU", "GB"]}
+                  |> then(fn p ->
+                    if model.selected, do: Map.put(p, :selected, model.selected), else: p
+                  end),
                 children: []
               },
               %{

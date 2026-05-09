@@ -72,7 +72,7 @@ defmodule Plushie.ProtocolParityTest do
   end
 
   describe "wheel scroll decoding" do
-    test "rejects unknown units as protocol errors" do
+    test "accepts page unit" do
       json =
         Jason.encode!(%{
           type: "event",
@@ -80,7 +80,19 @@ defmodule Plushie.ProtocolParityTest do
           value: %{delta_x: 1, delta_y: 2, unit: "page"}
         })
 
-      assert {:error, {:invalid_event_field, "wheel_scrolled", :unit, "page", :unknown, _}} =
+      assert %WidgetEvent{type: :scroll, value: %{unit: :page}} =
+               Protocol.decode_message(json, :json)
+    end
+
+    test "rejects unknown units as protocol errors" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "wheel_scrolled",
+          value: %{delta_x: 1, delta_y: 2, unit: "row"}
+        })
+
+      assert {:error, {:invalid_event_field, "wheel_scrolled", :unit, "row", :unknown, _}} =
                Protocol.decode_message(json, :json)
     end
 

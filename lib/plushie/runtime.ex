@@ -753,6 +753,14 @@ defmodule Plushie.Runtime do
   end
 
   @impl GenServer
+  def handle_info({:renderer_event, {:prop_validation, _id, _data}}, state) do
+    # prop_validation is a renderer-internal diagnostic (emitted when
+    # validate_props is enabled in the Settings or debug binary). It is
+    # never delivered to the app's update/2.
+    {:noreply, state}
+  end
+
+  @impl GenServer
   def handle_info({:renderer_event, event}, state) do
     # Renderer-originated events reset the dispatch chain: this is a
     # fresh input, not a tail of a chained dispatch.

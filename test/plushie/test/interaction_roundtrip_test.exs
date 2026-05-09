@@ -91,7 +91,11 @@ defmodule Plushie.Test.InteractionRoundtripTest do
               %{
                 id: "language",
                 type: "pick_list",
-                props: %{options: ["Elixir", "Erlang", "Gleam"], selected: model.selected},
+                props:
+                  %{options: ["Elixir", "Erlang", "Gleam"]}
+                  |> then(fn p ->
+                    if model.selected, do: Map.put(p, :selected, model.selected), else: p
+                  end),
                 children: []
               }
             ]

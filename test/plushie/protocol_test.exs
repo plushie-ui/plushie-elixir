@@ -679,7 +679,7 @@ defmodule Plushie.ProtocolTest do
         Jason.encode!(%{
           type: "event",
           family: "wheel_scrolled",
-          value: %{delta_x: 1, delta_y: 2, unit: "page"}
+          value: %{delta_x: 1, delta_y: 2, unit: "row"}
         })
 
       assert_raise Plushie.Protocol.Error, ~r/invalid wheel_scrolled event field unit/, fn ->

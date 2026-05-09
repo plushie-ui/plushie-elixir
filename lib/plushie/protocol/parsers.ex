@@ -26,12 +26,13 @@ defmodule Plushie.Protocol.Parsers do
   def parse_mouse_button(_), do: {:error, :invalid}
 
   @doc "Parses an optional scroll unit string to an atom."
-  @spec parse_scroll_unit(term()) :: parse_result(:line | :pixel | nil)
+  @spec parse_scroll_unit(term()) :: parse_result(:line | :pixel | :page | nil)
   def parse_scroll_unit(nil), do: {:ok, nil}
   def parse_scroll_unit("line"), do: {:ok, :line}
   def parse_scroll_unit("lines"), do: {:ok, :line}
   def parse_scroll_unit("pixel"), do: {:ok, :pixel}
   def parse_scroll_unit("pixels"), do: {:ok, :pixel}
+  def parse_scroll_unit("page"), do: {:ok, :page}
   def parse_scroll_unit(str) when is_binary(str), do: {:error, :unknown}
   def parse_scroll_unit(_), do: {:error, :invalid}
 

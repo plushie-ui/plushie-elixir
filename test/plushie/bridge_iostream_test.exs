@@ -236,6 +236,7 @@ defmodule Plushie.BridgeIostreamTest do
       end
     end
 
+    @tag capture_log: true
     test "logs and drops protocol violations instead of crashing" do
       {:ok, bridge} =
         Plushie.Bridge.start_link(
@@ -258,7 +259,7 @@ defmodule Plushie.BridgeIostreamTest do
           Jason.encode!(%{
             type: "event",
             family: "wheel_scrolled",
-            value: %{delta_x: 1, delta_y: 2, unit: "page"}
+            value: %{delta_x: 1, delta_y: 2, unit: "row"}
           })
 
         send(bridge, {:iostream_data, bad_json})
@@ -273,7 +274,7 @@ defmodule Plushie.BridgeIostreamTest do
                        1_000
 
         assert match?(
-                 {:invalid_event_field, "wheel_scrolled", :unit, "page", :unknown, _},
+                 {:invalid_event_field, "wheel_scrolled", :unit, "row", :unknown, _},
                  metadata.reason
                )
 
