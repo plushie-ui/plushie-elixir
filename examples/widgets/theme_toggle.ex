@@ -69,6 +69,15 @@ defmodule ThemeToggle do
     face_color = if progress < 0.5, do: "#665500", else: "#4c1d95"
 
     ring_pad = 4
+    cos_r = :math.cos(rotation * :math.pi() / 180)
+    sin_r = :math.sin(rotation * :math.pi() / 180)
+    face_cx = thumb_x
+    face_cy = @track_h / 2
+    {lx, ly} = face_pt(-3.5, -3.0, face_cx, face_cy, cos_r, sin_r)
+    {rx, ry} = face_pt(3.5, -3.0, face_cx, face_cy, cos_r, sin_r)
+    rotated_smile = Enum.map(smile_path(), fn [op, x, y] ->
+      [op, face_cx + x * cos_r - y * sin_r, face_cy + x * sin_r + y * cos_r]
+    end)
 
     canvas id,
       width: @track_w + ring_pad * 2,
@@ -85,14 +94,9 @@ defmodule ThemeToggle do
           a11y: %{role: :switch, label: "Dark humor", toggled: progress >= 0.5} do
           rect(0, 0, @track_w, @track_h, fill: track_color, radius: @track_h / 2)
           circle(thumb_x, @track_h / 2, @thumb_r, fill: "#ffffff")
-
-          group do
-            translate(thumb_x, @track_h / 2)
-            rotate(rotation)
-            circle(-3.5, -3, 2, fill: face_color)
-            circle(3.5, -3, 2, fill: face_color)
-            path(smile_path(), stroke: Plushie.Canvas.Shape.stroke(face_color, 2))
-          end
+          circle(lx, ly, 2, fill: face_color)
+          circle(rx, ry, 2, fill: face_color)
+          path(rotated_smile, stroke: Plushie.Canvas.Shape.stroke(face_color, 2))
         end
       end
     end
@@ -122,6 +126,10 @@ defmodule ThemeToggle do
   end
 
   defp hex(n), do: n |> Integer.to_string(16) |> String.pad_leading(2, "0")
+
+  defp face_pt(px, py, cx, cy, cos_r, sin_r) do
+    {cx + px * cos_r - py * sin_r, cy + px * sin_r + py * cos_r}
+  end
 
   defp smile_path do
     alias Plushie.Canvas.Shape, as: S

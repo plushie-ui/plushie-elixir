@@ -84,9 +84,9 @@ defmodule StarRating do
         alt: "#{rating} out of 5 stars" do
         layer "stars" do
           for i <- 0..4 do
-            group "star-#{i}", x: i * (size + gap) + size / 2, y: size / 2 do
-              path(commands, fill: star_color(i < rating, false, theme_progress), id: "path")
-            end
+            cx = i * (size + gap) + size / 2
+            path(star_commands_at(outer_r, inner_r, cx, size / 2),
+                 fill: star_color(i < rating, false, theme_progress))
           end
         end
       end
@@ -132,6 +132,22 @@ defmodule StarRating do
         angle = :math.pi() / 2 + i * :math.pi() / 5
         r = if rem(i, 2) == 0, do: outer_r, else: inner_r
         {r * :math.cos(angle), -r * :math.sin(angle)}
+      end
+
+    [{x0, y0} | rest] = points
+
+    [
+      move_to(x0, y0)
+      | Enum.map(rest, fn {x, y} -> line_to(x, y) end)
+    ] ++ [close()]
+  end
+
+  defp star_commands_at(outer_r, inner_r, cx, cy) do
+    points =
+      for i <- 0..9 do
+        angle = :math.pi() / 2 + i * :math.pi() / 5
+        r = if rem(i, 2) == 0, do: outer_r, else: inner_r
+        {cx + r * :math.cos(angle), cy - r * :math.sin(angle)}
       end
 
     [{x0, y0} | rest] = points
