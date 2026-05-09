@@ -20,14 +20,15 @@ Open `mix.exs` and add `:plushie` to your dependencies:
 ```elixir
 defp deps do
   [
-    {:plushie, "== 0.6.0"}
+    {:plushie, "== 0.7.2"},
+    {:file_system, "~> 1.0"}
   ]
 end
 ```
 
 Pin to an exact version pre-1.0. The API may change between minor
 releases. Check the [CHANGELOG](https://github.com/plushie-ui/plushie-elixir/blob/main/CHANGELOG.md)
-when upgrading.
+when upgrading. `file_system` is required for hot reload (`--watch`).
 
 Next, configure the formatter so the Plushie DSL macros are formatted
 correctly. In `.formatter.exs`:
