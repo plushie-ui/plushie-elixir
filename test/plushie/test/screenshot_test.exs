@@ -138,6 +138,52 @@ defmodule Plushie.Test.ScreenshotTest do
     end
   end
 
+  describe "assert_match/3 -- png: option" do
+    defp tmp_dir(_ctx) do
+      dir =
+        Path.join(
+          System.tmp_dir!(),
+          "plushie_png_opt_#{System.unique_integer([:positive])}"
+        )
+
+      on_exit(fn -> File.rm_rf!(dir) end)
+      {:ok, dir: dir}
+    end
+
+    defp screenshot_with_pixels do
+      rgba = <<255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255>>
+      %Screenshot{name: "shot", hash: "abc", size: {2, 2}, rgba_data: rgba}
+    end
+
+    setup :tmp_dir
+
+    test "saves PNG by default when rgba_data is present", %{dir: dir} do
+      ScreenshotAssertions.assert_match(screenshot_with_pixels(), dir)
+      assert File.exists?(Path.join(dir, "shot.png"))
+    end
+
+    test "saves PNG when png: true", %{dir: dir} do
+      ScreenshotAssertions.assert_match(screenshot_with_pixels(), dir, png: true)
+      assert File.exists?(Path.join(dir, "shot.png"))
+    end
+
+    test "skips PNG when png: false", %{dir: dir} do
+      ScreenshotAssertions.assert_match(screenshot_with_pixels(), dir, png: false)
+      refute File.exists?(Path.join(dir, "shot.png"))
+    end
+
+    test "still writes hash file when png: false", %{dir: dir} do
+      ScreenshotAssertions.assert_match(screenshot_with_pixels(), dir, png: false)
+      assert File.exists?(Path.join(dir, "shot.sha256"))
+    end
+
+    test "skips PNG when rgba_data is nil regardless of png: true", %{dir: dir} do
+      s = %Screenshot{name: "shot", hash: "abc", size: {0, 0}, rgba_data: nil}
+      ScreenshotAssertions.assert_match(s, dir, png: true)
+      refute File.exists?(Path.join(dir, "shot.png"))
+    end
+  end
+
   describe "from_response/2" do
     test "builds a screenshot from a msgpack-style binary response" do
       rgba = <<255, 0, 0, 255>>

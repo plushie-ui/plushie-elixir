@@ -260,6 +260,12 @@ assert_screenshot("pad-styled")
 
 On first run, these create golden files in `test/snapshots/` and
 `test/screenshots/`. Subsequent runs compare against the golden files.
+Each screenshot produces two files: a `.sha256` hash used for the
+actual assertion, and a `.png` for visual inspection - the hash is what
+CI checks, the PNG is a human convenience. Some teams commit both,
+others gitignore the PNGs and rely solely on the hashes. Add
+`test/screenshots/*.png` to `.gitignore` to keep them out of version
+control, or pass `png: false` to skip writing the PNG entirely.
 
 To update golden files when the UI intentionally changes:
 

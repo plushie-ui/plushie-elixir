@@ -192,4 +192,19 @@ defmodule Examples.RatePlushieTest do
   # interaction), which is not reliably testable through the mock backend.
   # The validation logic itself is thoroughly covered above. A headless or
   # windowed backend test could cover the full happy path.
+
+  # -- Screenshots (headless renderer required for pixel capture) ---------------
+
+  describe "screenshots" do
+    @describetag backend: :headless
+
+    test "initial state" do
+      assert_screenshot("rate_plushie_initial")
+    end
+
+    test "validation errors after empty submit" do
+      click("#submit-review")
+      assert_screenshot("rate_plushie_validation_errors")
+    end
+  end
 end

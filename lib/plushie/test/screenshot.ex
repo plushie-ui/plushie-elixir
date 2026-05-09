@@ -10,13 +10,22 @@ defmodule Plushie.Test.Screenshot do
 
   @type t :: Screenshot.t()
 
-  @spec assert_match(screenshot :: Screenshot.t(), golden_dir :: String.t()) :: :ok
-  def assert_match(%Screenshot{hash: ""}, _golden_dir), do: :ok
+  @spec assert_match(
+          screenshot :: Screenshot.t(),
+          golden_dir :: String.t(),
+          opts :: keyword()
+        ) :: :ok
+  def assert_match(screenshot, golden_dir, opts \\ [])
+  def assert_match(%Screenshot{hash: ""}, _golden_dir, _opts), do: :ok
 
-  def assert_match(%Screenshot{} = screenshot, golden_dir) do
+  def assert_match(%Screenshot{} = screenshot, golden_dir, opts) do
     File.mkdir_p!(golden_dir)
     suffix = if screenshot.backend, do: ".#{screenshot.backend}", else: ""
     golden_path = Path.join(golden_dir, "#{screenshot.name}#{suffix}.sha256")
+
+    if Keyword.get(opts, :png, true) && screenshot.rgba_data do
+      save_png(screenshot, Path.join(golden_dir, "#{screenshot.name}#{suffix}.png"))
+    end
 
     cond do
       System.get_env("PLUSHIE_UPDATE_SCREENSHOTS") == "1" ->

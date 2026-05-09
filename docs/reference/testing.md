@@ -249,8 +249,26 @@ assert_screenshot("styled-view")       # pixel comparison
 ```
 
 Golden files are stored in `test/snapshots/` (tree hashes) and
-`test/screenshots/` (pixel hashes). First run creates the golden file;
-subsequent runs compare against it.
+`test/screenshots/` (pixel screenshots). Each screenshot produces two
+files: a `.sha256` hash used for the actual assertion, and a `.png` for
+visual inspection. The hash is what CI checks; the PNG is a human
+convenience for reviewing what the UI looks like. First run creates the
+golden files; subsequent runs compare against them.
+
+Some teams commit both files, others commit only the hashes and
+gitignore the PNGs - both are valid. To keep PNGs out of version
+control:
+
+```
+# .gitignore
+test/screenshots/*.png
+```
+
+Pass `png: false` to skip writing the PNG entirely:
+
+```elixir
+assert_screenshot("styled-view", png: false)
+```
 
 Update golden files when the UI intentionally changes:
 

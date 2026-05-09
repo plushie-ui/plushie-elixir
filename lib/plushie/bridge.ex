@@ -566,8 +566,10 @@ defmodule Plushie.Bridge do
 
   @impl GenServer
   def handle_call({:screenshot, name, opts}, from, %{pending_screenshot: nil} = state) do
+    id = "sc_" <> Integer.to_string(System.unique_integer([:positive, :monotonic]))
+
     message =
-      %{type: "screenshot", name: name}
+      %{type: "screenshot", id: id, name: name}
       |> maybe_put_dimension(opts, :width)
       |> maybe_put_dimension(opts, :height)
 

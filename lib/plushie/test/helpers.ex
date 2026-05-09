@@ -332,9 +332,10 @@ defmodule Plushie.Test.Helpers do
   """
   @spec assert_screenshot(name :: String.t(), opts :: keyword()) :: :ok
   def assert_screenshot(name, opts \\ []) do
-    snap = screenshot(name, opts)
+    {match_opts, screenshot_opts} = Keyword.split(opts, [:png])
+    snap = screenshot(name, screenshot_opts)
     golden_dir = Path.join(["test", "screenshots"])
-    Screenshot.assert_match(snap, golden_dir)
+    Screenshot.assert_match(snap, golden_dir, match_opts)
   end
 
   @doc """
@@ -346,10 +347,11 @@ defmodule Plushie.Test.Helpers do
   """
   @spec assert_screenshot_match(
           screenshot :: Screenshot.t(),
-          golden_dir :: String.t()
+          golden_dir :: String.t(),
+          opts :: keyword()
         ) :: :ok
-  def assert_screenshot_match(screenshot, golden_dir) do
-    Screenshot.assert_match(screenshot, golden_dir)
+  def assert_screenshot_match(screenshot, golden_dir, opts \\ []) do
+    Screenshot.assert_match(screenshot, golden_dir, opts)
   end
 
   @doc "Waits for a tagged async task to complete."
