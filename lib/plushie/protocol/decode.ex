@@ -822,6 +822,8 @@ defmodule Plushie.Protocol.Decode do
 
   defp dispatch(%{"type" => "event", "family" => "press", "id" => _id, "value" => data} = msg) do
     {local, scope, window_id, _family} = event_identity!(msg)
+    button = parse_pointer_button!(data["button"], "press", msg)
+    pointer = parse_pointer_type!(data["pointer"], "press", msg)
 
     %WidgetEvent{
       type: :press,
@@ -831,8 +833,8 @@ defmodule Plushie.Protocol.Decode do
       value: %{
         x: data["x"],
         y: data["y"],
-        button: parse_pointer_button(data["button"]),
-        pointer: parse_pointer_type(data["pointer"]),
+        button: button,
+        pointer: pointer,
         finger: data["finger"],
         modifiers: parse_modifiers(data["modifiers"]),
         captured: data["captured"] || false
@@ -842,6 +844,9 @@ defmodule Plushie.Protocol.Decode do
 
   defp dispatch(%{"type" => "event", "family" => "release", "id" => _id, "value" => data} = msg) do
     {local, scope, window_id, _family} = event_identity!(msg)
+    button = parse_pointer_button!(data["button"], "release", msg)
+    pointer = parse_pointer_type!(data["pointer"], "release", msg)
+    lost = parse_pointer_lost!(data, "release", msg)
 
     %WidgetEvent{
       type: :release,
@@ -851,18 +856,19 @@ defmodule Plushie.Protocol.Decode do
       value: %{
         x: data["x"],
         y: data["y"],
-        button: parse_pointer_button(data["button"]),
-        pointer: parse_pointer_type(data["pointer"]),
+        button: button,
+        pointer: pointer,
         finger: data["finger"],
         modifiers: parse_modifiers(data["modifiers"]),
         captured: data["captured"] || false,
-        lost: data["lost"]
+        lost: lost
       }
     }
   end
 
   defp dispatch(%{"type" => "event", "family" => "move", "id" => _id, "value" => data} = msg) do
     {local, scope, window_id, _family} = event_identity!(msg)
+    pointer = parse_pointer_type!(data["pointer"], "move", msg)
 
     %WidgetEvent{
       type: :move,
@@ -872,7 +878,7 @@ defmodule Plushie.Protocol.Decode do
       value: %{
         x: data["x"],
         y: data["y"],
-        pointer: parse_pointer_type(data["pointer"]),
+        pointer: pointer,
         finger: data["finger"],
         modifiers: parse_modifiers(data["modifiers"]),
         captured: data["captured"] || false
@@ -890,6 +896,7 @@ defmodule Plushie.Protocol.Decode do
          } = msg
        ) do
     {local, scope, window_id, _family} = event_identity!(msg)
+    pointer = parse_pointer_type!(data["pointer"], "scroll", msg)
 
     %WidgetEvent{
       type: :scroll,
@@ -901,7 +908,7 @@ defmodule Plushie.Protocol.Decode do
         y: data["y"],
         delta_x: data["delta_x"],
         delta_y: data["delta_y"],
-        pointer: parse_pointer_type(data["pointer"]),
+        pointer: pointer,
         modifiers: parse_modifiers(data["modifiers"]),
         captured: data["captured"] || false
       }
@@ -946,6 +953,7 @@ defmodule Plushie.Protocol.Decode do
          %{"type" => "event", "family" => "double_click", "id" => _id, "value" => data} = msg
        ) do
     {local, scope, window_id, _family} = event_identity!(msg)
+    pointer = parse_pointer_type!(data["pointer"], "double_click", msg)
 
     %WidgetEvent{
       type: :double_click,
@@ -955,7 +963,7 @@ defmodule Plushie.Protocol.Decode do
       value: %{
         x: data["x"],
         y: data["y"],
-        pointer: parse_pointer_type(data["pointer"]),
+        pointer: pointer,
         modifiers: parse_modifiers(data["modifiers"])
       }
     }
@@ -1579,26 +1587,45 @@ defmodule Plushie.Protocol.Decode do
 
   defp parse_canvas_key_data(_, _type), do: %{key: nil, modifiers: %Plushie.KeyModifiers{}}
 
-  # Parses a unified pointer button string. Defaults to :left when nil.
-  @spec parse_pointer_button(value :: String.t() | nil) :: atom()
-  defp parse_pointer_button(nil), do: :left
-
-  defp parse_pointer_button(value) when is_binary(value) do
+  # Missing button and pointer fields have protocol defaults. Present fields
+  # must be canonical wire strings so renderer-to-host drift is visible.
+  @spec parse_pointer_button!(term(), String.t(), map()) :: atom()
+  defp parse_pointer_button!(value, family, msg) do
     case Plushie.Type.Pointer.parse_button(value) do
-      {:ok, parsed} -> parsed
-      :error -> :left
+      {:ok, parsed} ->
+        parsed
+
+      :error ->
+        raise Error,
+          reason: {:invalid_event_field, family, :button, value, :invalid, msg},
+          format: :msgpack,
+          data: <<>>
     end
   end
 
-  # Parses a pointer type string. Defaults to :mouse when nil.
-  @spec parse_pointer_type(value :: String.t() | nil) :: atom()
-  defp parse_pointer_type(nil), do: :mouse
-
-  defp parse_pointer_type(value) when is_binary(value) do
+  @spec parse_pointer_type!(term(), String.t(), map()) :: atom()
+  defp parse_pointer_type!(value, family, msg) do
     case Plushie.Type.Pointer.parse_pointer(value) do
-      {:ok, parsed} -> parsed
-      :error -> :mouse
+      {:ok, parsed} ->
+        parsed
+
+      :error ->
+        raise Error,
+          reason: {:invalid_event_field, family, :pointer, value, :invalid, msg},
+          format: :msgpack,
+          data: <<>>
     end
+  end
+
+  @spec parse_pointer_lost!(map(), String.t(), map()) :: boolean()
+  defp parse_pointer_lost!(data, _family, _msg) when not is_map_key(data, "lost"), do: false
+  defp parse_pointer_lost!(%{"lost" => value}, _family, _msg) when is_boolean(value), do: value
+
+  defp parse_pointer_lost!(%{"lost" => value}, family, msg) do
+    raise Error,
+      reason: {:invalid_event_field, family, :lost, value, :invalid, msg},
+      format: :msgpack,
+      data: <<>>
   end
 
   # Recursively converts string-keyed wire data to atom-keyed maps

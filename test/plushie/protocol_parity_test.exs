@@ -885,6 +885,34 @@ defmodule Plushie.ProtocolParityTest do
       assert %WidgetEvent{type: :press, value: %{button: :left, pointer: :mouse}} =
                Protocol.decode_message(json, :json)
     end
+
+    test "rejects unknown pointer button" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "press",
+          id: "canvas1",
+          window_id: "main",
+          value: %{button: "primary"}
+        })
+
+      assert {:error, {:invalid_event_field, "press", :button, "primary", :invalid, _}} =
+               Protocol.decode_message(json, :json)
+    end
+
+    test "rejects unknown pointer kind" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "press",
+          id: "canvas1",
+          window_id: "main",
+          value: %{pointer: "trackpad"}
+        })
+
+      assert {:error, {:invalid_event_field, "press", :pointer, "trackpad", :invalid, _}} =
+               Protocol.decode_message(json, :json)
+    end
   end
 
   describe "release event decoding" do
@@ -901,8 +929,22 @@ defmodule Plushie.ProtocolParityTest do
       assert %WidgetEvent{
                type: :release,
                id: "canvas1",
-               value: %{x: 100.0, y: 200.0, button: :left}
+               value: %{x: 100.0, y: 200.0, button: :left, lost: false}
              } = Protocol.decode_message(json, :json)
+    end
+
+    test "rejects non-boolean lost" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "release",
+          id: "canvas1",
+          window_id: "main",
+          value: %{lost: "false"}
+        })
+
+      assert {:error, {:invalid_event_field, "release", :lost, "false", :invalid, _}} =
+               Protocol.decode_message(json, :json)
     end
   end
 
