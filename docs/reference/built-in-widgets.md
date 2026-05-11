@@ -419,7 +419,7 @@ lazy loading, and intersection observation.
 |---|---|---|
 | `delay` | integer | Delay (ms) before emitting events |
 | `anticipate` | number | Distance (px) to anticipate visibility |
-| `on_resize` | atom / string | Event tag for resize events |
+| `on_resize` | boolean | Enable resize events |
 | `event_rate` | integer | Max events/sec for resize |
 | `a11y` | map | Accessibility overrides |
 

@@ -115,7 +115,7 @@ defmodule PlushieUIParityTestHelper do
   end
 
   def sensor_with_do do
-    sensor "s1", on_resize: :resized do
+    sensor "s1", on_resize: true do
       text("watched")
     end
   end
@@ -286,7 +286,7 @@ defmodule Plushie.UIParityTest do
 
     test "sensor with event props and do block" do
       node = H.sensor_with_do()
-      assert node.props[:on_resize] == "resized"
+      assert node.props[:on_resize] == true
       assert length(node.children) == 1
     end
   end
