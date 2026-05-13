@@ -203,7 +203,7 @@ defmodule Plushie.Binary do
       bin_name = build_name()
       ext = if os_name() == "windows", do: ".exe", else: ""
 
-      for profile <- ["release", "debug"] do
+      Enum.find_value(["release", "debug"], fn profile ->
         path =
           Path.join([
             Mix.Project.build_path(),
@@ -216,8 +216,7 @@ defmodule Plushie.Binary do
           ])
 
         if File.exists?(path), do: path
-      end
-      |> Enum.find(& &1)
+      end)
     end
   end
 
@@ -268,7 +267,8 @@ defmodule Plushie.Binary do
 
   @spec mix_available?() :: boolean()
   defp mix_available? do
-    Code.ensure_loaded?(Mix.Project) and function_exported?(Mix.Project, :config, 0)
+    Code.ensure_loaded?(Mix.Project) and function_exported?(Mix.Project, :config, 0) and
+      Process.whereis(Mix.ProjectStack) != nil
   end
 
   @spec app_name() :: atom() | nil

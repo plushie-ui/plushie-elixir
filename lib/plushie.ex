@@ -129,7 +129,7 @@ defmodule Plushie do
   @doc """
   Starts a Plushie application under a supervisor linked to the calling process.
 
-  Returns `{:ok, pid}` on success.
+  Returns the same start result as `Supervisor.start_link/3`.
   """
   @spec start_link(module(), keyword()) :: Supervisor.on_start()
   def start_link(app_module, opts \\ []) do
@@ -137,6 +137,8 @@ defmodule Plushie do
       opts
       |> Keyword.put(:app, app_module)
       |> Keyword.put_new(:name, __MODULE__)
+
+    validate_name!(opts[:name])
 
     Supervisor.start_link(__MODULE__, opts, name: sup_name(opts[:name]))
   end
@@ -165,6 +167,7 @@ defmodule Plushie do
   def child_spec(opts) do
     opts = Keyword.put_new(opts, :name, __MODULE__)
     name = opts[:name]
+    validate_name!(name)
 
     %{
       id: name,
@@ -181,6 +184,7 @@ defmodule Plushie do
   @impl Supervisor
   def init(opts) do
     name = Keyword.get(opts, :name, __MODULE__)
+    validate_name!(name)
     app = Keyword.fetch!(opts, :app)
     validate_app!(app)
     transport = Keyword.get(opts, :transport, :spawn)
@@ -324,13 +328,21 @@ defmodule Plushie do
           "expected :transport to be :spawn, :stdio, or {:iostream, pid}, got: #{inspect(other)}"
   end
 
+  @spec validate_name!(name :: term()) :: :ok
+  defp validate_name!(name) when is_atom(name), do: :ok
+
+  defp validate_name!(other) do
+    raise ArgumentError,
+          "expected :name to be an atom, got: #{inspect(other)}"
+  end
+
   @doc "Returns the registered name of the runtime for the given instance."
   @spec runtime_for(name :: atom()) :: atom()
-  def runtime_for(name \\ __MODULE__), do: runtime_name(name)
+  def runtime_for(name \\ __MODULE__) when is_atom(name), do: runtime_name(name)
 
   @doc "Returns the registered name of the bridge for the given instance."
   @spec bridge_for(name :: atom()) :: atom()
-  def bridge_for(name \\ __MODULE__), do: bridge_name(name)
+  def bridge_for(name \\ __MODULE__) when is_atom(name), do: bridge_name(name)
 
   defp sup_name(name), do: :"#{name}.Supervisor"
   defp task_supervisor_name(name), do: :"#{name}.TaskSupervisor"
@@ -341,11 +353,16 @@ defmodule Plushie do
   @spec resolve_code_reloader(opts :: keyword()) :: boolean()
   defp resolve_code_reloader(opts) do
     case Keyword.get(opts, :code_reloader) do
-      nil -> Application.get_env(:plushie, :code_reloader, false) != false
+      nil -> code_reloader_enabled?(Application.get_env(:plushie, :code_reloader, false))
       false -> false
       _ -> true
     end
   end
+
+  @spec code_reloader_enabled?(term()) :: boolean()
+  defp code_reloader_enabled?(nil), do: false
+  defp code_reloader_enabled?(false), do: false
+  defp code_reloader_enabled?(_), do: true
 
   @spec resolve_reloader_opts(opts :: keyword()) :: keyword()
   defp resolve_reloader_opts(opts) do

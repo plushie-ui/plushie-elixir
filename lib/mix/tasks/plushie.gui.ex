@@ -108,7 +108,11 @@ defmodule Mix.Tasks.Plushie.Gui do
         false
 
       nil ->
-        Application.get_env(:plushie, :code_reloader, false) != false
+        code_reloader_enabled?(Application.get_env(:plushie, :code_reloader, false))
     end
   end
+
+  defp code_reloader_enabled?(nil), do: false
+  defp code_reloader_enabled?(false), do: false
+  defp code_reloader_enabled?(_), do: true
 end

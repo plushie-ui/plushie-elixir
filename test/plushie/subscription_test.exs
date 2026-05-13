@@ -161,5 +161,63 @@ defmodule Plushie.SubscriptionTest do
         assert spec.max_rate == 42, "#{func} should store max_rate"
       end
     end
+
+    test "all renderer constructors accept window scope" do
+      constructors = [
+        :on_key_press,
+        :on_key_release,
+        :on_pointer_move,
+        :on_pointer_button,
+        :on_pointer_scroll,
+        :on_window_event,
+        :on_window_close,
+        :on_window_open,
+        :on_window_resize,
+        :on_window_focus,
+        :on_window_unfocus,
+        :on_window_move,
+        :on_animation_frame,
+        :on_theme_change,
+        :on_ime,
+        :on_pointer_touch,
+        :on_file_drop,
+        :on_event,
+        :on_modifiers_changed
+      ]
+
+      for func <- constructors do
+        spec = apply(Subscription, func, [[window: "editor"]])
+        assert spec.window_id == "editor", "#{func} should store window scope"
+      end
+    end
+  end
+
+  describe "for_window/2" do
+    test "sets the window on each subscription" do
+      subscriptions = [
+        Subscription.on_key_press(),
+        Subscription.on_pointer_move(max_rate: 60)
+      ]
+
+      assert [
+               %Subscription{type: :on_key_press, window_id: "main"},
+               %Subscription{type: :on_pointer_move, max_rate: 60, window_id: "main"}
+             ] = Subscription.for_window("main", subscriptions)
+    end
+  end
+
+  describe "map_tag/2" do
+    test "transforms the subscription tag" do
+      subscription = Subscription.every(100, :tick)
+
+      assert %Subscription{tag: {:widget, :tick}} =
+               Subscription.map_tag(subscription, fn tag -> {:widget, tag} end)
+    end
+
+    test "supports tuple tags" do
+      subscription = %Subscription{type: :every, interval: 100, tag: {:widget, "main", "timer"}}
+
+      assert Subscription.key(subscription) == {:every, 100, {:widget, "main", "timer"}}
+    end
   end
 end

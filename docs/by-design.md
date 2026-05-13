@@ -107,3 +107,90 @@ vs positional args) where the concept and ordering match.
 
 **Revisit when:** The parity workflow identifies that the cross-SDK
 shape itself should change.
+
+## Normal-return specs do not enumerate exits
+
+Public specs describe values returned on the normal path. Linked
+process exits, `GenServer.call/3` exits for missing processes, and
+similar BEAM control-flow exits are not expanded into every wrapper's
+return type.
+
+**Rules out:** Widening a wrapper spec from `:ok` to include values that
+the delegated function does not normally return, or treating possible
+process exits as ordinary return values.
+
+**Still in scope:** Documenting meaningful failure behavior when it is
+part of the user-facing contract. Returning `{:error, reason}` for
+recoverable conditions where the implementation actually returns that
+shape.
+
+**Revisit when:** A public API intentionally converts an exit into a
+regular return value.
+
+## Batch helper names stay cross-SDK aligned
+
+Batch helpers are named `batch` across the SDKs that expose them. In
+Elixir, invalid inputs to constructors and normalizers may raise through
+guards, pattern matching, or explicit validation without requiring a
+bang suffix.
+
+**Rules out:** Renaming `Subscription.batch/1` or `Command.batch/1` to a
+bang form solely because invalid input raises.
+
+**Still in scope:** Clear docs, specs, and tests for the validation each
+batch helper performs. A parity-routed rename if the shared SDK shape
+changes.
+
+**Revisit when:** The parity workflow changes the shared helper name or
+Elixir grows a distinct success/failure pair where the bang convention
+would carry real information.
+
+## Typespecs do not replace runtime validation
+
+Typespecs document the intended shape for tools and readers. They do
+not enforce runtime input, especially for public APIs called from user
+code.
+
+**Rules out:** Removing guards or validations solely because the spec
+already says the accepted type. Treating validation as dead code only
+because well-typed callers would not hit it.
+
+**Still in scope:** Fixing inaccurate specs so they describe the
+validated surface. Removing checks that are impossible because a
+surrounding invariant, not just a spec, makes them unreachable.
+
+**Revisit when:** A validation is proven unreachable from construction
+invariants rather than from typespec assumptions.
+
+## Binary architecture validation is best effort
+
+`Plushie.Binary.validate_architecture!/1` raises when it can detect a
+binary architecture mismatch. If the platform lacks the `file` command
+or the architecture cannot be recognized, resolution proceeds.
+
+**Rules out:** Treating an inconclusive architecture check as a hard
+startup failure.
+
+**Still in scope:** Raising on a detected mismatch. Improving detection
+for additional architectures or platforms when the implementation stays
+clear.
+
+**Revisit when:** Binary resolution gains a portable architecture
+metadata source that does not depend on host tools.
+
+## Scoped ID parsing is structural
+
+`Plushie.ScopedId.parse/1` parses canonical wire ID structure into
+window, scope, and local ID components. It is not the validator for
+user-authored widget IDs.
+
+**Rules out:** Rejecting parseable wire strings only because their local
+ID would be illegal in a user-authored tree node.
+
+**Still in scope:** Validating user-authored widget IDs during tree
+normalization. Fixing reconstruction helpers such as `from_event/1`
+when they build an incorrect canonical ID from already-decoded event
+fields.
+
+**Revisit when:** `ScopedId.parse/1` becomes a user-input validation API
+rather than a structural parser.

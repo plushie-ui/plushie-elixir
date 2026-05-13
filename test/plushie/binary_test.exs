@@ -25,7 +25,6 @@ defmodule Plushie.BinaryTest do
 
       assert String.contains?(name, "x86_64") or
                String.contains?(name, "aarch64") or
-               String.contains?(name, "arm") or
                String.contains?(name, "unknown")
     end
 
@@ -97,7 +96,7 @@ defmodule Plushie.BinaryTest do
   end
 
   describe "build_name/0" do
-    test "defaults to app-renderer suffix" do
+    setup do
       previous = Application.get_env(:plushie, :build_name)
       Application.delete_env(:plushie, :build_name)
 
@@ -109,9 +108,42 @@ defmodule Plushie.BinaryTest do
         end
       end)
 
+      :ok
+    end
+
+    test "defaults to app-renderer suffix" do
       name = Binary.build_name()
       assert is_binary(name)
       assert String.ends_with?(name, "-renderer")
+    end
+
+    test "uses configured build name" do
+      Application.put_env(:plushie, :build_name, "custom-renderer")
+
+      assert Binary.build_name() == "custom-renderer"
+    end
+
+    test "rejects non-string build name config" do
+      Application.put_env(:plushie, :build_name, :custom_renderer)
+
+      assert_raise RuntimeError, ~r/:build_name must be a string/, fn ->
+        Binary.build_name()
+      end
+    end
+
+    test "falls back when no Mix project is running" do
+      ebin = Application.app_dir(:plushie, "ebin")
+      elixir = System.find_executable("elixir")
+
+      assert {output, 0} =
+               System.cmd(elixir, [
+                 "-pa",
+                 ebin,
+                 "-e",
+                 "IO.write(Plushie.Binary.build_name())"
+               ])
+
+      assert output == "app-renderer"
     end
   end
 end

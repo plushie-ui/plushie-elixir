@@ -116,6 +116,12 @@ defmodule Plushie.SubscriptionParityTest do
       sub = Subscription.on_theme_change()
       assert Subscription.batch([sub]) == [sub]
     end
+
+    test "rejects non-subscription elements" do
+      assert_raise ArgumentError, ~r/expected %Plushie.Subscription{}/, fn ->
+        Subscription.batch([Subscription.on_theme_change(), :not_a_subscription])
+      end
+    end
   end
 
   describe "key/1 for new subscriptions" do

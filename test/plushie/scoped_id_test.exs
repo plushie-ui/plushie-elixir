@@ -2,6 +2,7 @@ defmodule Plushie.ScopedIdTest do
   use ExUnit.Case, async: true
 
   alias Plushie.Event.WidgetEvent
+  alias Plushie.ScopedId
   alias Plushie.Tree
 
   describe "Tree.normalize scoping" do
@@ -238,6 +239,43 @@ defmodule Plushie.ScopedIdTest do
     test "scope without window_id preserves full path" do
       event = %WidgetEvent{type: :click, id: "save", scope: ["form", "sidebar"]}
       assert Plushie.Event.target(event) == "sidebar/form/save"
+    end
+  end
+
+  describe "ScopedId.from_event/1" do
+    test "builds a full ID from event fields" do
+      event = %WidgetEvent{type: :click, id: "save", scope: ["form"], window_id: "main"}
+
+      assert %ScopedId{id: "save", scope: ["form"], window_id: "main", full: "main#form/save"} =
+               ScopedId.from_event(event)
+    end
+
+    test "strips trailing window scope before rebuilding the full ID" do
+      event = %WidgetEvent{
+        type: :click,
+        id: "save",
+        scope: ["form", "sidebar", "main"],
+        window_id: "main"
+      }
+
+      assert %ScopedId{
+               id: "save",
+               scope: ["form", "sidebar"],
+               window_id: "main",
+               full: "main#sidebar/form/save"
+             } = ScopedId.from_event(event)
+    end
+
+    test "builds a local path when no window is present" do
+      event = %WidgetEvent{type: :click, id: "save", scope: ["form", "sidebar"]}
+
+      assert %ScopedId{
+               id: "save",
+               scope: ["form", "sidebar"],
+               window_id: nil,
+               full: "sidebar/form/save"
+             } =
+               ScopedId.from_event(event)
     end
   end
 

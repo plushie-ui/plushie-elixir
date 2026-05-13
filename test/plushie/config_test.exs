@@ -89,9 +89,32 @@ defmodule Plushie.ConfigTest do
         Plushie.stop(name)
       end)
     end
+
+    test "DevServer is not started when code_reloader is nil" do
+      Application.put_env(:plushie, :code_reloader, nil)
+      name = :"config_test_#{System.unique_integer([:positive])}"
+
+      capture_log(fn ->
+        {:ok, pid} = Plushie.start_link(ConfigTestApp, name: name)
+
+        child_modules =
+          pid
+          |> Supervisor.which_children()
+          |> Enum.map(fn {id, _, _, _} -> id end)
+
+        refute Plushie.Dev.DevServer in child_modules
+        Plushie.stop(name)
+      end)
+    end
   end
 
   describe "start_link option validation" do
+    test "rejects non-atom :name" do
+      assert_raise ArgumentError, ~r/expected :name to be an atom/, fn ->
+        Plushie.start_link(ConfigTestApp, name: "gui")
+      end
+    end
+
     test "rejects non-module :app" do
       Process.flag(:trap_exit, true)
 

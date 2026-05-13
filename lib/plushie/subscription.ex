@@ -79,10 +79,14 @@ defmodule Plushie.Subscription do
   field. For timer subscriptions, the tag is the user-provided atom that
   appears in `%Plushie.Event.TimerEvent{tag: tag}`. For renderer
   subscriptions, the tag is `nil` (management is by `{kind, window_id}`).
+  Stateful widget subscriptions use tuple tags internally so timer events can
+  be routed back to the widget instance that declared them.
   """
+  @type tag :: atom() | tuple() | nil
+
   @type t :: %__MODULE__{
           type: atom(),
-          tag: atom() | nil,
+          tag: tag(),
           interval: pos_integer() | nil,
           max_rate: non_neg_integer() | nil,
           window_id: String.t() | nil
@@ -379,10 +383,10 @@ defmodule Plushie.Subscription do
 
   Delivers one of:
 
-  * `%ImeEvent{type: :opened, captured: bool}` - the IME session started
-  * `%ImeEvent{type: :preedit, text: str, cursor: {start, end_pos} | nil, captured: bool}`
-  * `%ImeEvent{type: :commit, text: str, captured: bool}` - final text committed
-  * `%ImeEvent{type: :closed, captured: bool}` - the IME session ended
+  * `%Plushie.Event.ImeEvent{type: :opened, captured: boolean()}` - the IME session started
+  * `%Plushie.Event.ImeEvent{type: :preedit, text: String.t(), cursor: {start, end_pos} | nil, captured: boolean()}`
+  * `%Plushie.Event.ImeEvent{type: :commit, text: String.t(), captured: boolean()}` - final text committed
+  * `%Plushie.Event.ImeEvent{type: :closed, captured: boolean()}` - the IME session ended
   """
   @spec on_ime(opts :: keyword()) :: t()
   def on_ime(opts \\ []) do
@@ -413,8 +417,8 @@ defmodule Plushie.Subscription do
   @doc """
   Fires when the system theme changes (light/dark mode).
 
-  Delivers `%SystemEvent{type: :theme_changed, value: mode}` to `update/2` where `mode` is
-  a string like `"light"` or `"dark"`.
+  Delivers `%Plushie.Event.SystemEvent{type: :theme_changed, value: mode}` to `update/2`
+  where `mode` is a string like `"light"` or `"dark"`.
   """
   @spec on_theme_change(opts :: keyword()) :: t()
   def on_theme_change(opts \\ []) do
@@ -431,7 +435,8 @@ defmodule Plushie.Subscription do
   @doc """
   Fires on each animation frame (vsync tick).
 
-  Delivers `%SystemEvent{type: :animation_frame, value: timestamp}` to `update/2`.
+  Delivers `%Plushie.Event.SystemEvent{type: :animation_frame, value: timestamp}` to
+  `update/2` where `timestamp` is the renderer frame timestamp in milliseconds.
   """
   @spec on_animation_frame(opts :: keyword()) :: t()
   def on_animation_frame(opts \\ []) do
@@ -448,9 +453,10 @@ defmodule Plushie.Subscription do
   @doc """
   Fires when a file is dropped on a window.
 
-  Delivers `%WindowEvent{type: :file_dropped, window_id: id, path: path}` to `update/2`.
-  Also fires `%WindowEvent{type: :file_hovered, ...}` while hovering
-  and `%WindowEvent{type: :files_hovered_left, ...}` when the hover exits.
+  Delivers `%Plushie.Event.WindowEvent{type: :file_dropped, window_id: id, path: path}`
+  to `update/2`. Also fires `%Plushie.Event.WindowEvent{type: :file_hovered, ...}`
+  while hovering and `%Plushie.Event.WindowEvent{type: :files_hovered_left, ...}`
+  when the hover exits.
   """
   @spec on_file_drop(opts :: keyword()) :: t()
   def on_file_drop(opts \\ []) do
@@ -520,7 +526,7 @@ defmodule Plushie.Subscription do
   Combines a list of subscriptions. Validates that all elements are
   `%Subscription{}` structs and returns the list.
   """
-  @spec batch(subscriptions :: [t()]) :: [t()]
+  @spec batch(subscriptions :: [term()]) :: [t()]
   def batch(subscriptions) when is_list(subscriptions) do
     Enum.each(subscriptions, fn
       %__MODULE__{} -> :ok
@@ -537,7 +543,8 @@ defmodule Plushie.Subscription do
   Timer subscriptions are keyed by `{:every, interval, tag}`.
   Renderer subscriptions are keyed by `{type, window_id}`.
   """
-  @spec key(sub :: t()) :: {:every, pos_integer(), atom()} | {atom(), String.t() | nil}
+  @spec key(sub :: t()) ::
+          {:every, pos_integer(), atom() | tuple()} | {atom(), String.t() | tuple() | nil}
   def key(%__MODULE__{type: :every, tag: tag, interval: interval}) do
     {:every, interval, tag}
   end
@@ -558,7 +565,7 @@ defmodule Plushie.Subscription do
   Used by the runtime to namespace stateful widget subscription tags
   so timer events can be routed back to the correct widget.
   """
-  @spec map_tag(sub :: t(), mapper :: (term() -> term())) :: t()
+  @spec map_tag(sub :: t(), mapper :: (tag() -> tag())) :: t()
   def map_tag(%__MODULE__{} = sub, mapper) when is_function(mapper, 1) do
     %{sub | tag: mapper.(sub.tag)}
   end

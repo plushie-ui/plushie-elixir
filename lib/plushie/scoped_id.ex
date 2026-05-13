@@ -70,6 +70,9 @@ defmodule Plushie.ScopedId do
   Edge cases: `"main#"` produces `id: ""` (the window itself with
   no widget path). `"#foo"` is treated as bare id `"#foo"` (empty
   window part is ignored). Empty string produces `id: ""`.
+
+  This parser reflects wire ID structure. It does not validate whether a
+  parsed local ID is legal as a user-authored widget ID.
   """
   @spec parse(canonical :: String.t()) :: t()
   def parse(canonical) when is_binary(canonical) do
@@ -105,10 +108,17 @@ defmodule Plushie.ScopedId do
 
       from_event(%WidgetEvent{id: "email", scope: ["form"], window_id: "main"})
   """
-  @spec from_event(event :: map()) :: t()
+  @type event_fields :: %{
+          required(:id) => String.t(),
+          required(:scope) => [String.t()] | nil,
+          optional(:window_id) => String.t() | nil,
+          optional(atom()) => term()
+        }
+
+  @spec from_event(event :: event_fields()) :: t()
   def from_event(%{id: id, scope: scope} = event) do
     win = Map.get(event, :window_id)
-    scope_list = scope || []
+    scope_list = scope |> List.wrap() |> strip_window_scope(win)
 
     full = build_full(win, scope_list, id)
 
@@ -139,6 +149,16 @@ defmodule Plushie.ScopedId do
 
   # Build the canonical full ID from components.
   # Scope is in reversed order (nearest first), so reverse for path.
+  defp strip_window_scope(scope, nil), do: scope
+
+  defp strip_window_scope(scope, window),
+    do: strip_window_scope(scope, window, Enum.reverse(scope))
+
+  defp strip_window_scope(_scope, window, [candidate | rest]) when candidate == window,
+    do: Enum.reverse(rest)
+
+  defp strip_window_scope(scope, _window, _reversed_scope), do: scope
+
   defp build_full(nil, [], id), do: id
 
   defp build_full(nil, scope, id) do
