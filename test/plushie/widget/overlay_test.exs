@@ -2,6 +2,7 @@ defmodule Plushie.Widget.OverlayTest do
   use ExUnit.Case, async: true
 
   alias Plushie.Widget.Overlay
+  alias Plushie.Widget.Text
 
   describe "new/2" do
     test "creates overlay with id" do
@@ -160,6 +161,22 @@ defmodule Plushie.Widget.OverlayTest do
         |> Overlay.push(%{id: "a", type: "text", props: %{}, children: []})
         |> Overlay.push(%{id: "b", type: "text", props: %{}, children: []})
         |> Overlay.push(%{id: "c", type: "text", props: %{}, children: []})
+        |> Overlay.build()
+      end
+    end
+
+    test "validates child count after converting widget struct children" do
+      node =
+        Overlay.new("ol1")
+        |> Overlay.push(Text.new("anchor", "Open"))
+        |> Overlay.push(Text.new("content", "Menu"))
+        |> Overlay.build()
+
+      assert Enum.map(node.children, & &1.type) == ["text", "text"]
+
+      assert_raise ArgumentError, ~r/requires exactly 2 children, got 1/, fn ->
+        Overlay.new("ol1")
+        |> Overlay.push(Text.new("anchor", "Open"))
         |> Overlay.build()
       end
     end

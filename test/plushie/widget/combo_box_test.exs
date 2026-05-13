@@ -143,6 +143,14 @@ defmodule Plushie.Widget.ComboBoxTest do
       assert cb.on_close == true
     end
 
+    test "routes value as selected" do
+      cb =
+        ComboBox.new("id", @options)
+        |> ComboBox.with_options(value: "Banana")
+
+      assert cb.selected == "Banana"
+    end
+
     test "raises on unknown option" do
       assert_raise ArgumentError, ~r/unknown option.*:bogus/, fn ->
         ComboBox.new("id", @options, bogus: true)

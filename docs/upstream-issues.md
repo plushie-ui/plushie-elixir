@@ -31,3 +31,20 @@ needs renderer support.
 Upstream fix: represent resize increments as optional dimensions in the
 Rust operation model, or add a dedicated clear operation in the protocol
 and renderer dispatch.
+
+## Overlay width is exposed by host SDKs but ignored by the renderer
+
+Dependency: `plushie-rust`
+
+The Elixir, TypeScript, Gleam, and Ruby host SDKs expose an overlay
+`width` prop and encode it onto the overlay node. The Rust overlay
+widget currently extracts `position`, `gap`, `offset_x`, `offset_y`,
+`align`, and `flip`, but it does not extract or apply `width`. Setting
+overlay width in a host SDK therefore has no renderer effect.
+
+Local workaround: size the overlay content child, or place the content
+inside a container with the desired width.
+
+Upstream fix: either apply the `width` prop in the Rust overlay widget
+or route a cross-SDK parity change that removes the field from the host
+SDK overlay APIs.

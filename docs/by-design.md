@@ -978,6 +978,84 @@ the bug class under test.
 **Revisit when:** The internal bridge starts duplicating renderer
 behavior instead of only recording runtime calls.
 
+## Widget builder tests may stay pure
+
+Widget builder modules have focused tests for constructor routing,
+setter validation, child conversion, and built node shape. Those tests
+may use `ExUnit.Case` because they do not claim renderer behavior and do
+not replace the integration spine.
+
+**Rules out:** Converting every widget builder test to
+`Plushie.Test.Case` solely because the widget eventually renders.
+Adding renderer interaction tests for every prop combination without a
+specific renderer or wire failure mode.
+
+**Still in scope:** Renderer-backed tests for event dispatch, disabled
+behavior, wire shape drift, automation behavior, and regressions that a
+pure builder test would hide. Builder tests should still normalize
+through `Plushie.Tree` when the failure mode is scoped IDs or encoded
+props.
+
+**Revisit when:** Builder tests start making renderer-behavior claims,
+or repeated renderer regressions show that a widget family needs a
+dedicated integration suite.
+
+## Renderer compatibility aliases are not host API
+
+The renderer may accept compatibility prop names that are not part of
+the host SDK API shape. Host SDKs expose the canonical cross-SDK field
+name and should not add duplicate aliases only because the renderer
+still accepts an older or lower-level prop name.
+
+**Rules out:** Adding `Button.content` beside `Button.label` only
+because the renderer accepts `content` as a fallback.
+
+**Still in scope:** Routing a canonical field rename through the
+cross-SDK parity workflow if the SDK shape itself should change. Keeping
+renderer compatibility paths as long as the renderer needs to accept old
+wire data.
+
+**Revisit when:** The parity workflow chooses `content` as the shared
+button text field, or the renderer fallback becomes the only supported
+wire field.
+
+## Animation descriptor recognition is explicit
+
+`Plushie.Widget.Build.animation_descriptor?/1` recognizes the closed set
+of renderer-side animation descriptor structs supported by the public
+animation API. Adding a new descriptor type is a public API change and
+must update the places that distinguish descriptors from ordinary field
+values.
+
+**Rules out:** Replacing explicit descriptor clauses with a speculative
+open-ended protocol solely to avoid updating the helper for future
+animation types.
+
+**Still in scope:** Adding a descriptor clause as part of the same
+change that introduces a new animation struct. Improving diagnostics
+when a descriptor is used with a field type that cannot accept its
+target.
+
+**Revisit when:** Animation descriptors become an intentionally open
+extension point.
+
+## Slider dimensions are orientation-specific
+
+Horizontal and vertical sliders use dimension names according to the
+renderer contract. For a horizontal slider, `width` is the layout length
+and `height` is the track thickness. For a vertical slider, `height` is
+the layout length and `width` is the track thickness.
+
+**Rules out:** Changing vertical slider `width` to a layout `Length`
+only to mirror the horizontal slider's `width` field name.
+
+**Still in scope:** Cross-SDK parity changes if the renderer contract
+renames these fields or exposes separate layout and track-thickness
+properties.
+
+**Revisit when:** The renderer exposes orientation-neutral slider size
+props or measured user confusion warrants a parity-routed rename.
+
 ## Manual tree maps preserve unknown string prop keys
 
 Tree normalization accepts manually constructed maps in tests and low

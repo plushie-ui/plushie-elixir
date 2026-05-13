@@ -346,8 +346,17 @@ defmodule Plushie.Widget.TableTest do
       assert node.props[:rows] == nil
       assert length(node.children) == 2
 
-      row = hd(node.children)
-      assert row.type == "table_row"
+      [first_row, second_row] = node.children
+      assert first_row.type == "table_row"
+      assert second_row.type == "table_row"
+
+      [first_name_cell | _] = first_row.children
+      [second_name_cell | _] = second_row.children
+      [first_name] = first_name_cell.children
+      [second_name] = second_name_cell.children
+
+      assert first_name.props.content == "Alice"
+      assert second_name.props.content == "Bob"
     end
 
     test "rows: expansion preserves false cell values" do
@@ -364,6 +373,52 @@ defmodule Plushie.Widget.TableTest do
 
       assert active_text.props.content == "false"
       assert name_text.props.content == ""
+    end
+
+    test "rows: expansion uses generated IDs independent of data keys" do
+      node =
+        Table.new("tbl1",
+          columns: [%{key: "display/name", label: "Display name"}],
+          rows: [%{"display/name" => "Alice"}]
+        )
+        |> Table.build()
+
+      [row] = node.children
+      [cell] = row.children
+      [text] = cell.children
+
+      assert row.id == "row:0"
+      assert cell.id == "cell:0:0"
+      assert text.id == "text"
+      assert text.props.content == "Alice"
+      assert Plushie.Tree.normalize(node)
+    end
+
+    test "rows: expansion raises when a row is missing a column key" do
+      assert_raise ArgumentError, ~r/table "tbl1": row 0 is missing column key :age/, fn ->
+        Table.new("tbl1",
+          columns: @atom_columns,
+          rows: [%{name: "Alice"}]
+        )
+        |> Table.build()
+      end
+    end
+
+    test "rows: expansion supports struct rows" do
+      node =
+        Table.new("tbl1",
+          columns: @atom_columns,
+          rows: [%__MODULE__.User{name: "Alice", age: 30, email: "a@b.com"}]
+        )
+        |> Table.build()
+
+      [row] = node.children
+      [name_cell, age_cell] = row.children
+      [name_text] = name_cell.children
+      [age_text] = age_cell.children
+
+      assert name_text.props.content == "Alice"
+      assert age_text.props.content == "30"
     end
 
     test "children without rows: is allowed" do

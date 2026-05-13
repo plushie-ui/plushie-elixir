@@ -73,6 +73,23 @@ defmodule Plushie.Widget.SvgTest do
       svg = Svg.new("i", "a.svg") |> Svg.color(:red)
       assert svg.color == "#ff0000"
     end
+
+    test "normalized color reaches the normalized tree" do
+      node =
+        Svg.new("i", "a.svg")
+        |> Svg.color(:red)
+        |> Plushie.Tree.normalize()
+
+      assert node.props[:color] == "#ff0000"
+    end
+
+    test "invalid struct color raises a validation error during build" do
+      svg = %Svg{id: "i", source: "a.svg", color: :not_a_color}
+
+      assert_raise ArgumentError, ~r/invalid color value: :not_a_color/, fn ->
+        Svg.build(svg)
+      end
+    end
   end
 
   describe "build/1" do

@@ -15,6 +15,7 @@ defmodule Plushie.Widget.SliderTest do
     test "optional fields default to nil" do
       s = Slider.new("vol", {0, 100}, 50)
       assert s.step == nil
+      assert s.keyboard_step == nil
       assert s.shift_step == nil
       assert s.default == nil
       assert s.width == nil
@@ -24,8 +25,9 @@ defmodule Plushie.Widget.SliderTest do
     end
 
     test "accepts keyword options" do
-      s = Slider.new("vol", {0, 100}, 50, step: 5, height: 20)
+      s = Slider.new("vol", {0, 100}, 50, step: 5, keyboard_step: 10, height: 20)
       assert s.step == 5
+      assert s.keyboard_step == 10
       assert s.height == 20
     end
   end
@@ -39,6 +41,11 @@ defmodule Plushie.Widget.SliderTest do
     test "shift_step/2 sets shift_step" do
       s = Slider.new("id", {0, 10}, 5) |> Slider.shift_step(10)
       assert s.shift_step == 10
+    end
+
+    test "keyboard_step/2 sets keyboard_step" do
+      s = Slider.new("id", {0, 10}, 5) |> Slider.keyboard_step(0.5)
+      assert s.keyboard_step == 0.5
     end
 
     test "default/2 sets default" do
@@ -83,14 +90,19 @@ defmodule Plushie.Widget.SliderTest do
     end
 
     test "includes non-nil optional props" do
-      node = Slider.new("s", {0, 10}, 5, step: 1, height: 20) |> Slider.build()
+      node =
+        Slider.new("s", {0, 10}, 5, step: 1, keyboard_step: 2, height: 20)
+        |> Slider.build()
+
       assert node.props[:step] == 1
+      assert node.props[:keyboard_step] == 2
       assert node.props[:height] == 20
     end
 
     test "omits nil props" do
       node = Slider.new("s", {0, 10}, 5) |> Slider.build()
       refute Map.has_key?(node.props, "step")
+      refute Map.has_key?(node.props, :keyboard_step)
       refute Map.has_key?(node.props, "shift_step")
       refute Map.has_key?(node.props, "default")
       refute Map.has_key?(node.props, "width")
@@ -105,8 +117,12 @@ defmodule Plushie.Widget.SliderTest do
 
   describe "with_options/2" do
     test "routes multiple options" do
-      s = Slider.new("id", {0, 10}, 5) |> Slider.with_options(step: 2, default: 0)
+      s =
+        Slider.new("id", {0, 10}, 5)
+        |> Slider.with_options(step: 2, keyboard_step: 4, default: 0)
+
       assert s.step == 2
+      assert s.keyboard_step == 4
       assert s.default == 0
     end
 

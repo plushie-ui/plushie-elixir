@@ -15,6 +15,7 @@ defmodule Plushie.Widget.VerticalSliderTest do
     test "optional fields default to nil" do
       vs = VerticalSlider.new("vs", {0, 100}, 50)
       assert vs.step == nil
+      assert vs.keyboard_step == nil
       assert vs.shift_step == nil
       assert vs.default == nil
       assert vs.width == nil
@@ -23,8 +24,9 @@ defmodule Plushie.Widget.VerticalSliderTest do
     end
 
     test "accepts keyword options" do
-      vs = VerticalSlider.new("vs", {0, 100}, 50, step: 10, height: :fill)
+      vs = VerticalSlider.new("vs", {0, 100}, 50, step: 10, keyboard_step: 20, height: :fill)
       assert vs.step == 10
+      assert vs.keyboard_step == 20
       assert vs.height == :fill
     end
   end
@@ -38,6 +40,11 @@ defmodule Plushie.Widget.VerticalSliderTest do
     test "shift_step/2 sets shift_step" do
       vs = VerticalSlider.new("id", {0, 10}, 5) |> VerticalSlider.shift_step(5)
       assert vs.shift_step == 5
+    end
+
+    test "keyboard_step/2 sets keyboard_step" do
+      vs = VerticalSlider.new("id", {0, 10}, 5) |> VerticalSlider.keyboard_step(0.25)
+      assert vs.keyboard_step == 0.25
     end
 
     test "default/2 sets default" do
@@ -77,10 +84,16 @@ defmodule Plushie.Widget.VerticalSliderTest do
 
     test "includes non-nil optional props" do
       node =
-        VerticalSlider.new("vs", {0, 10}, 5, step: 2, width: 40, height: 300)
+        VerticalSlider.new("vs", {0, 10}, 5,
+          step: 2,
+          keyboard_step: 3,
+          width: 40,
+          height: 300
+        )
         |> VerticalSlider.build()
 
       assert node.props[:step] == 2
+      assert node.props[:keyboard_step] == 3
       assert node.props[:width] == 40
       assert node.props[:height] == 300
     end
@@ -88,6 +101,7 @@ defmodule Plushie.Widget.VerticalSliderTest do
     test "omits nil props" do
       node = VerticalSlider.new("vs", {0, 10}, 5) |> VerticalSlider.build()
       refute Map.has_key?(node.props, "step")
+      refute Map.has_key?(node.props, :keyboard_step)
       refute Map.has_key?(node.props, "shift_step")
       refute Map.has_key?(node.props, "default")
       refute Map.has_key?(node.props, "style")
@@ -98,9 +112,10 @@ defmodule Plushie.Widget.VerticalSliderTest do
     test "routes multiple options" do
       vs =
         VerticalSlider.new("id", {0, 10}, 5)
-        |> VerticalSlider.with_options(step: 1, default: 0, style: :default)
+        |> VerticalSlider.with_options(step: 1, keyboard_step: 2, default: 0, style: :default)
 
       assert vs.step == 1
+      assert vs.keyboard_step == 2
       assert vs.default == 0
       assert vs.style == :default
     end

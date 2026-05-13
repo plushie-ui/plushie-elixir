@@ -11,6 +11,7 @@ defmodule Plushie.Widget.VerticalSlider do
     field :range, Plushie.Type.Range, option: false, doc: "`{min, max}` numeric range."
     field :value, :float, option: false, doc: "Current slider value."
     field :step, :float, doc: "Step increment."
+    field :keyboard_step, :float, doc: "Step increment for keyboard movement."
     field :shift_step, :float, doc: "Step increment when Shift is held."
     field :default, :float, doc: "Default value (double-click resets to this)."
     field :width, :float, doc: "Slider width in pixels."

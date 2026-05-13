@@ -137,6 +137,14 @@ defmodule Plushie.Widget.ButtonTest do
       assert btn.disabled == true
     end
 
+    test "with_options routes enabled inversely" do
+      btn =
+        Button.new("b", "X")
+        |> Button.with_options(enabled: true)
+
+      assert btn.disabled == false
+    end
+
     test "raises on unknown option" do
       assert_raise ArgumentError, ~r/unknown option.*:bogus/, fn ->
         Button.new("b", "X", bogus: true)

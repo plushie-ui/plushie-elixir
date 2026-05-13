@@ -8,7 +8,7 @@ defmodule Plushie.Widget.ProgressBar do
   @a11y_defaults %{role: :progress_indicator}
 
   widget :progress_bar do
-    field :range, Plushie.Type.Range, option: false, doc: "`[min, max]` as a two-element list."
+    field :range, Plushie.Type.Range, option: false, doc: "`{min, max}` numeric range."
     field :value, :float, option: false, doc: "Current progress value."
     field :width, Plushie.Type.Length, doc: "Bar width. Default: fill."
     field :height, Plushie.Type.Length, doc: "Bar height. Default: shrink."

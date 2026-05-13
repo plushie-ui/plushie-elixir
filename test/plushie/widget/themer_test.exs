@@ -19,6 +19,11 @@ defmodule Plushie.Widget.ThemerTest do
       t = Themer.new("th1", palette)
       assert t.theme == palette
     end
+
+    test "accepts keyword options" do
+      t = Themer.new("th1", theme: :dark)
+      assert t.theme == :dark
+    end
   end
 
   describe "push/2" do

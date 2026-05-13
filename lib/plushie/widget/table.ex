@@ -8,7 +8,7 @@ defmodule Plushie.Widget.Table.Validation do
   # columns. Structs are accepted as rows and converted to atom-keyed
   # maps automatically.
 
-  # -- Column validation -------------------------------------------------------
+  # Column validation
 
   @doc false
   def validate_columns!(_id, []), do: :ok
@@ -30,7 +30,7 @@ defmodule Plushie.Widget.Table.Validation do
     end
   end
 
-  # -- Row validation ----------------------------------------------------------
+  # Row validation
 
   @doc false
   def coerce_struct_rows(rows) do
@@ -99,7 +99,7 @@ defmodule Plushie.Widget.Table.Validation do
 
   defp error(id, message), do: "table #{inspect(id)}: #{message}"
 
-  # -- Rows expansion ----------------------------------------------------------
+  # Rows expansion
 
   @doc false
   def expand_rows(tbl) do
@@ -113,12 +113,14 @@ defmodule Plushie.Widget.Table.Validation do
         row_id = expanded_row_id(row, index)
 
         cells =
-          Enum.map(col_keys, fn key ->
-            value = row |> Map.get(key, "") |> cell_text()
+          col_keys
+          |> Enum.with_index()
+          |> Enum.map(fn {key, column_index} ->
+            value = cell_text!(tbl.id, row, index, key)
             column = to_string(key)
 
             text_node = %{
-              id: "#{row_id}/#{column}/text",
+              id: "text",
               type: "text",
               props: %{content: value},
               children: []
@@ -126,7 +128,7 @@ defmodule Plushie.Widget.Table.Validation do
 
             Plushie.UI.__build_container__(
               Plushie.Table.Cell,
-              column,
+              "cell:#{index}:#{column_index}",
               [column: column],
               [text_node],
               nil
@@ -147,6 +149,17 @@ defmodule Plushie.Widget.Table.Validation do
 
   defp column_key(col), do: col[:key] || col["key"]
 
+  defp cell_text!(id, row, row_index, key) do
+    case Map.fetch(row, key) do
+      {:ok, value} ->
+        cell_text(value)
+
+      :error ->
+        raise ArgumentError,
+              error(id, "row #{row_index} is missing column key #{inspect(key)}")
+    end
+  end
+
   defp cell_text(nil), do: ""
   defp cell_text(value), do: to_string(value)
 
@@ -158,7 +171,7 @@ defmodule Plushie.Widget.Table.Validation do
     end
   end
 
-  # -- @before_compile hook ----------------------------------------------------
+  # @before_compile hook
 
   # Generates thin overrides for columns/2, rows/2, and build/1
   # that delegate to the validation functions above.

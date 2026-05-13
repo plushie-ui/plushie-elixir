@@ -29,8 +29,13 @@ defmodule Plushie.Widget.Build do
     if animation_descriptor?(val) do
       val
     else
-      {:ok, casted} = Plushie.Type.Color.cast(val)
-      casted
+      case Plushie.Type.Color.cast(val) do
+        {:ok, casted} ->
+          casted
+
+        :error ->
+          raise ArgumentError, "invalid color value: #{inspect(val)}"
+      end
     end
   end
 
