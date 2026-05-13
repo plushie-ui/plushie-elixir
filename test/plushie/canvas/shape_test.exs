@@ -5,6 +5,7 @@ defmodule Plushie.Canvas.ShapeTest do
 
   alias Plushie.Canvas.{
     Circle,
+    Dash,
     Gradient,
     Image,
     Line,
@@ -186,6 +187,16 @@ defmodule Plushie.Canvas.ShapeTest do
       assert result.x == 1.5
       assert result.y == 1.5
     end
+
+    test "scale/2 rejects non-numeric values" do
+      assert_raise FunctionClauseError, fn ->
+        Shape.scale("x", "y")
+      end
+    end
+
+    test "Scale.encode/1 preserves zero axis scale" do
+      assert Scale.encode(%Scale{x: 0, y: 0.5}) == %{type: "scale", x: 0, y: 0.5}
+    end
   end
 
   # -- Gradient ---------------------------------------------------------------
@@ -208,6 +219,22 @@ defmodule Plushie.Canvas.ShapeTest do
       assert %Gradient{} = rect.fill
       assert rect.fill.stops == [{0.0, "#000"}, {1.0, "#fff"}]
     end
+
+    test "encode validates point shape" do
+      gradient = %Gradient{from: :origin, to: {100, 0}, stops: [{0.0, "#000"}]}
+
+      assert_raise ArgumentError, ~r/expected gradient from/, fn ->
+        Gradient.encode(gradient)
+      end
+    end
+
+    test "encode validates stop shape" do
+      gradient = %Gradient{from: {0, 0}, to: {100, 0}, stops: [:bad_stop]}
+
+      assert_raise ArgumentError, ~r/expected gradient stop/, fn ->
+        Gradient.encode(gradient)
+      end
+    end
   end
 
   # -- Fill rule --------------------------------------------------------------
@@ -221,6 +248,11 @@ defmodule Plushie.Canvas.ShapeTest do
     test "fill_rule :non_zero adds explicit fill_rule to shape" do
       result = Shape.circle(50, 50, 25, fill: "#00ff00", fill_rule: :non_zero)
       assert result.fill_rule == "non_zero"
+    end
+
+    test "fill_rule accepts wire strings" do
+      result = Shape.path([Shape.move_to(0, 0)], fill: "#0088ff", fill_rule: "even_odd")
+      assert result.fill_rule == "even_odd"
     end
 
     test "fill_rule is nil when not set" do
@@ -255,7 +287,7 @@ defmodule Plushie.Canvas.ShapeTest do
 
     test "with dash option" do
       result = Shape.stroke("#000", 1, dash: {[5, 3], 0})
-      assert result.dash == %{segments: [5, 3], offset: 0}
+      assert result.dash == %Dash{segments: [5, 3], offset: 0}
     end
 
     test "with all options combined" do
@@ -265,7 +297,13 @@ defmodule Plushie.Canvas.ShapeTest do
       assert result.width == 3
       assert result.cap == "square"
       assert result.join == "miter"
-      assert result.dash == %{segments: [10, 5], offset: 2}
+      assert result.dash == %Dash{segments: [10, 5], offset: 2}
+    end
+
+    test "accepts dash keyword options" do
+      result = Shape.stroke("#000", 1, dash: [segments: [2, 1], offset: 0])
+
+      assert result.dash == %Dash{segments: [2, 1], offset: 0}
     end
   end
 
@@ -296,6 +334,12 @@ defmodule Plushie.Canvas.ShapeTest do
                w: 24,
                h: 24
              } = result
+    end
+
+    test "rejects canvas-scope options with arity-specific message" do
+      assert_raise ArgumentError, ~r/Pass only source, x, y, width, and height/, fn ->
+        Shape.__build_svg__("icons/arrow.svg", 0, 0, 24, 24, fill: "#000")
+      end
     end
   end
 
@@ -361,6 +405,20 @@ defmodule Plushie.Canvas.ShapeTest do
       result = Shape.text(10, 10, "Default")
       assert result.align_x == nil
       assert result.align_y == nil
+    end
+  end
+
+  describe "__build_interactive__/3" do
+    test "does not use nil tooltip as an a11y label" do
+      result = Shape.__build_interactive__("hotspot", [], focusable: true)
+
+      assert result.a11y == %{role: "group"}
+    end
+
+    test "uses tooltip as default a11y label when present" do
+      result = Shape.__build_interactive__("hotspot", [], focusable: true, tooltip: "Details")
+
+      assert result.a11y == %{role: "group", label: "Details"}
     end
   end
 end

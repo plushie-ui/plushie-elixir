@@ -11,5 +11,11 @@ defmodule Plushie.Canvas.Transform.Scale do
 
   @doc false
   def encode(%{factor: f}) when is_number(f), do: %{type: "scale", factor: f}
-  def encode(%__MODULE__{} = s), do: %{type: "scale", x: s.x || 1, y: s.y || 1}
+
+  def encode(%__MODULE__{} = s) do
+    %{type: "scale", x: scale_or_default(s.x), y: scale_or_default(s.y)}
+  end
+
+  defp scale_or_default(nil), do: 1
+  defp scale_or_default(value), do: value
 end

@@ -108,6 +108,7 @@ defmodule Plushie.Canvas.Shape do
   alias Plushie.Canvas.{
     Circle,
     Clip,
+    Dash,
     Gradient,
     Group,
     Image,
@@ -394,7 +395,7 @@ defmodule Plushie.Canvas.Shape do
 
   @doc "Create a non-uniform scale transform."
   @spec scale(x :: number(), y :: number()) :: Scale.t()
-  def scale(x, y), do: %Scale{x: x, y: y}
+  def scale(x, y) when is_number(x) and is_number(y), do: %Scale{x: x, y: y}
 
   # -- Clip value -------------------------------------------------------------
 
@@ -414,8 +415,12 @@ defmodule Plushie.Canvas.Shape do
           to :: {number(), number()},
           stops :: [{number(), String.t()}]
         ) :: Gradient.t()
-  def linear_gradient({fx, fy}, {tx, ty}, stops) do
-    %Gradient{from: {fx, fy}, to: {tx, ty}, stops: stops}
+  def linear_gradient(from, to, stops) do
+    %Gradient{
+      from: Gradient.validate_point!(from, :from),
+      to: Gradient.validate_point!(to, :to),
+      stops: Gradient.validate_stops!(stops)
+    }
   end
 
   # -- Image / SVG on canvas --------------------------------------------------
@@ -491,7 +496,7 @@ defmodule Plushie.Canvas.Shape do
     if opts != [] do
       raise ArgumentError,
             "canvas svg does not accept options (got #{inspect(opts)}). " <>
-              "SVG shapes do not support fill, stroke, or opacity."
+              "Pass only source, x, y, width, and height."
     end
 
     %Svg{source: source, x: x, y: y, w: w, h: h}
@@ -517,6 +522,8 @@ defmodule Plushie.Canvas.Shape do
       nil -> shape
       :non_zero -> %{shape | fill_rule: "non_zero"}
       :even_odd -> %{shape | fill_rule: "even_odd"}
+      "non_zero" -> %{shape | fill_rule: "non_zero"}
+      "even_odd" -> %{shape | fill_rule: "even_odd"}
     end
   end
 
@@ -544,7 +551,9 @@ defmodule Plushie.Canvas.Shape do
   defp maybe_put_dash(shape, opts) do
     case Keyword.get(opts, :dash) do
       nil -> shape
-      {segments, offset} -> %{shape | dash: %{segments: segments, offset: offset}}
+      %Dash{} = dash -> %{shape | dash: dash}
+      dash_opts when is_list(dash_opts) -> %{shape | dash: Dash.from_opts(dash_opts)}
+      {segments, offset} -> %{shape | dash: %Dash{segments: segments, offset: offset}}
     end
   end
 
@@ -570,8 +579,12 @@ defmodule Plushie.Canvas.Shape do
   # Injects default a11y annotations for interactive elements.
   defp apply_default_a11y(%{a11y: a11y} = el) when not is_nil(a11y), do: el
 
+  defp apply_default_a11y(%{focusable: true, tooltip: tooltip} = el)
+       when is_binary(tooltip) and tooltip != "",
+       do: %{el | a11y: %{role: "group", label: tooltip}}
+
   defp apply_default_a11y(%{focusable: true} = el),
-    do: %{el | a11y: %{role: "group", label: el.tooltip}}
+    do: %{el | a11y: %{role: "group"}}
 
   defp apply_default_a11y(%{on_click: true} = el), do: %{el | a11y: %{role: "button"}}
   defp apply_default_a11y(%{draggable: true} = el), do: %{el | a11y: %{role: "slider"}}

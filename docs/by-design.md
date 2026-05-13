@@ -242,3 +242,19 @@ future work or could be misrouted to a newer caller.
 
 **Revisit when:** A call path uses a reply token in a way that can raise
 for reasons other than the caller exiting.
+
+## Circle radius and rectangle corner radius are different concepts
+
+Canvas circles use the positional `r` field for their geometric radius.
+Canvas rectangles use the optional `radius` field for rounded corners.
+Those names are intentionally not mirrored because a circle has no
+corner-radius option.
+
+**Rules out:** Adding a `radius:` option to `circle/4` to mirror
+`rect/5` rounded-corner options.
+
+**Still in scope:** Renaming the circle positional field through the
+cross-SDK parity workflow if the shared canvas shape vocabulary changes.
+
+**Revisit when:** Canvas gains a new circle-like shape with a separate
+corner or smoothing radius.
