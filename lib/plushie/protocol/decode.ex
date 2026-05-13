@@ -1064,7 +1064,8 @@ defmodule Plushie.Protocol.Decode do
     }
   end
 
-  defp dispatch(%{"type" => "event", "family" => "sort", "id" => _id, "value" => data} = msg) do
+  defp dispatch(%{"type" => "event", "family" => "sort", "id" => _id, "value" => column} = msg)
+       when is_binary(column) do
     {local, scope, window_id, _family} = event_identity!(msg)
 
     %WidgetEvent{
@@ -1072,8 +1073,15 @@ defmodule Plushie.Protocol.Decode do
       id: local,
       scope: scope,
       window_id: window_id,
-      value: %{column: data["column"]}
+      value: column
     }
+  end
+
+  defp dispatch(%{"type" => "event", "family" => "sort", "id" => _id, "value" => value} = msg) do
+    raise Error,
+      reason: {:invalid_event_field, "sort", :value, value, :expected_binary, msg},
+      format: :msgpack,
+      data: <<>>
   end
 
   defp dispatch(%{"type" => "event", "family" => "scrolled", "id" => _id, "value" => data} = msg) do

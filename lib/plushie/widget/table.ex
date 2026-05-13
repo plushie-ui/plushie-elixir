@@ -104,7 +104,7 @@ defmodule Plushie.Widget.Table.Validation do
   @doc false
   def expand_rows(tbl) do
     columns = tbl.columns || []
-    col_keys = Enum.map(columns, fn col -> to_string(col[:key] || col["key"]) end)
+    col_keys = Enum.map(columns, &column_key/1)
 
     row_children =
       tbl.rows
@@ -114,10 +114,11 @@ defmodule Plushie.Widget.Table.Validation do
 
         cells =
           Enum.map(col_keys, fn key ->
-            value = to_string(row[String.to_atom(key)] || row[key] || "")
+            value = row |> Map.get(key, "") |> cell_text()
+            column = to_string(key)
 
             text_node = %{
-              id: "#{row_id}/#{key}/text",
+              id: "#{row_id}/#{column}/text",
               type: "text",
               props: %{content: value},
               children: []
@@ -125,8 +126,8 @@ defmodule Plushie.Widget.Table.Validation do
 
             Plushie.UI.__build_container__(
               Plushie.Table.Cell,
-              key,
-              [column: key],
+              column,
+              [column: column],
               [text_node],
               nil
             )
@@ -143,6 +144,11 @@ defmodule Plushie.Widget.Table.Validation do
 
     %{tbl | rows: nil, children: Enum.reverse(row_children)}
   end
+
+  defp column_key(col), do: col[:key] || col["key"]
+
+  defp cell_text(nil), do: ""
+  defp cell_text(value), do: to_string(value)
 
   defp expanded_row_id(row, index) do
     case row[:id] || row["id"] do

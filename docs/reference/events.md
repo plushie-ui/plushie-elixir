@@ -59,7 +59,7 @@ Carrier indicates where data lands in the `Plushie.Event.WidgetEvent` struct:
 | `:option_hovered`  | value (any) | Pick list option hovered                |
 | `:key_binding`     | value (map) | Key binding activated (empty map)     |
 | `:link_click`      | value (string) | Rich text link clicked (URL)        |
-| `:sort`            | value (map) | Table column sort requested (`column`)     |
+| `:sort`            | value (string) | Table column sort requested (column key) |
 | `:scrolled`        | value (map) | Scrollable viewport offset changed (`absolute_x`, `absolute_y`, `relative_x`, `relative_y`, `bounds` as `{width, height}`, `content_bounds` as `{width, height}`) |
 | `:pane_focus_cycle` | value (map) | Pane focus cycle requested (`pane`)       |
 | `:transition_complete` | value (map) | Renderer-side transition completed (`tag`, `prop`) |

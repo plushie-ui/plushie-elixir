@@ -2121,7 +2121,7 @@ defmodule Plushie.UI do
   Data table widget with children-based rows.
 
   The ID is optional. Pass it as the first argument when you need
-  to match events (sort, row_click) or target the table with commands.
+  to match sort events or target the table with commands.
 
   ## Rich composition
 

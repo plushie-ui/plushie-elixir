@@ -155,16 +155,15 @@ streaming alternative for large dynamic images is planned.
 `Plushie.Widget.Table`
 
 **table** displays structured data in rows and columns with sortable
-headers, row selection highlighting, and optional striped backgrounds.
+headers.
 Rows are real tree children, so adding, removing, or reordering rows
 produces minimal wire patches (LIS-based diffing) instead of
 re-sending the entire dataset.
 
-The table ID is optional. Pass one when you need to match sort or
-row_click events:
+The table ID is optional. Pass one when you need to match sort events:
 
 ```elixir
-table "users", columns: cols, selected: Selection.to_list(sel) do
+table "users", columns: cols do
   for user <- model.users do
     table_row user.id do
       cell "name", text(user.name)
@@ -239,27 +238,6 @@ def update(model, %WidgetEvent{type: {:table, :sort}, id: "users", value: col}) 
 end
 ```
 
-### Selection
-
-Selection is app-managed. Pass selected row IDs via the `selected:`
-prop; the renderer highlights those rows. Handle `:row_click` events
-to update selection state using `Plushie.Selection`:
-
-```elixir
-def update(model, %WidgetEvent{type: {:table, :row_click}, id: row_id}) do
-  %{model | selection: Selection.toggle(model.selection, row_id)}
-end
-
-def view(model) do
-  table "users",
-    columns: cols,
-    selected: Selection.to_list(model.selection),
-    striped: true do
-    ...
-  end
-end
-```
-
 ### Props
 
 | Prop | Type | Default | Description |
@@ -267,8 +245,6 @@ end
 | `columns` | `[map]` | | Column definitions (see above) |
 | `rows` | `[map]` | | Data shorthand: text-only rows |
 | `header` | boolean | `true` | Show header row |
-| `selected` | `[string]` | | Row IDs to highlight |
-| `striped` | boolean | `false` | Alternate row backgrounds |
 | `separator` | float | `1.0` | Divider thickness (0.0 to hide) |
 | `separator_color` | Color | | Divider colour |
 | `sort_by` | string | | Currently sorted column key |

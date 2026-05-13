@@ -54,7 +54,7 @@ defmodule Plushie.Event.BuiltinSpecs do
     option_hovered: %{carrier: :value, type: :any},
     key_binding: %{carrier: :value, type: :map},
     link_click: %{carrier: :value, type: :string},
-    sort: %{carrier: :value, fields: [column: :string]},
+    sort: %{carrier: :value, type: :string},
     scrolled: %{
       carrier: :value,
       fields: [

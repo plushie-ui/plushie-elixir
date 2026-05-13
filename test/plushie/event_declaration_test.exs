@@ -464,9 +464,8 @@ defmodule Plushie.EventDeclarationTest do
       assert %{carrier: :value, type: :map} = BuiltinSpecs.spec(:key_binding)
     end
 
-    test "sort spec has column field" do
-      assert %{carrier: :value, fields: fields} = BuiltinSpecs.spec(:sort)
-      assert Keyword.fetch!(fields, :column) == :string
+    test "sort spec carries the column key string" do
+      assert %{carrier: :value, type: :string} = BuiltinSpecs.spec(:sort)
     end
 
     test "scrolled spec matches decoded tuple fields" do

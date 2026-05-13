@@ -125,10 +125,10 @@ defmodule Plushie.Docs.EventsTest do
   end
 
   test "events_widget_sort_match_test" do
-    event = %WidgetEvent{type: :sort, id: "users", scope: [], value: %{column: "name"}}
+    event = %WidgetEvent{type: :sort, id: "users", scope: [], value: "name"}
 
     assert match?(%WidgetEvent{type: :sort, id: "users"}, event)
-    assert event.value.column == "name"
+    assert event.value == "name"
   end
 
   # -- Pointer events (mouse area + canvas unified) ----------------------------

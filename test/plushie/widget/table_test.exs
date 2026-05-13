@@ -350,6 +350,22 @@ defmodule Plushie.Widget.TableTest do
       assert row.type == "table_row"
     end
 
+    test "rows: expansion preserves false cell values" do
+      node =
+        Table.new("tbl1",
+          columns: [%{key: :active, label: "Active"}, %{key: :name, label: "Name"}],
+          rows: [%{active: false, name: nil}]
+        )
+        |> Table.build()
+
+      [active_cell, name_cell] = node.children |> hd() |> Map.fetch!(:children)
+      [active_text] = active_cell.children
+      [name_text] = name_cell.children
+
+      assert active_text.props.content == "false"
+      assert name_text.props.content == ""
+    end
+
     test "children without rows: is allowed" do
       node =
         Table.new("tbl1")

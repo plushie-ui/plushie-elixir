@@ -316,6 +316,40 @@ defmodule Plushie.ProtocolTest do
     end
   end
 
+  describe "decode_message/1 -- sort events" do
+    test "decodes sort value as the column key string" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "sort",
+          id: "users",
+          value: "name",
+          window_id: "main"
+        })
+
+      assert Protocol.decode_message(json, :json) == %WidgetEvent{
+               type: :sort,
+               id: "users",
+               value: "name",
+               scope: ["main"],
+               window_id: "main"
+             }
+    end
+
+    test "rejects malformed sort values" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "sort",
+          id: "users",
+          value: %{column: "name"}
+        })
+
+      assert {:error, {:invalid_event_field, "sort", :value, _, :expected_binary, _}} =
+               Protocol.decode_message(json, :json)
+    end
+  end
+
   describe "decode_message/1 -- key_binding events" do
     test "decodes dynamic key binding data as a map" do
       json =

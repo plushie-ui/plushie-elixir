@@ -151,7 +151,7 @@ defmodule Plushie.Selection do
     MapSet.member?(selected, id)
   end
 
-  @doc "Returns the selected IDs as a list (for passing to table `selected:` prop)."
+  @doc "Returns the selected IDs as a list."
   @spec to_list(sel :: t()) :: [term()]
   def to_list(%__MODULE__{selected: selected}) do
     MapSet.to_list(selected)
