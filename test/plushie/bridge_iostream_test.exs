@@ -52,6 +52,25 @@ defmodule Plushie.BridgeIostreamTest do
     decoded
   end
 
+  defp wait_for_file(path, timeout_ms \\ 1_000) do
+    deadline = System.monotonic_time(:millisecond) + timeout_ms
+    do_wait_for_file(path, deadline)
+  end
+
+  defp do_wait_for_file(path, deadline) do
+    cond do
+      File.exists?(path) ->
+        :ok
+
+      System.monotonic_time(:millisecond) >= deadline ->
+        flunk("expected #{path} to exist")
+
+      true ->
+        Process.sleep(10)
+        do_wait_for_file(path, deadline)
+    end
+  end
+
   defp screenshot_response(id, name) do
     %{
       "type" => "screenshot_response",
@@ -443,6 +462,7 @@ defmodule Plushie.BridgeIostreamTest do
 
       tag = System.unique_integer([:positive])
       state_file = Path.join(System.tmp_dir!(), "plushie_resync_#{tag}")
+      second_file = Path.join(System.tmp_dir!(), "plushie_resync_#{tag}.ready")
       script = Path.join(System.tmp_dir!(), "plushie_resync_#{tag}.sh")
 
       # First invocation: exit with error (triggers restart).
@@ -453,6 +473,7 @@ defmodule Plushie.BridgeIostreamTest do
         touch "#{state_file}"
         exit 1
       fi
+      touch "#{second_file}"
       sleep 60
       """)
 
@@ -480,6 +501,7 @@ defmodule Plushie.BridgeIostreamTest do
           # The restart fires after restart_delay (10ms). The script stays
           # alive on second invocation.
           assert_receive :renderer_restarted, 1_000
+          wait_for_file(second_file)
 
           # Complete the resync; this flushes queued messages.
           Plushie.Bridge.send_resync_complete(bridge)
@@ -493,6 +515,7 @@ defmodule Plushie.BridgeIostreamTest do
       assert log =~ "queued widget_op while renderer is unavailable"
 
       File.rm(state_file)
+      File.rm(second_file)
       File.rm(script)
     end
   end
