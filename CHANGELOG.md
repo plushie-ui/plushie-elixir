@@ -403,8 +403,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - **Event coalescing** - `max_rate` on subscriptions, `event_rate` on
   widgets, host-side pending coalesce buffer for mouse moves and sensor
   resizes.
-- **Three transport modes** - `:spawn` (default), `:stdio` (for
-  `plushie --exec`), and `{:iostream, pid}` (for SSH/TCP/custom).
+- **Three transport modes** - `:spawn` (default), `:stdio` for
+  renderer-parent stdio, and `{:iostream, pid}` (for SSH/TCP/custom).
 - **Canvas interactive shapes** - renderer-side hit testing with click,
   hover, drag, focus events via the `interactive` field on shapes.
 - **`docs/dsl-internals.md`** - maintainer guide for the DSL

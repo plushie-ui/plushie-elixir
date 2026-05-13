@@ -57,10 +57,10 @@ Asymmetric. Renderer-to-host = closed and typed; host structurally
 protected today (typed event decoding, no opaque-blob path, effect/
 query response correlation by wire ID, no host-side eval, atoms only
 from closed enumeration). Host-to-renderer = broad by design (file
-paths, fonts, images, screenshots, effects, `--exec`); bounding it
-is the capability-manifest roadmap in plushie-rust. Wire = byte-stream
-agnostic; confidentiality + integrity delegated to outer transport.
-Same-access (user attacking themselves) out of scope.
+paths, fonts, images, screenshots, effects, structured renderer exec
+args); bounding it is the capability-manifest roadmap in plushie-rust.
+Wire = byte-stream agnostic; confidentiality + integrity delegated to
+outer transport. Same-access (user attacking themselves) out of scope.
 
 ### Resilience
 
@@ -313,7 +313,7 @@ mix plushie.build                 # build renderer (auto-detects native widgets)
 mix plushie.build --wasm          # build WASM renderer via wasm-pack
 mix plushie.download              # download precompiled binary
 mix plushie.download --wasm       # download WASM renderer
-mix plushie.connect MyApp         # connect to renderer (for plushie --listen --exec)
+mix plushie.connect MyApp         # connect to a renderer-parent socket
 mix plushie.script                # run .plushie automation scripts
 mix plushie.replay FILE           # replay a script with real windows
 ```
