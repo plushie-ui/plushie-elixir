@@ -1384,9 +1384,7 @@ defmodule Plushie.Runtime do
     # Include token proof if one was provided for --listen socket auth.
     settings =
       if state.token do
-        settings
-        |> Map.drop([:token, "token"])
-        |> Map.put(:token_sha256, token_sha256(state.token))
+        Map.put(settings, :token_sha256, token_sha256(state.token))
       else
         settings
       end

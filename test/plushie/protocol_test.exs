@@ -1227,6 +1227,16 @@ defmodule Plushie.ProtocolTest do
       decoded = Jason.decode!(encoded)
       refute Map.has_key?(decoded["settings"], "default_font")
     end
+
+    test "rejects plaintext token fields from settings" do
+      assert_raise ArgumentError, ~r/use token_sha256/, fn ->
+        Protocol.encode_settings(%{"token" => "secret"}, :json)
+      end
+
+      assert_raise ArgumentError, ~r/use token_sha256/, fn ->
+        Protocol.encode_settings(%{token: "secret"}, :json)
+      end
+    end
   end
 
   describe "msgpack encode/decode roundtrips" do

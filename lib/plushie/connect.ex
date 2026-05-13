@@ -4,7 +4,7 @@ defmodule Plushie.Connect do
 
   This is the release-safe counterpart to `mix plushie.connect`. It is
   intended for renderer-parent launch, where the renderer starts the
-  host process with `--listen --exec` and provides `PLUSHIE_SOCKET` and
+  host process with `--listen` and structured exec args, and provides `PLUSHIE_SOCKET` and
   `PLUSHIE_TOKEN` in the environment.
   """
 

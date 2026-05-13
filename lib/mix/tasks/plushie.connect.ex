@@ -14,12 +14,14 @@ defmodule Mix.Tasks.Plushie.Connect do
   ## How it connects
 
   The renderer (`plushie --listen`) creates a socket and either spawns
-  this task (via `--exec`) or prints connection info for manual use.
+  this task through renderer-parent exec or prints connection info for manual use.
 
-  **Launched by `--listen --exec`**: The renderer sets `PLUSHIE_SOCKET`
+  **Launched by renderer-parent exec**: The renderer sets `PLUSHIE_SOCKET`
   and `PLUSHIE_TOKEN` in the environment and writes a JSON negotiation
   line to stdin. The task reads the token from the environment first,
   falling back to stdin if env vars weren't forwarded (e.g., over SSH).
+  The token is used locally to compute `settings.token_sha256`; the
+  plaintext token is not sent in the Settings message.
 
   **Manual connect**: The user copies the socket path and token from
   the renderer's output and provides them as CLI arguments.
@@ -41,7 +43,7 @@ defmodule Mix.Tasks.Plushie.Connect do
 
   ## Options
 
-    * `--token TOKEN`: shared token for authentication
+    * `--token TOKEN`: shared token used to compute `settings.token_sha256`
     * `--json`: use JSON wire format instead of MessagePack
     * `--daemon`: keep running after all windows close
   """

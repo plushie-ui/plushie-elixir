@@ -363,7 +363,7 @@ identical either way.
 
 | Flag | Description |
 |---|---|
-| `--token TOKEN` | Shared authentication token |
+| `--token TOKEN` | Shared authentication token used to compute `settings.token_sha256` |
 | `--json` | Use JSON wire format instead of MessagePack |
 | `--daemon` | Keep running after all windows close |
 
@@ -374,17 +374,21 @@ environment variable. The authentication token is resolved in priority
 order: `--token` flag, `PLUSHIE_TOKEN` environment variable, or a JSON
 negotiation line on stdin (1-second timeout).
 
+When a token is available, the SDK sends `settings.token_sha256` in the
+Settings message. It does not send the plaintext token to the renderer.
+
 ### The remote rendering flow
 
-1. Start the renderer with `plushie --listen --exec "..."`:
+1. Start the renderer with `plushie --listen --exec-bin ...`:
    ```bash
-   plushie --listen --exec "mix plushie.connect PlushiePad"
+   plushie --listen --exec-bin mix --exec-arg plushie.connect --exec-arg PlushiePad
    ```
    The renderer starts, binds a socket, and spawns the command. The
    socket path is passed to the command via `PLUSHIE_SOCKET`.
 
-2. `mix plushie.connect` reads `PLUSHIE_SOCKET`, connects, and starts
-   the Plushie supervision tree with `transport: {:iostream, adapter}`.
+2. `mix plushie.connect` reads `PLUSHIE_SOCKET`, resolves `PLUSHIE_TOKEN`
+   or stdin negotiation, connects, and starts the Plushie supervision tree
+   with `transport: {:iostream, adapter}`.
 
 3. From this point, the protocol is identical to local mode. The only
    difference is latency, since messages travel over a socket instead of

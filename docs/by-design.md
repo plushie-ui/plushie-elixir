@@ -416,7 +416,7 @@ rather than a structural parser.
 The `:stdio` transport attaches the bridge to the BEAM process's existing
 stdin and stdout. It does not spawn the renderer, so there is no child
 process environment for `Plushie.RendererEnv` to filter. Environment
-bounding for `plushie --exec` belongs to the renderer process that chose
+bounding for renderer-parent exec belongs to the renderer process that chose
 to start the host.
 
 **Rules out:** Applying the renderer environment whitelist to `:stdio`

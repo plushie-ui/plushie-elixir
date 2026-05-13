@@ -26,12 +26,20 @@ defmodule Plushie.Protocol.Encode do
   """
   @spec encode_settings(settings :: map(), format :: Plushie.Protocol.format()) :: iodata()
   def encode_settings(settings, format \\ :msgpack) when is_map(settings) do
+    reject_plaintext_token!(settings)
+
     settings =
       settings
       |> Map.put_new(:protocol_version, @protocol_version)
       |> normalize_default_font()
 
     serialize(%{type: "settings", settings: settings}, format)
+  end
+
+  defp reject_plaintext_token!(settings) do
+    if Map.has_key?(settings, :token) or Map.has_key?(settings, "token") do
+      raise ArgumentError, "settings token is not supported; use token_sha256"
+    end
   end
 
   # The renderer reads `default_font` strictly as an object with at

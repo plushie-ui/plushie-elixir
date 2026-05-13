@@ -353,7 +353,13 @@ mix plushie_pad.server
 Connect from another terminal using the Plushie renderer over SSH:
 
 ```bash
-plushie --exec "ssh -p 2222 localhost -s plushie"
+plushie \
+  --exec-bin ssh \
+  --exec-arg -p \
+  --exec-arg 2222 \
+  --exec-arg localhost \
+  --exec-arg -s \
+  --exec-arg plushie
 ```
 
 Open a third terminal and connect again. Both windows show the same

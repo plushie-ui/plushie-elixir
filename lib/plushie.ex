@@ -35,7 +35,7 @@ defmodule Plushie do
                       via `config :plushie, code_reloader: true`.
   - `:transport`: `:spawn` (default, spawns the renderer as a child
                       process), `:stdio` (reads/writes the BEAM's own
-                      stdin/stdout, for use with `plushie --exec`), or
+                      stdin/stdout, for renderer-parent stdio use), or
                       `{:iostream, pid}` (custom transport via iostream
                       adapter, see `Plushie.Bridge` for the protocol)
   - `:format`: wire format, `:msgpack` (default) or `:json`

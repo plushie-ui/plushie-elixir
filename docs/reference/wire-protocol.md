@@ -71,7 +71,8 @@ The SDK and renderer follow a fixed startup sequence:
 
 1. **SDK sends Settings** - `Plushie.Protocol.encode_settings/2`
    serialises the app's `settings/0` callback result plus the protocol
-   version. The Bridge writes this as the first message.
+   version. Socket-auth tokens are represented as `settings.token_sha256`,
+   not as plaintext `token`. The Bridge writes this as the first message.
 2. **Renderer auto-detects format** from the first byte and reads the
    Settings.
 3. **Renderer sends Hello** - reports its version, mode (`mock`,

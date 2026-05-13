@@ -7,7 +7,7 @@ defmodule Plushie.Transport.Port do
   - `:spawn` (default) spawns the renderer binary as a child process.
     Supports restart on crash (the bridge re-opens the port).
   - `:stdio` reads/writes the BEAM's own stdin/stdout. Used when the
-    renderer spawns the Elixir process (e.g. `plushie --exec`).
+    renderer spawns the Elixir process via structured exec args.
   """
 
   @behaviour Plushie.Transport

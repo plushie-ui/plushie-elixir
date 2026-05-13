@@ -216,11 +216,11 @@ renderer process inherits `RUST_LOG` from the environment.
 
 ### :stdio
 
-The renderer spawns the Elixir app (via `plushie --exec "mix ..."`).
+The renderer spawns the Elixir app with structured exec args.
 Communication happens over the BEAM's own stdin/stdout. The Elixir app
 reads events from stdin and writes snapshots/patches to stdout.
 
-This mode is used by the renderer's `--exec` flag, which starts the
+This mode is used by renderer-parent startup, which starts the
 renderer first, then launches the Elixir app as a subprocess. The
 `:binary` option is ignored since no subprocess is spawned from the
 Elixir side.
