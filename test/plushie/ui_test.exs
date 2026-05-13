@@ -1115,6 +1115,16 @@ defmodule Plushie.UITest do
   end
 
   describe "tooltip id, tip do...end" do
+    test "accepts a dynamic tip expression without children" do
+      tip = "Help text"
+      node = tooltip("tip1", tip)
+
+      assert node.id == "tip1"
+      assert node.type == "tooltip"
+      assert node.props[:tip] == "Help text"
+      assert node.children == []
+    end
+
     test "collects children with tip" do
       node =
         tooltip "tip1", "Help text" do

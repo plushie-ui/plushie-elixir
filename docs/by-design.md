@@ -356,3 +356,137 @@ arity when the optional argument is the subject being documented.
 
 **Revisit when:** A short example hides a required argument or users need
 the omitted option to understand the feature.
+
+## Runtime command builders validate runtime keyword data
+
+Generated native-widget command functions are ordinary runtime
+functions. Optional command fields arrive as keyword data, and unknown
+keys are rejected where the command value is built.
+
+**Rules out:** Adding a separate macro-only command invocation form
+solely to reject unknown keyword keys at compile time. The DSL
+discipline reserves new macro forms for recurring bug classes where the
+generated code stays clearer than the hand-written runtime call.
+
+**Still in scope:** Clear `ArgumentError` messages from generated
+command functions. Compile-time validation of the command declarations
+themselves, including field types and event shape.
+
+**Revisit when:** Unknown command option keys become a recurring user
+bug that runtime validation does not diagnose clearly.
+
+## Internal generated helpers may remain public and undocumented
+
+Some helpers generated for protocols or macro expansion must be public
+so generated implementations in protocol modules can call them, but they
+are still internal when marked `@doc false`.
+
+**Rules out:** Treating every public `@doc false` generated helper as a
+user-facing API that needs standalone documentation before the 1.0
+public-surface sweep.
+
+**Still in scope:** Adding docs or narrowing visibility when a helper is
+already being changed for a correctness reason. Fixing inaccurate specs
+on generated helpers.
+
+**Revisit when:** The 1.0 API sweep decides which generated helper
+modules are public API.
+
+## Field types include animation descriptors because setters accept them
+
+Generated field types include renderer-side animation descriptors for
+every field because every generated setter accepts transition, spring,
+and sequence descriptors and validates their target values against the
+declared field type.
+
+**Rules out:** Removing animation descriptors from field specs solely
+because a given renderer widget currently reads only some props through
+animated accessors.
+
+**Still in scope:** Tightening renderer-side support or diagnostics for
+props that cannot be interpolated. Adding SDK-side validation if
+plushie-rust exposes a stable animatable-prop manifest.
+
+**Revisit when:** Animatable prop metadata becomes part of the renderer
+contract.
+
+## Setter specs describe the generated function, not each clause
+
+Generated setters may have a nil-specific clause followed by animation
+and value clauses. The `@spec` describes the function's accepted public
+input shape across those clauses; it is not a per-clause guard
+description.
+
+**Rules out:** Removing `nil` from a setter spec only because the
+non-nil value clause has a guard that excludes nil while another clause
+handles nil.
+
+**Still in scope:** Fixing setter specs when the generated function has
+no nil clause and nil is not a valid normal input.
+
+**Revisit when:** Generated setters move to a shape where each public
+input category has a separate documented function.
+
+## Element nil IDs are auto-ID sentinels
+
+Canvas and table elements may carry `id: nil` until their parent
+container assigns a positional runtime ID. This is how programmatic
+shape helpers and canvas-scope auto IDs compose.
+
+**Rules out:** Applying widget ID validation to nil element IDs. Widgets
+require explicit non-empty IDs; elements use nil as an internal
+auto-assignment marker.
+
+**Still in scope:** Rejecting an explicit empty string ID. Ensuring
+container conversion assigns IDs before element nodes reach the renderer.
+
+**Revisit when:** Canvas and table element construction stops using
+parent-assigned IDs.
+
+## Quoted `__MODULE__` in generated code resolves at the use site
+
+Quoted generated functions intentionally refer to `__MODULE__` inside
+the quoted body. When that body is injected into a widget or element
+module, error messages name the generated module, not the codegen helper
+module that produced the quote.
+
+**Rules out:** Replacing quoted `__MODULE__` with an explicit module
+argument solely to avoid a resolution problem that does not occur.
+
+**Still in scope:** Passing an explicit module when generated code is
+evaluated outside the target module. Tests that confirm user-facing
+errors name the widget or element being called.
+
+**Revisit when:** A generated function is moved to a context where
+quoted `__MODULE__` no longer resolves to the user's module.
+
+## Alias expansion leaves validation to the type resolver
+
+Event and command declaration macros expand alias syntax enough to
+normalize valid module aliases. Unknown or invalid types are then
+reported by the shared type validation path, which can name the event
+or field context.
+
+**Rules out:** Adding a separate unresolved-alias validation layer
+around `Macro.expand/2` when the same bug is caught by the type
+resolver.
+
+**Still in scope:** Improving the type validation message when an
+unknown expanded module produces a vague error.
+
+**Revisit when:** Alias expansion starts raising before the type
+validation path can produce a user-facing `CompileError`.
+
+## Case expressions have no `else` branch
+
+Container and canvas scope handling rewrites supported Elixir control
+flow forms. `case` and `cond` bodies are represented by `do:` clauses;
+`else:` handling belongs to `with`, `if`, `unless`, and comprehensions.
+
+**Rules out:** Adding unreachable `else:` handling to `case` scope
+rewrites.
+
+**Still in scope:** Fixing scope rewriting for real AST forms produced
+by supported Elixir control flow.
+
+**Revisit when:** Elixir adds `else:` support to `case`.

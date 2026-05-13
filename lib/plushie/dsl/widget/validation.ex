@@ -17,6 +17,7 @@ defmodule Plushie.DSL.Widget.Validation do
   defdelegate validate_reserved_names!(env, props), to: SharedValidation
   defdelegate warn_duplicate_props(env, props), to: SharedValidation
   defdelegate validate_positional!(env, positional, props), to: SharedValidation
+  defdelegate validate_positional!(env, positional, props, line), to: SharedValidation
   defdelegate valid_type?(type), to: SharedValidation
   defdelegate type_module?(module), to: SharedValidation
 
@@ -27,7 +28,7 @@ defmodule Plushie.DSL.Widget.Validation do
     unless widget_type do
       raise CompileError,
         file: env.file,
-        line: 0,
+        line: env.line,
         description: "missing `widget :type_name` declaration in #{inspect(env.module)}"
     end
 
@@ -35,14 +36,14 @@ defmodule Plushie.DSL.Widget.Validation do
       unless Module.get_attribute(env.module, :_rust_crate) do
         raise CompileError,
           file: env.file,
-          line: 0,
+          line: env.line,
           description: "missing `rust_crate \"path\"` in #{inspect(env.module)}"
       end
 
       unless Module.get_attribute(env.module, :_rust_constructor) do
         raise CompileError,
           file: env.file,
-          line: 0,
+          line: env.line,
           description: "missing `rust_constructor \"expr\"` in #{inspect(env.module)}"
       end
     end
@@ -76,7 +77,7 @@ defmodule Plushie.DSL.Widget.Validation do
     unless has_view_2 or has_view_3 do
       raise CompileError,
         file: env.file,
-        line: 0,
+        line: env.line,
         description: "#{inspect(env.module)} must define view/2 or view/3."
     end
 
@@ -86,7 +87,7 @@ defmodule Plushie.DSL.Widget.Validation do
     if has_view_3 and not has_view_2 and state_fields == [] and not has_handle_event do
       raise CompileError,
         file: env.file,
-        line: 0,
+        line: env.line,
         description:
           "#{inspect(env.module)} defines view/3 (stateful) but declares no state fields. " <>
             "Use `state field_name: default` to declare state, or define view/2 for stateless widgets."

@@ -263,6 +263,41 @@ defmodule Plushie.EventDeclarationTest do
       assert [:changed] = DoBlockEventWidget.__events__()
       assert [:adjusted] = OptionalFieldWidget.__events__()
     end
+
+    test "unknown declarations in event blocks raise CompileError" do
+      assert_raise CompileError,
+                   ~r/expected `value type`, `fields \[\.\.\.\]`, or `fields do \.\.\. end`/,
+                   fn ->
+                     Code.compile_string("""
+                     defmodule BadEventBlockWidget do
+                       use Plushie.Widget
+
+                       widget :bad_event_block
+
+                       event :changed do
+                         floater 42
+                       end
+                     end
+                     """)
+                   end
+    end
+
+    test "event blocks reject multiple payload declarations" do
+      assert_raise CompileError, ~r/event block can declare only one payload/, fn ->
+        Code.compile_string("""
+        defmodule DuplicateEventPayloadWidget do
+          use Plushie.Widget
+
+          widget :duplicate_event_payload
+
+          event :changed do
+            value :string
+            fields x: :float
+          end
+        end
+        """)
+      end
+    end
   end
 
   describe "do-block emit routing" do

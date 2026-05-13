@@ -192,6 +192,14 @@ defmodule Plushie.CanvasElementTest do
       assert node.props.fill == "red"
       refute Map.has_key?(node.props, :id)
     end
+
+    test "explicit empty id raises when converting to a node" do
+      rect = %TestRect{id: "", x: 10.0, y: 20.0, w: 100.0, h: 50.0}
+
+      assert_raise ArgumentError, ~r/requires a non-empty id/, fn ->
+        Plushie.Tree.Node.to_node(rect)
+      end
+    end
   end
 
   describe "setter functions" do

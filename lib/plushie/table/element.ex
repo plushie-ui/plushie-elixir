@@ -40,6 +40,7 @@ defmodule Plushie.Table.Element do
       Module.put_attribute(__MODULE__, :_element_type_name, nil)
       Module.put_attribute(__MODULE__, :_element_container, false)
       Module.put_attribute(__MODULE__, :_element_positional, nil)
+      Module.put_attribute(__MODULE__, :_element_positional_line, nil)
       Module.put_attribute(__MODULE__, :_element_wire_type, nil)
 
       import Plushie.DSL.Element.Macro,
@@ -55,12 +56,13 @@ defmodule Plushie.Table.Element do
     wire_type = Module.get_attribute(env.module, :_element_wire_type)
     props = Module.get_attribute(env.module, :_element_props) |> Enum.reverse()
     positional = Module.get_attribute(env.module, :_element_positional) || []
+    positional_line = Module.get_attribute(env.module, :_element_positional_line)
 
     validate_declarations!(env, element_type)
     Validation.validate_prop_types!(env, props)
     Validation.validate_reserved_names!(env, props)
     Validation.warn_duplicate_props(env, props)
-    Validation.validate_positional!(env, positional, props)
+    Validation.validate_positional!(env, positional, props, positional_line)
 
     Codegen.generate_element(env.module, element_type, container, props, positional,
       wire_type: wire_type
@@ -71,7 +73,7 @@ defmodule Plushie.Table.Element do
     unless element_type do
       raise CompileError,
         file: env.file,
-        line: 0,
+        line: env.line,
         description: "missing `element :type_name` declaration in #{inspect(env.module)}"
     end
   end

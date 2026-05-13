@@ -169,6 +169,7 @@ defmodule Plushie.Widget do
         Module.put_attribute(__MODULE__, :_widget_type_name, nil)
         Module.put_attribute(__MODULE__, :_widget_container, false)
         Module.put_attribute(__MODULE__, :_widget_positional, nil)
+        Module.put_attribute(__MODULE__, :_widget_positional_line, nil)
       end
 
     widget_attrs =
@@ -250,7 +251,8 @@ defmodule Plushie.Widget do
     Validation.validate_reserved_names!(env, props)
 
     positional = Module.get_attribute(env.module, :_widget_positional) || []
-    Validation.validate_positional!(env, positional, props)
+    positional_line = Module.get_attribute(env.module, :_widget_positional_line)
+    Validation.validate_positional!(env, positional, props, positional_line)
 
     rust_crate_val = Module.get_attribute(env.module, :_rust_crate)
     rust_constructor_val = Module.get_attribute(env.module, :_rust_constructor)

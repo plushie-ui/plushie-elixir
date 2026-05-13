@@ -153,6 +153,7 @@ defmodule Plushie.DSL.Element.Codegen do
       [{:id, id_var} | Enum.map(positional, fn name -> {name, Macro.var(name, ctx)} end)]
 
     id_struct_kw = Enum.map(id_struct_pairs, fn {k, v} -> {k, v} end)
+    positional_types = positional_spec_types(positional, props)
 
     id_full_guard =
       case pos_guard do
@@ -163,6 +164,11 @@ defmodule Plushie.DSL.Element.Codegen do
     id_fn =
       quote do
         @doc "Creates a new element with the given ID, positional args, and keyword options."
+        @spec new(
+                id :: String.t(),
+                unquote_splicing(positional_types),
+                opts :: [option()]
+              ) :: t()
         def new(unquote(id_var), unquote_splicing(positional_vars), unquote(opts_var))
             when unquote(id_full_guard) do
           struct!(__MODULE__, unquote(id_struct_kw))
@@ -183,6 +189,7 @@ defmodule Plushie.DSL.Element.Codegen do
       if pos_guard do
         quote do
           @doc "Creates a new element without an explicit ID (auto-assigned by parent container)."
+          @spec new(unquote_splicing(positional_types), opts :: [option()]) :: t()
           def new(unquote_splicing(positional_vars), unquote(opts_var))
               when unquote(pos_guard) do
             struct!(__MODULE__, unquote(auto_struct_kw))
@@ -194,8 +201,7 @@ defmodule Plushie.DSL.Element.Codegen do
           end
         end
       else
-        quote do
-        end
+        nil
       end
 
     {id_fn, auto_id_fn}
@@ -229,6 +235,11 @@ defmodule Plushie.DSL.Element.Codegen do
           # Canvas elements keep their explicit ID in props for the renderer
           # to use as canvas element identifier (event routing, focus tracking).
           var!(props) = Plushie.Widget.Build.put_if(var!(props), var!(element).id, :id)
+
+          if var!(element).id == "" do
+            raise ArgumentError,
+                  "element #{inspect(unquote(type_string))} requires a non-empty id when an id is explicit"
+          end
 
           %{
             id: var!(element).id,
@@ -360,4 +371,13 @@ defmodule Plushie.DSL.Element.Codegen do
   end
 
   defp ensure_child_id(struct, _parent_prefix, _idx), do: struct
+
+  defp positional_spec_types(positional, props) do
+    Enum.map(positional, fn name ->
+      {_name, type, _opts} =
+        Enum.find(props, fn {field_name, _type, _opts} -> field_name == name end)
+
+      quote(do: unquote(Macro.var(name, nil)) :: unquote(Fields.castable_type_for(type)))
+    end)
+  end
 end

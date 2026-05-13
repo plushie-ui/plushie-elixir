@@ -76,8 +76,11 @@ defmodule Plushie.DSL.Element.Macro do
   default `new(id, opts \\\\ [])`.
   """
   defmacro positional(names) when is_list(names) do
+    line = __CALLER__.line
+
     quote do
       @_element_positional unquote(names)
+      @_element_positional_line unquote(line)
     end
   end
 
@@ -96,8 +99,11 @@ defmodule Plushie.DSL.Element.Macro do
   supported options.
   """
   defmacro field(name, type, opts \\ []) do
+    line = __CALLER__.line
+
     quote do
-      @_element_props {unquote(name), unquote(type), unquote(opts)}
+      @_element_props {unquote(name), unquote(type),
+                       Keyword.put(unquote(opts), :__line__, unquote(line))}
     end
   end
 

@@ -249,6 +249,7 @@ defmodule Plushie.DSL.Fields do
     args_with_default = positional_vars ++ [{:\\, [], [opts_var, []]}]
 
     struct_kw = Enum.map(struct_pairs, fn {k, v} -> {k, v} end)
+    positional_types = positional_spec_types(positional, props)
 
     body =
       quote do
@@ -282,6 +283,11 @@ defmodule Plushie.DSL.Fields do
 
     quote do
       @doc unquote(doc)
+      @spec new(
+              id :: String.t(),
+              unquote_splicing(positional_types),
+              opts :: [option()]
+            ) :: t()
       def new(unquote(id_var), unquote_splicing(args_with_default))
           when unquote(full_guard) do
         unquote(body)
@@ -432,23 +438,26 @@ defmodule Plushie.DSL.Fields do
 
   # Generates the value-accepting clause of a setter (the non-nil branch).
   @doc false
-  def generate_setter_clause(name, doc, value_type, _wants_nil, cast_fn, _guard, _encoder)
+  def generate_setter_clause(name, doc, value_type, wants_nil, cast_fn, _guard, _encoder)
       when cast_fn != nil do
     escaped_cast = Macro.escape(cast_fn)
+    spec_type = maybe_nil_type(value_type, wants_nil)
 
     quote do
       @doc unquote(doc)
-      @spec unquote(name)(widget :: t(), value :: unquote(value_type) | nil) :: t()
+      @spec unquote(name)(widget :: t(), value :: unquote(spec_type)) :: t()
       def unquote(name)(%__MODULE__{} = widget, value) do
         %{widget | unquote(name) => unquote(escaped_cast).(value)}
       end
     end
   end
 
-  def generate_setter_clause(name, doc, value_type, _wants_nil, _cast_fn, nil = _guard, encoder) do
+  def generate_setter_clause(name, doc, value_type, wants_nil, _cast_fn, nil = _guard, encoder) do
+    spec_type = maybe_nil_type(value_type, wants_nil)
+
     quote do
       @doc unquote(doc)
-      @spec unquote(name)(widget :: t(), value :: unquote(value_type) | nil) :: t()
+      @spec unquote(name)(widget :: t(), value :: unquote(spec_type)) :: t()
       def unquote(name)(%__MODULE__{} = widget, value) do
         %{widget | unquote(name) => unquote(encoder).(value)}
       end
@@ -456,12 +465,7 @@ defmodule Plushie.DSL.Fields do
   end
 
   def generate_setter_clause(name, doc, value_type, wants_nil, _cast_fn, guard, encoder) do
-    spec_type =
-      if wants_nil do
-        quote(do: unquote(value_type) | nil)
-      else
-        value_type
-      end
+    spec_type = maybe_nil_type(value_type, wants_nil)
 
     quote do
       @doc unquote(doc)
@@ -492,7 +496,15 @@ defmodule Plushie.DSL.Fields do
       @doc unquote(doc)
       @spec unquote(name)(widget :: t(), value :: unquote(value_type) | nil) :: t()
       def unquote(name)(%__MODULE__{} = widget, value) do
-        {:ok, casted} = unquote(type_module).cast(value)
+        casted =
+          case unquote(type_module).cast(value) do
+            {:ok, casted} ->
+              casted
+
+            :error ->
+              raise ArgumentError,
+                    "cast failed for field #{unquote(name)} with value: #{inspect(value)}"
+          end
 
         merged =
           case Map.get(widget, unquote(name)) do
@@ -603,6 +615,18 @@ defmodule Plushie.DSL.Fields do
   def combine_guard(base, constraints) do
     Enum.reduce(constraints, base, fn right, left ->
       quote(do: unquote(left) and unquote(right))
+    end)
+  end
+
+  defp maybe_nil_type(value_type, true), do: quote(do: unquote(value_type) | nil)
+  defp maybe_nil_type(value_type, false), do: value_type
+
+  defp positional_spec_types(positional, props) do
+    Enum.map(positional, fn name ->
+      {_name, type, _opts} =
+        Enum.find(props, fn {field_name, _type, _opts} -> field_name == name end)
+
+      quote(do: unquote(Macro.var(name, nil)) :: unquote(castable_type_for(type)))
     end)
   end
 

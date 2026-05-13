@@ -86,8 +86,11 @@ defmodule Plushie.DSL.Widget.Macro do
   default `new(id, opts \\\\ [])`.
   """
   defmacro positional(names) when is_list(names) do
+    line = __CALLER__.line
+
     quote do
       @_widget_positional unquote(names)
+      @_widget_positional_line unquote(line)
     end
   end
 
@@ -343,8 +346,11 @@ defmodule Plushie.DSL.Widget.Macro do
     Default `false`.
   """
   defmacro field(name, type, opts \\ []) do
+    line = __CALLER__.line
+
     quote do
-      @_widget_props {unquote(name), unquote(type), unquote(opts)}
+      @_widget_props {unquote(name), unquote(type),
+                      Keyword.put(unquote(opts), :__line__, unquote(line))}
     end
   end
 
@@ -575,8 +581,18 @@ defmodule Plushie.DSL.Widget.Macro do
 
           %{carrier: :value, fields: fields, required: Keyword.keys(fields)}
 
-        _other, acc ->
-          acc
+        _other, %{carrier: carrier} when carrier != :none ->
+          raise CompileError,
+            file: caller.file,
+            line: caller.line,
+            description: "event block can declare only one payload"
+
+        other, _acc ->
+          raise CompileError,
+            file: caller.file,
+            line: ast_line(other, caller),
+            description:
+              "expected `value type`, `fields [...]`, or `fields do ... end` inside event block, got: #{Macro.to_string(other)}"
       end)
     end
   end
@@ -609,6 +625,12 @@ defmodule Plushie.DSL.Widget.Macro do
   end
 
   defp maybe_expand_alias(other, _caller), do: other
+
+  defp ast_line({_name, meta, _args}, caller) when is_list(meta) do
+    Keyword.get(meta, :line, caller.line)
+  end
+
+  defp ast_line(_ast, caller), do: caller.line
 
   # Parses a list of `field` statements into a data spec with required tracking.
   defp parse_data_block_to_spec(stmts, caller) do

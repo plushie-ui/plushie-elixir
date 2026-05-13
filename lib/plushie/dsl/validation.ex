@@ -10,7 +10,7 @@ defmodule Plushie.DSL.Validation do
 
   # Known field options consumed by DSL macros. Anything else is
   # treated as a type constraint and forwarded to constrain_guard/2.
-  @known_field_opts [:doc, :default, :option, :wire_name, :required, :cast, :merge]
+  @known_field_opts [:doc, :default, :option, :wire_name, :required, :cast, :merge, :__line__]
 
   @reserved_prop_names [:id, :type, :children, :do]
 
@@ -23,7 +23,7 @@ defmodule Plushie.DSL.Validation do
       unless valid_type?(type) do
         raise CompileError,
           file: env.file,
-          line: 0,
+          line: field_line(opts, env),
           description:
             "unsupported field type #{inspect(type)} for field #{inspect(name)} in #{inspect(env.module)}. " <>
               "Use a primitive shortcut (:string, :float, etc.), a Plushie.Type module, " <>
@@ -36,10 +36,10 @@ defmodule Plushie.DSL.Validation do
 
   @doc false
   def validate_reserved_names!(env, props) do
-    for {name, _type, _opts} <- props, name in @reserved_prop_names do
+    for {name, _type, opts} <- props, name in @reserved_prop_names do
       raise CompileError,
         file: env.file,
-        line: 0,
+        line: field_line(opts, env),
         description:
           "field name #{inspect(name)} is reserved in #{inspect(env.module)}. " <>
             "Reserved names: #{inspect(@reserved_prop_names)}"
@@ -60,14 +60,14 @@ defmodule Plushie.DSL.Validation do
   end
 
   @doc false
-  def validate_positional!(env, positional, props) do
+  def validate_positional!(env, positional, props, line \\ nil) do
     prop_names = Enum.map(props, fn {name, _, _} -> name end)
 
     for name <- positional do
       unless name in prop_names do
         raise CompileError,
           file: env.file,
-          line: 0,
+          line: line || env.line,
           description:
             "positional #{inspect(name)} is not a declared field in #{inspect(env.module)}. " <>
               "Declared fields: #{inspect(prop_names)}"
@@ -111,23 +111,25 @@ defmodule Plushie.DSL.Validation do
         constraint_error!(
           env,
           name,
+          opts,
           constraint_opts,
           "composite types do not support constraints"
         )
 
       {_, module} ->
-        validate_module_constraints!(env, name, module, constraint_opts)
+        validate_module_constraints!(env, name, module, opts, constraint_opts)
     end
   end
 
   @doc false
-  def validate_module_constraints!(env, name, module, constraint_opts) do
+  def validate_module_constraints!(env, name, module, opts, constraint_opts) do
     Code.ensure_compiled(module)
 
     unless function_exported?(module, :field_options, 0) do
       constraint_error!(
         env,
         name,
+        opts,
         constraint_opts,
         "#{inspect(module)} does not support constraints (no field_options/0)"
       )
@@ -138,7 +140,7 @@ defmodule Plushie.DSL.Validation do
     for {key, _val} <- constraint_opts, key not in allowed do
       raise CompileError,
         file: env.file,
-        line: 0,
+        line: field_line(opts, env),
         description:
           "field #{inspect(name)} in #{inspect(env.module)} has unknown constraint " <>
             "#{inspect(key)}. #{inspect(module)} supports: #{inspect(allowed)}"
@@ -146,12 +148,16 @@ defmodule Plushie.DSL.Validation do
   end
 
   @doc false
-  def constraint_error!(env, name, constraint_opts, reason) do
+  def constraint_error!(env, name, opts, constraint_opts, reason) do
     raise CompileError,
       file: env.file,
-      line: 0,
+      line: field_line(opts, env),
       description:
         "field #{inspect(name)} in #{inspect(env.module)} has constraint options " <>
           "#{inspect(Keyword.keys(constraint_opts))} but #{reason}"
+  end
+
+  defp field_line(opts, env) do
+    Keyword.get(opts, :__line__, env.line)
   end
 end

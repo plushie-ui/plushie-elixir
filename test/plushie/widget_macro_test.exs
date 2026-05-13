@@ -71,6 +71,14 @@ defmodule Plushie.WidgetMacroTest do
     field(:a11y, Plushie.Type.A11y, default: %{role: :badge})
   end
 
+  defmodule MergeFieldWidget do
+    use Plushie.Widget
+
+    widget(:merge_field)
+
+    field(:a11y, Plushie.Type.A11y, default: %{role: :generic_container}, merge: true)
+  end
+
   # ---------------------------------------------------------------------------
   # Test modules: widget (container, node builder)
   # ---------------------------------------------------------------------------
@@ -630,6 +638,22 @@ defmodule Plushie.WidgetMacroTest do
       end
     end
 
+    test "unknown field type points at the field declaration" do
+      error =
+        assert_raise CompileError, fn ->
+          Code.compile_string("""
+          defmodule TestBadPropTypeLine do
+            use Plushie.Widget
+
+            widget :bad_prop_line
+            field :foo, :bogus_type
+          end
+          """)
+        end
+
+      assert error.line == 5
+    end
+
     test "raises on unknown command param type" do
       assert_raise CompileError, ~r/invalid type.*:widget_ref/, fn ->
         Code.compile_string("""
@@ -1059,6 +1083,14 @@ defmodule Plushie.WidgetMacroTest do
       widget = BlockFormWidget.new("b1", "X")
       widget = BlockFormWidget.label(widget, "Y")
       assert widget.label == "Y"
+    end
+
+    test "merge setter raises ArgumentError when casting fails" do
+      widget = MergeFieldWidget.new("m1")
+
+      assert_raise ArgumentError, ~r/cast failed for field a11y/, fn ->
+        MergeFieldWidget.a11y(widget, :invalid)
+      end
     end
   end
 end

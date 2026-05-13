@@ -1768,6 +1768,7 @@ defmodule Plushie.UI do
 
   ## Forms
 
+  - `tooltip(id, tip)` - without children
   - `tooltip(id, tip, do: block)` - with children
   - `tooltip(id, tip, opts, do: block)` - with children and options
 
@@ -1797,6 +1798,17 @@ defmodule Plushie.UI do
         end
 
       tip when is_binary(tip) ->
+        quote do
+          Plushie.UI.__build_container__(
+            Plushie.Widget.Tooltip,
+            unquote(id),
+            [tip: unquote(tip)],
+            [],
+            nil
+          )
+        end
+
+      tip ->
         quote do
           Plushie.UI.__build_container__(
             Plushie.Widget.Tooltip,
@@ -2188,13 +2200,11 @@ defmodule Plushie.UI do
     id_container_2arity_body(Plushie.Widget.Table, "table", id, opts_or_do)
   end
 
-  defmacro table(opts, do_block) do
+  defmacro table(opts, do: block) do
     # Reached when first arg is NOT a string literal (non-binary guard
     # on the clause above matched first for string IDs).
     # Handles: table columns: cols do ... end
     auto_id = compile_auto_id(__CALLER__.module, __CALLER__.line)
-
-    [do: block] = do_block
 
     option_keys = Plushie.Widget.Table.__field_keys__()
     option_types = Plushie.Widget.Table.__field_types__()

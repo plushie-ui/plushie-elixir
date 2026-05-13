@@ -107,8 +107,10 @@ defmodule Plushie.Widget.Table.Validation do
     col_keys = Enum.map(columns, fn col -> to_string(col[:key] || col["key"]) end)
 
     row_children =
-      Enum.map(tbl.rows, fn row ->
-        row_id = to_string(row[:id] || row["id"] || "")
+      tbl.rows
+      |> Enum.with_index()
+      |> Enum.map(fn {row, index} ->
+        row_id = expanded_row_id(row, index)
 
         cells =
           Enum.map(col_keys, fn key ->
@@ -140,6 +142,14 @@ defmodule Plushie.Widget.Table.Validation do
       end)
 
     %{tbl | rows: nil, children: Enum.reverse(row_children)}
+  end
+
+  defp expanded_row_id(row, index) do
+    case row[:id] || row["id"] do
+      nil -> "row:#{index}"
+      "" -> "row:#{index}"
+      id -> to_string(id)
+    end
   end
 
   # -- @before_compile hook ----------------------------------------------------
