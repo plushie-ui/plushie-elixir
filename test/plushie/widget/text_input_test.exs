@@ -20,6 +20,7 @@ defmodule Plushie.Widget.TextInputTest do
       assert ti.font == nil
       assert ti.line_height == nil
       assert ti.align_x == nil
+      assert ti.text_direction == nil
       assert ti.icon == nil
       assert ti.on_submit == nil
       assert ti.on_paste == nil
@@ -70,6 +71,11 @@ defmodule Plushie.Widget.TextInputTest do
       assert ti.align_x == :center
     end
 
+    test "text_direction/2 sets text direction" do
+      ti = TextInput.new("id", "") |> TextInput.text_direction(:rtl)
+      assert ti.text_direction == :rtl
+    end
+
     test "icon/2 sets the icon map" do
       icon = %{code_point: "X", side: "left"}
       ti = TextInput.new("id", "") |> TextInput.icon(icon)
@@ -95,6 +101,11 @@ defmodule Plushie.Widget.TextInputTest do
       ti = TextInput.new("id", "") |> TextInput.style(:default)
       assert ti.style == :default
     end
+
+    test "validation/2 normalizes invalid tuples" do
+      ti = TextInput.new("id", "") |> TextInput.validation({:invalid, "Required"})
+      assert ti.validation == %{state: :invalid, message: "Required"}
+    end
   end
 
   describe "build/1" do
@@ -107,12 +118,20 @@ defmodule Plushie.Widget.TextInputTest do
 
     test "includes non-nil props" do
       node =
-        TextInput.new("search", "hello", placeholder: "type here", size: 14, secure: true)
+        TextInput.new("search", "hello",
+          placeholder: "type here",
+          size: 14,
+          text_direction: :rtl,
+          validation: {:invalid, "Required"},
+          secure: true
+        )
         |> TextInput.build()
 
       assert node.props[:value] == "hello"
       assert node.props[:placeholder] == "type here"
       assert node.props[:size] == 14
+      assert node.props[:text_direction] == :rtl
+      assert node.props[:validation] == %{state: :invalid, message: "Required"}
       assert node.props[:secure] == true
     end
 
@@ -122,7 +141,16 @@ defmodule Plushie.Widget.TextInputTest do
       refute Map.has_key?(node.props, "padding")
       refute Map.has_key?(node.props, "width")
       refute Map.has_key?(node.props, "font")
+      refute Map.has_key?(node.props, "text_direction")
       refute Map.has_key?(node.props, "style")
+    end
+
+    test "normalizes validation to renderer wire shape" do
+      node =
+        TextInput.new("id", "", validation: {:invalid, "Required"})
+        |> Plushie.Tree.normalize()
+
+      assert node.props[:validation] == %{state: "invalid", message: "Required"}
     end
 
     test "includes false values in props" do
@@ -133,8 +161,12 @@ defmodule Plushie.Widget.TextInputTest do
 
   describe "with_options/2" do
     test "routes multiple options" do
-      ti = TextInput.new("id", "") |> TextInput.with_options(width: :fill, on_submit: true)
+      ti =
+        TextInput.new("id", "")
+        |> TextInput.with_options(width: :fill, text_direction: :ltr, on_submit: true)
+
       assert ti.width == :fill
+      assert ti.text_direction == :ltr
       assert ti.on_submit == true
     end
 

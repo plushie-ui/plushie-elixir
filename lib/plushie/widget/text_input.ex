@@ -24,6 +24,9 @@ defmodule Plushie.Widget.TextInput do
     field :align_x, Plushie.Type.Alignment,
       doc: "Text horizontal alignment: `:left`, `:center`, `:right`."
 
+    field :text_direction, Plushie.Type.TextDirection,
+      doc: "Text direction hint: `:auto`, `:ltr`, or `:rtl`."
+
     field :icon, :map,
       doc:
         "Icon inside the input field. Map with `code_point`, `size`, `spacing`, `side`, `font` keys."
@@ -45,7 +48,7 @@ defmodule Plushie.Widget.TextInput do
     field :required, :boolean,
       doc: "Marks the field as required. Flows into `a11y.required` automatically."
 
-    field :validation, :any,
+    field :validation, Plushie.Type.Validation,
       doc:
         "Form validation state. Accepts `:valid`, `:pending`, or `{:invalid, message}`. " <>
           "Flows into `a11y.invalid` and `a11y.error_message` automatically."

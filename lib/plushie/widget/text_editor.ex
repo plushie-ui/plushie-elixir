@@ -26,6 +26,9 @@ defmodule Plushie.Widget.TextEditor do
     field :padding, :float, doc: "Uniform padding in pixels."
     field :wrapping, Plushie.Type.Wrapping, doc: "Text wrapping mode."
 
+    field :text_direction, Plushie.Type.TextDirection,
+      doc: "Text direction hint: `:auto`, `:ltr`, or `:rtl`."
+
     field :input_purpose,
           {:enum,
            [:normal, :secure, :terminal, :number, :decimal, :phone, :email, :url, :search]},
@@ -40,11 +43,12 @@ defmodule Plushie.Widget.TextEditor do
     field :key_bindings, {:list, :map}, doc: "Declarative key binding rules for the editor."
     field :placeholder_color, Plushie.Type.Color, doc: "Placeholder text color."
     field :selection_color, Plushie.Type.Color, doc: "Text selection highlight color."
+    field :on_paste, :boolean, doc: "When true, emits paste events. Default: false."
 
     field :required, :boolean,
       doc: "Marks the field as required. Flows into `a11y.required` automatically."
 
-    field :validation, :any,
+    field :validation, Plushie.Type.Validation,
       doc:
         "Form validation state. Accepts `:valid`, `:pending`, or `{:invalid, message}`. " <>
           "Flows into `a11y.invalid` and `a11y.error_message` automatically."
@@ -54,6 +58,7 @@ defmodule Plushie.Widget.TextEditor do
   end
 
   event :edit, value: :string, doc: "Emitted on content changes."
+  event :paste, value: :string, doc: "Emitted on paste (requires `on_paste` prop)."
   event :focused, doc: "Emitted when the editor gains focus."
   event :blurred, doc: "Emitted when the editor loses focus."
 end

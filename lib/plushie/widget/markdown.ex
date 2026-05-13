@@ -28,4 +28,6 @@ defmodule Plushie.Widget.Markdown do
 
     positional [:content]
   end
+
+  event :link_click, value: :string, doc: "Emitted when a markdown link is clicked."
 end

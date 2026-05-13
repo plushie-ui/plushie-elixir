@@ -51,10 +51,12 @@ defmodule Plushie.Widget.RichText do
 
     field :wrapping, Plushie.Type.Wrapping, doc: "Text wrapping mode."
 
-    field :ellipsis, {:enum, [:none, :start, :middle, :end]},
+    field :ellipsis, Plushie.Type.Ellipsis,
       doc: "Text ellipsis mode: `:none`, `:start`, `:middle`, `:end`."
 
     field :event_rate, :integer, doc: "Max events per second for coalescable events."
     field :a11y, Plushie.Type.A11y, default: @a11y_defaults, doc: "Accessibility annotations."
   end
+
+  event :link_click, value: :string, doc: "Emitted when a span link is clicked."
 end

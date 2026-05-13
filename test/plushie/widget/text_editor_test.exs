@@ -23,9 +23,11 @@ defmodule Plushie.Widget.TextEditorTest do
       assert ed.line_height == nil
       assert ed.padding == nil
       assert ed.wrapping == nil
+      assert ed.text_direction == nil
       assert ed.highlight_syntax == nil
       assert ed.highlight_theme == nil
       assert ed.style == nil
+      assert ed.on_paste == nil
     end
 
     test "accepts keyword options" do
@@ -81,6 +83,11 @@ defmodule Plushie.Widget.TextEditorTest do
       assert ed.wrapping == :word
     end
 
+    test "text_direction/2 sets text direction" do
+      ed = TextEditor.new("id") |> TextEditor.text_direction(:rtl)
+      assert ed.text_direction == :rtl
+    end
+
     test "highlight_syntax/2 sets syntax language" do
       ed = TextEditor.new("id") |> TextEditor.highlight_syntax("ex")
       assert ed.highlight_syntax == "ex"
@@ -94,6 +101,16 @@ defmodule Plushie.Widget.TextEditorTest do
     test "style/2 sets style" do
       ed = TextEditor.new("id") |> TextEditor.style(:default)
       assert ed.style == :default
+    end
+
+    test "on_paste/2 sets on_paste" do
+      ed = TextEditor.new("id") |> TextEditor.on_paste(true)
+      assert ed.on_paste == true
+    end
+
+    test "validation/2 normalizes invalid tuples" do
+      ed = TextEditor.new("id") |> TextEditor.validation({:invalid, "Required"})
+      assert ed.validation == %{state: :invalid, message: "Required"}
     end
 
     test "key_bindings/2 sets key bindings" do
@@ -119,14 +136,20 @@ defmodule Plushie.Widget.TextEditorTest do
       node =
         TextEditor.new("editor",
           content: "code",
+          text_direction: :rtl,
           highlight_syntax: "rs",
-          highlight_theme: "solarized_dark"
+          highlight_theme: "solarized_dark",
+          on_paste: true,
+          validation: {:invalid, "Required"}
         )
         |> TextEditor.build()
 
       assert node.props[:content] == "code"
+      assert node.props[:text_direction] == :rtl
       assert node.props[:highlight_syntax] == "rs"
       assert node.props[:highlight_theme] == "solarized_dark"
+      assert node.props[:on_paste] == true
+      assert node.props[:validation] == %{state: :invalid, message: "Required"}
     end
 
     test "omits nil props" do
@@ -137,6 +160,15 @@ defmodule Plushie.Widget.TextEditorTest do
       refute Map.has_key?(node.props, :highlight_theme)
       refute Map.has_key?(node.props, :style)
       refute Map.has_key?(node.props, :key_bindings)
+      refute Map.has_key?(node.props, :on_paste)
+    end
+
+    test "normalizes validation to renderer wire shape" do
+      node =
+        TextEditor.new("id", validation: {:invalid, "Required"})
+        |> Plushie.Tree.normalize()
+
+      assert node.props[:validation] == %{state: "invalid", message: "Required"}
     end
 
     test "includes key_bindings in props when set" do
@@ -174,15 +206,19 @@ defmodule Plushie.Widget.TextEditorTest do
         TextEditor.new("id")
         |> TextEditor.with_options(
           content: "x = 1",
+          text_direction: :ltr,
           highlight_syntax: "py",
           highlight_theme: "base16_ocean",
-          wrapping: :word
+          wrapping: :word,
+          on_paste: true
         )
 
       assert ed.content == "x = 1"
+      assert ed.text_direction == :ltr
       assert ed.highlight_syntax == "py"
       assert ed.highlight_theme == "base16_ocean"
       assert ed.wrapping == :word
+      assert ed.on_paste == true
     end
 
     test "routes key_bindings option" do
@@ -199,6 +235,12 @@ defmodule Plushie.Widget.TextEditorTest do
       assert_raise ArgumentError, ~r/unknown option.*:readonly/, fn ->
         TextEditor.new("id", readonly: true)
       end
+    end
+  end
+
+  describe "events" do
+    test "declares paste" do
+      assert :paste in TextEditor.__events__()
     end
   end
 end

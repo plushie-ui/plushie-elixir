@@ -68,14 +68,14 @@ defmodule Plushie.Widget.RichText.Span do
   @doc "Set the text colour."
   @spec color(t(), Color.input()) :: t()
   def color(%__MODULE__{} = span, value) do
-    {:ok, c} = Color.cast(value)
+    c = cast!(Color, value, "span color")
     %{span | color: c}
   end
 
   @doc "Set the line height."
   @spec line_height(t(), LineHeight.t() | number() | map()) :: t()
   def line_height(%__MODULE__{} = span, value) do
-    {:ok, lh} = LineHeight.cast(value)
+    lh = cast!(LineHeight, value, "span line_height")
     %{span | line_height: lh}
   end
 
@@ -96,7 +96,7 @@ defmodule Plushie.Widget.RichText.Span do
   @doc "Set the padding around the span's text."
   @spec padding(t(), Padding.t() | number() | map() | list()) :: t()
   def padding(%__MODULE__{} = span, value) do
-    {:ok, p} = Padding.cast(value)
+    p = cast!(Padding, value, "span padding")
     %{span | padding: p}
   end
 
@@ -108,7 +108,7 @@ defmodule Plushie.Widget.RichText.Span do
   def highlight(%__MODULE__{} = span, %{} = h), do: %{span | highlight: h}
 
   def highlight(%__MODULE__{} = span, color) do
-    {:ok, c} = Color.cast(color)
+    c = cast!(Color, color, "span highlight")
     %{span | highlight: %{background: c}}
   end
 
@@ -123,5 +123,15 @@ defmodule Plushie.Widget.RichText.Span do
 
   def encode(%{} = map) do
     Map.new(map, fn {k, v} -> {k, Plushie.Type.encode_value(v)} end)
+  end
+
+  defp cast!(type, value, label) do
+    case type.cast(value) do
+      {:ok, casted} ->
+        casted
+
+      :error ->
+        raise ArgumentError, "#{label} is invalid: #{inspect(value)}"
+    end
   end
 end

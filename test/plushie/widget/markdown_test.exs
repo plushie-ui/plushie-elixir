@@ -99,6 +99,12 @@ defmodule Plushie.Widget.MarkdownTest do
     end
   end
 
+  describe "events" do
+    test "declares link_click" do
+      assert :link_click in Markdown.__events__()
+    end
+  end
+
   describe "with_options/2" do
     test "routes all known options" do
       md =

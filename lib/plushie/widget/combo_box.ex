@@ -58,7 +58,7 @@ defmodule Plushie.Widget.ComboBox do
     field :required, :boolean,
       doc: "Marks the field as required. Flows into `a11y.required` automatically."
 
-    field :validation, :any,
+    field :validation, Plushie.Type.Validation,
       doc:
         "Form validation state. Accepts `:valid`, `:pending`, or `{:invalid, message}`. " <>
           "Flows into `a11y.invalid` and `a11y.error_message` automatically."

@@ -28,7 +28,10 @@ defmodule Plushie.Widget.Text do
     field :wrapping, Plushie.Type.Wrapping,
       doc: "Text wrapping: `:none`, `:word`, `:glyph`, `:word_or_glyph`."
 
-    field :ellipsis, {:enum, [:none, :start, :middle, :end]},
+    field :text_direction, Plushie.Type.TextDirection,
+      doc: "Text direction hint: `:auto`, `:ltr`, or `:rtl`."
+
+    field :ellipsis, Plushie.Type.Ellipsis,
       doc: "Ellipsis mode: `:none`, `:start`, `:middle`, `:end`."
 
     field :shaping, Plushie.Type.Shaping, doc: "Text shaping strategy: `:basic` or `:advanced`."

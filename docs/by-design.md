@@ -1091,6 +1091,25 @@ missing from window operations.
 **Revisit when:** Window lifecycle synchronization moves out of the
 runtime and into renderer-side widget props.
 
+## Text editor key bindings stay renderer-shaped
+
+Text editor key bindings are declarative renderer rules. Host SDKs pass
+lists of map-shaped rules through to the renderer rather than
+re-implementing the renderer's binding parser in every language.
+
+**Rules out:** Adding an Elixir-only `Plushie.Type.KeyBinding` that
+validates the full key binding object shape while sibling SDKs keep the
+same prop as renderer-shaped maps.
+
+**Still in scope:** Rejecting non-map list entries through the existing
+field type. Adding a shared typed key binding builder through the
+cross-SDK parity workflow. Improving renderer diagnostics for malformed
+binding maps.
+
+**Revisit when:** The parity workflow defines a shared host-side key
+binding type or malformed key binding maps become a recurring user bug
+that renderer diagnostics do not catch.
+
 ## Manual tree maps preserve unknown string prop keys
 
 Tree normalization accepts manually constructed maps in tests and low

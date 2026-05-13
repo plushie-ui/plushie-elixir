@@ -22,6 +22,8 @@ defmodule Plushie.Widget.TextTest do
       assert txt.align_x == nil
       assert txt.align_y == nil
       assert txt.wrapping == nil
+      assert txt.text_direction == nil
+      assert txt.ellipsis == nil
       assert txt.shaping == nil
       assert txt.style == nil
     end
@@ -102,6 +104,20 @@ defmodule Plushie.Widget.TextTest do
     end
   end
 
+  describe "text_direction/2" do
+    test "sets the text direction field" do
+      txt = Text.new("t", "X") |> Text.text_direction(:rtl)
+      assert txt.text_direction == :rtl
+    end
+  end
+
+  describe "ellipsis/2" do
+    test "sets the ellipsis field" do
+      txt = Text.new("t", "X") |> Text.ellipsis(:end)
+      assert txt.ellipsis == :end
+    end
+  end
+
   describe "shaping/2" do
     test "sets the shaping field" do
       txt = Text.new("t", "X") |> Text.shaping(:advanced)
@@ -134,11 +150,15 @@ defmodule Plushie.Widget.TextTest do
         Text.new("t1", "Hi")
         |> Text.size(20)
         |> Text.wrapping(:word)
+        |> Text.text_direction(:rtl)
+        |> Text.ellipsis(:end)
         |> Text.align_x(:center)
         |> Text.build()
 
       assert node.props[:size] == 20
       assert node.props[:wrapping] == :word
+      assert node.props[:text_direction] == :rtl
+      assert node.props[:ellipsis] == :end
       assert node.props[:align_x] == :center
     end
 
@@ -158,6 +178,8 @@ defmodule Plushie.Widget.TextTest do
       refute Map.has_key?(node.props, "align_x")
       refute Map.has_key?(node.props, "align_y")
       refute Map.has_key?(node.props, "wrapping")
+      refute Map.has_key?(node.props, "text_direction")
+      refute Map.has_key?(node.props, "ellipsis")
       refute Map.has_key?(node.props, "shaping")
       refute Map.has_key?(node.props, "style")
     end
@@ -166,12 +188,22 @@ defmodule Plushie.Widget.TextTest do
   describe "with_options/2" do
     test "routes all supported options" do
       txt =
-        Text.new("t", "X", size: 14, width: :fill, height: 30, align_x: :left, style: :secondary)
+        Text.new("t", "X",
+          size: 14,
+          width: :fill,
+          height: 30,
+          align_x: :left,
+          text_direction: :ltr,
+          ellipsis: :middle,
+          style: :secondary
+        )
 
       assert txt.size == 14
       assert txt.width == :fill
       assert txt.height == 30
       assert txt.align_x == :left
+      assert txt.text_direction == :ltr
+      assert txt.ellipsis == :middle
       assert txt.style == :secondary
     end
 

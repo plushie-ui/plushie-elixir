@@ -2,6 +2,7 @@ defmodule Plushie.Widget.RichTextTest do
   use ExUnit.Case, async: true
 
   alias Plushie.Widget.RichText
+  alias Plushie.Widget.RichText.Span
 
   describe "new/2" do
     test "creates a struct with the given id and nil defaults" do
@@ -14,6 +15,7 @@ defmodule Plushie.Widget.RichTextTest do
       assert rt.font == nil
       assert rt.color == nil
       assert rt.line_height == nil
+      assert rt.ellipsis == nil
     end
 
     test "accepts keyword options" do
@@ -78,6 +80,13 @@ defmodule Plushie.Widget.RichTextTest do
     end
   end
 
+  describe "ellipsis/2" do
+    test "sets the ellipsis field" do
+      rt = RichText.new("rt1") |> RichText.ellipsis(:end)
+      assert rt.ellipsis == :end
+    end
+  end
+
   describe "build/1" do
     test "returns a ui_node map with correct type and id" do
       node = RichText.new("rt1") |> RichText.build()
@@ -94,11 +103,13 @@ defmodule Plushie.Widget.RichTextTest do
         |> RichText.spans(spans)
         |> RichText.size(14)
         |> RichText.width(:fill)
+        |> RichText.ellipsis(:end)
         |> RichText.build()
 
       assert node.props[:spans] == spans
       assert node.props[:size] == 14
       assert node.props[:width] == :fill
+      assert node.props[:ellipsis] == :end
     end
 
     test "omits nil props" do
@@ -110,6 +121,22 @@ defmodule Plushie.Widget.RichTextTest do
       refute Map.has_key?(node.props, "width")
       refute Map.has_key?(node.props, "height")
       refute Map.has_key?(node.props, "line_height")
+      refute Map.has_key?(node.props, "ellipsis")
+    end
+
+    test "encodes span structs through the full build pipeline" do
+      node =
+        RichText.new("rt1")
+        |> RichText.spans([
+          Span.new("Build ") |> Span.color("#000000"),
+          Span.new("ok") |> Span.color("#22aa22") |> Span.underline(true)
+        ])
+        |> Plushie.Tree.normalize()
+
+      assert node.props[:spans] == [
+               %{text: "Build ", color: "#000000"},
+               %{text: "ok", color: "#22aa22", underline: true}
+             ]
     end
   end
 
@@ -125,7 +152,8 @@ defmodule Plushie.Widget.RichTextTest do
           size: 12,
           font: "Serif",
           color: "#000000",
-          line_height: 1.2
+          line_height: 1.2,
+          ellipsis: :middle
         )
 
       assert rt.spans == spans
@@ -135,6 +163,7 @@ defmodule Plushie.Widget.RichTextTest do
       assert rt.font == "Serif"
       assert rt.color == "#000000"
       assert rt.line_height == 1.2
+      assert rt.ellipsis == :middle
     end
 
     test "raises on unknown option" do
@@ -144,9 +173,13 @@ defmodule Plushie.Widget.RichTextTest do
     end
   end
 
-  describe "Span typed builder" do
-    alias Plushie.Widget.RichText.Span
+  describe "events" do
+    test "declares link_click" do
+      assert :link_click in RichText.__events__()
+    end
+  end
 
+  describe "Span typed builder" do
     test "new/1 stores text and leaves all styling unset" do
       span = Span.new("hello")
       assert span.text == "hello"
@@ -174,6 +207,24 @@ defmodule Plushie.Widget.RichTextTest do
       assert is_binary(span.color)
       assert span.padding == 4
       assert span.underline == true
+    end
+
+    test "setters raise argument errors on invalid input" do
+      assert_raise ArgumentError, ~r/span color is invalid/, fn ->
+        Span.new("hi") |> Span.color(:not_a_color)
+      end
+
+      assert_raise ArgumentError, ~r/span line_height is invalid/, fn ->
+        Span.new("hi") |> Span.line_height(:bad)
+      end
+
+      assert_raise ArgumentError, ~r/span padding is invalid/, fn ->
+        Span.new("hi") |> Span.padding(:bad)
+      end
+
+      assert_raise ArgumentError, ~r/span highlight is invalid/, fn ->
+        Span.new("hi") |> Span.highlight(:not_a_color)
+      end
     end
 
     test "padding cast accepts a per-side map" do
