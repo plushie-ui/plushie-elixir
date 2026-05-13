@@ -20,7 +20,7 @@ defmodule Plushie.Event.BuiltinSpecs do
 
   Built-in atomic types or a module implementing `Plushie.Type`.
   """
-  @type field_type :: :float | :string | :boolean | :any | module()
+  @type field_type :: :float | :string | :boolean | :any | :map | module() | tuple()
 
   @typedoc """
   Event spec describing the payload shape.
@@ -52,7 +52,7 @@ defmodule Plushie.Event.BuiltinSpecs do
     open: %{carrier: :none},
     close: %{carrier: :none},
     option_hovered: %{carrier: :value, type: :any},
-    key_binding: %{carrier: :value, fields: []},
+    key_binding: %{carrier: :value, type: :map},
     link_click: %{carrier: :value, type: :string},
     sort: %{carrier: :value, fields: [column: :string]},
     scrolled: %{
@@ -62,10 +62,8 @@ defmodule Plushie.Event.BuiltinSpecs do
         absolute_y: :float,
         relative_x: :float,
         relative_y: :float,
-        bounds_width: :float,
-        bounds_height: :float,
-        content_width: :float,
-        content_height: :float
+        bounds: {:tuple, [:float, :float]},
+        content_bounds: {:tuple, [:float, :float]}
       ]
     },
     pane_focus_cycle: %{carrier: :value, fields: [pane: :any]},
@@ -87,12 +85,8 @@ defmodule Plushie.Event.BuiltinSpecs do
       carrier: :value,
       fields: [
         key: Plushie.Type.Key,
-        modified_key: :string,
-        physical_key: :string,
-        location: :string,
         modifiers: Plushie.Type.KeyModifiers,
-        text: :string,
-        repeat: :boolean
+        text: :string
       ],
       required: [:key, :modifiers]
     },
@@ -100,12 +94,7 @@ defmodule Plushie.Event.BuiltinSpecs do
       carrier: :value,
       fields: [
         key: Plushie.Type.Key,
-        modified_key: :string,
-        physical_key: :string,
-        location: :string,
-        modifiers: Plushie.Type.KeyModifiers,
-        text: :string,
-        repeat: :boolean
+        modifiers: Plushie.Type.KeyModifiers
       ],
       required: [:key, :modifiers]
     },
@@ -120,7 +109,8 @@ defmodule Plushie.Event.BuiltinSpecs do
         button: Plushie.Type.Pointer,
         pointer: :atom,
         finger: :float,
-        modifiers: :any
+        modifiers: :any,
+        captured: :boolean
       ]
     },
     release: %{
@@ -131,12 +121,21 @@ defmodule Plushie.Event.BuiltinSpecs do
         button: Plushie.Type.Pointer,
         pointer: :atom,
         finger: :float,
-        modifiers: :any
+        modifiers: :any,
+        captured: :boolean,
+        lost: :boolean
       ]
     },
     move: %{
       carrier: :value,
-      fields: [x: :float, y: :float, pointer: :atom, finger: :float, modifiers: :any]
+      fields: [
+        x: :float,
+        y: :float,
+        pointer: :atom,
+        finger: :float,
+        modifiers: :any,
+        captured: :boolean
+      ]
     },
     scroll: %{
       carrier: :value,
@@ -146,11 +145,12 @@ defmodule Plushie.Event.BuiltinSpecs do
         delta_x: :float,
         delta_y: :float,
         pointer: :atom,
-        modifiers: :any
+        modifiers: :any,
+        captured: :boolean
       ]
     },
-    enter: %{carrier: :value, fields: [x: :float, y: :float], required: []},
-    exit: %{carrier: :value, fields: [x: :float, y: :float], required: []},
+    enter: %{carrier: :value, fields: [x: :float, y: :float, captured: :boolean], required: []},
+    exit: %{carrier: :value, fields: [x: :float, y: :float, captured: :boolean], required: []},
     double_click: %{
       carrier: :value,
       fields: [x: :float, y: :float, pointer: :atom, modifiers: :any]

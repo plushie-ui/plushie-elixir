@@ -18,9 +18,9 @@ defmodule Plushie.Protocol.Error do
 
   @spec exception(keyword()) :: t()
   def exception(opts) do
-    reason = Keyword.fetch!(opts, :reason)
-    format = Keyword.fetch!(opts, :format)
-    data = Keyword.fetch!(opts, :data)
+    reason = fetch_required!(opts, :reason)
+    format = fetch_required!(opts, :format)
+    data = fetch_required!(opts, :data)
 
     %__MODULE__{
       reason: reason,
@@ -28,6 +28,16 @@ defmodule Plushie.Protocol.Error do
       data: data,
       message: format_message(reason, format)
     }
+  end
+
+  defp fetch_required!(opts, key) do
+    case Keyword.fetch(opts, key) do
+      {:ok, value} ->
+        value
+
+      :error ->
+        raise ArgumentError, "missing required #{inspect(key)} option for Plushie.Protocol.Error"
+    end
   end
 
   defp format_message({:decode_failed, decode_reason}, format) do

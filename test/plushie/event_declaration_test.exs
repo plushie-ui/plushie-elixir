@@ -426,7 +426,7 @@ defmodule Plushie.EventDeclarationTest do
   describe "BuiltinSpecs" do
     test "has spec for all builtin event types" do
       for type <-
-            ~w(click input submit toggle select slide slide_release paste open close option_hovered key_binding link_click sort scrolled pane_focus_cycle)a do
+            ~w(status click input submit toggle select slide slide_release paste open close option_hovered key_binding link_click sort scrolled pane_focus_cycle)a do
         assert BuiltinSpecs.spec(type) != nil, "missing spec for #{type}"
       end
     end
@@ -447,10 +447,21 @@ defmodule Plushie.EventDeclarationTest do
       assert :pointer in field_names
       assert :finger in field_names
       assert :modifiers in field_names
+      assert :captured in field_names
     end
 
     test "toggle spec has value :boolean" do
       assert %{carrier: :value, type: :boolean} = BuiltinSpecs.spec(:toggle)
+    end
+
+    test "builtin event type predicate includes every builtin spec" do
+      for type <- Map.keys(BuiltinSpecs.all()) do
+        assert Plushie.Event.WidgetEvent.builtin_event_type?(type), "missing builtin type #{type}"
+      end
+    end
+
+    test "key_binding spec carries a dynamic map" do
+      assert %{carrier: :value, type: :map} = BuiltinSpecs.spec(:key_binding)
     end
 
     test "sort spec has column field" do
@@ -458,11 +469,19 @@ defmodule Plushie.EventDeclarationTest do
       assert Keyword.fetch!(fields, :column) == :string
     end
 
+    test "scrolled spec matches decoded tuple fields" do
+      assert %{carrier: :value, fields: fields} = BuiltinSpecs.spec(:scrolled)
+      assert Keyword.fetch!(fields, :bounds) == {:tuple, [:float, :float]}
+      assert Keyword.fetch!(fields, :content_bounds) == {:tuple, [:float, :float]}
+    end
+
     test "key_press spec has parsed data fields" do
       spec = BuiltinSpecs.spec(:key_press)
       assert %{carrier: :value, fields: fields} = spec
       assert Keyword.fetch!(fields, :key) == Plushie.Type.Key
       assert Keyword.fetch!(fields, :modifiers) == Plushie.Type.KeyModifiers
+      assert Keyword.fetch!(fields, :text) == :string
+      refute Keyword.has_key?(fields, :modified_key)
     end
   end
 end

@@ -314,6 +314,25 @@ defmodule Plushie.ProtocolTest do
     end
   end
 
+  describe "decode_message/1 -- key_binding events" do
+    test "decodes dynamic key binding data as a map" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "key_binding",
+          id: "editor",
+          value: %{action: "save", key: "s"},
+          window_id: "main"
+        })
+
+      assert %WidgetEvent{
+               type: :key_binding,
+               id: "editor",
+               value: %{action: "save", key: "s"}
+             } = Protocol.decode_message(json, :json)
+    end
+  end
+
   describe "decode_message/1 -- key events (key in value.key)" do
     test "decodes a named key to %KeyEvent{type: :press}" do
       json =
@@ -1077,6 +1096,24 @@ defmodule Plushie.ProtocolTest do
 
       assert %Plushie.Event.WidgetEvent{type: :click, id: "save", window_id: nil} =
                Protocol.decode_message(json, :json)
+    end
+
+    test "diagnostic with unknown level returns a protocol error" do
+      json =
+        Jason.encode!(%{
+          type: "diagnostic",
+          level: "trace",
+          diagnostic: %{kind: "prop_unknown", node_id: "n", widget_type: "text", prop: "foo"}
+        })
+
+      assert {:error, {:invalid_event_field, "diagnostic", :level, "trace", :invalid, _}} =
+               Protocol.decode_message(json, :json)
+    end
+
+    test "Protocol.Error reports missing required options as ArgumentError" do
+      assert_raise ArgumentError, ~r/missing required :format option/, fn ->
+        Plushie.Protocol.Error.exception(reason: :bad, data: <<>>)
+      end
     end
   end
 

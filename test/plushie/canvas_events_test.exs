@@ -113,7 +113,12 @@ defmodule Plushie.CanvasEventsTest do
       assert %WidgetEvent{
                type: :scrolled,
                id: "scroller",
-               value: %{absolute_y: 50.0, relative_y: 0.5}
+               value: %{
+                 absolute_y: 50.0,
+                 relative_y: 0.5,
+                 bounds: {400.0, 300.0},
+                 content_bounds: {400.0, 600.0}
+               }
              } =
                Plushie.Protocol.decode_message(Jason.encode!(msg), :json)
     end

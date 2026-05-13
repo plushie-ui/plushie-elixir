@@ -1387,7 +1387,7 @@ defmodule Plushie.Protocol.Decode do
         "warn" -> :warn
         "error" -> :error
         nil -> :warn
-        other -> raise ArgumentError, "unknown diagnostic level #{inspect(other)}"
+        other -> invalid_diagnostic_level!(other, msg)
       end
 
     typed = Plushie.Event.Diagnostic.decode!(diag)
@@ -1562,7 +1562,7 @@ defmodule Plushie.Protocol.Decode do
   # Parses canvas element key event data into an atom-keyed map with
   # parsed key names and %KeyModifiers{} structs, matching the shapes
   # used by top-level %KeyEvent{} events for consistency.
-  @spec parse_canvas_key_data(data :: map() | nil, type :: :press | :release) :: map()
+  @spec parse_canvas_key_data(data :: term(), type :: term()) :: map()
   defp parse_canvas_key_data(%{} = data, type) do
     key =
       case Plushie.Type.Key.parse(data["key"]) do
@@ -1657,7 +1657,13 @@ defmodule Plushie.Protocol.Decode do
     dispatch(msg)
   rescue
     error in Plushie.Protocol.Error -> {:error, error.reason}
-    FunctionClauseError -> {:error, {:unknown_message, msg}}
+  end
+
+  defp invalid_diagnostic_level!(value, msg) do
+    raise Error,
+      reason: {:invalid_event_field, "diagnostic", :level, value, :invalid, msg},
+      format: :msgpack,
+      data: <<>>
   end
 
   # Normalizes format-specific binary representations so consumers do not
