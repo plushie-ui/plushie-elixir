@@ -228,6 +228,22 @@ from burst containment to lifetime containment.
 **Revisit when:** The resilience posture calls for cumulative lifetime
 restart limits.
 
+## Diagnostic mailbox draining uses tail recursion
+
+`Plushie.Test.DiagnosticCollector.flush/0` drains telemetry messages with
+a tail-recursive receive loop. Tail-call optimization keeps this from
+growing the BEAM stack, so mailbox size affects runtime work and memory,
+not call depth.
+
+**Rules out:** Replacing the loop solely because it is recursive or
+treating it as a stack-exhaustion bug.
+
+**Still in scope:** Adding batching, limits, or backpressure if
+diagnostic volume becomes a measured test-infra problem.
+
+**Revisit when:** The collector is used for a high-volume telemetry
+stream rather than sparse diagnostics from error and validation paths.
+
 ## GenServer late replies are safe
 
 `GenServer.reply/2` may be called after the original caller exits or

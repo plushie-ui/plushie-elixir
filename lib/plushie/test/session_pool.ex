@@ -244,21 +244,24 @@ defmodule Plushie.Test.SessionPool do
     case state.mode do
       mode when mode in [:mock, :headless] ->
         case Map.get(state.multiplexed.sessions, session_id) do
-          {_pid, monitor_ref} -> Process.demonitor(monitor_ref, [:flush])
-          _ -> :ok
+          {_pid, monitor_ref} ->
+            Process.demonitor(monitor_ref, [:flush])
+
+            req_id = "unreg_#{state.next_id}"
+
+            multiplexed =
+              Multiplexed.unregister(state.multiplexed, session_id, req_id, from, state.format)
+
+            {:noreply,
+             %{
+               state
+               | multiplexed: multiplexed,
+                 next_id: state.next_id + 1
+             }}
+
+          nil ->
+            {:reply, :ok, state}
         end
-
-        req_id = "unreg_#{state.next_id}"
-
-        multiplexed =
-          Multiplexed.unregister(state.multiplexed, session_id, req_id, from, state.format)
-
-        {:noreply,
-         %{
-           state
-           | multiplexed: multiplexed,
-             next_id: state.next_id + 1
-         }}
 
       :windowed ->
         case Map.get(state.sessions, session_id) do
@@ -381,11 +384,13 @@ defmodule Plushie.Test.SessionPool do
   def handle_cast({:send, session_id, msg}, state) do
     case state.mode do
       mode when mode in [:mock, :headless] ->
-        {:noreply,
-         %{
-           state
-           | multiplexed: Multiplexed.send_async(state.multiplexed, session_id, msg, state.format)
-         }}
+        case Multiplexed.send_async(state.multiplexed, session_id, msg, state.format) do
+          {:ok, multiplexed} ->
+            {:noreply, %{state | multiplexed: multiplexed}}
+
+          :error ->
+            {:noreply, state}
+        end
 
       :windowed ->
         case Map.get(state.sessions, session_id) do
@@ -416,7 +421,7 @@ defmodule Plushie.Test.SessionPool do
       when mode in [:mock, :headless] do
     Logger.error("SessionPool: renderer exited with status #{code}")
 
-    multiplexed = Multiplexed.handle_renderer_exit(state.multiplexed)
+    multiplexed = Multiplexed.handle_renderer_exit(state.multiplexed, code)
     {:stop, {:renderer_exited, code}, %{state | multiplexed: multiplexed}}
   end
 

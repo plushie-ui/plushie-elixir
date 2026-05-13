@@ -71,14 +71,19 @@ defmodule Plushie.Test.PoolAdapter do
       {:ok, msg} ->
         # Forward to pool. The session field is already set by Bridge.
         SessionPool.send_message(state.pool, state.session_id, msg)
+        {:noreply, state}
 
-      {:error, _} ->
+      {:error, reason} ->
         Logger.error(
           "plushie pool_adapter: failed to decode outgoing message (#{byte_size(binary)} bytes)"
         )
-    end
 
-    {:noreply, state}
+        if state.bridge do
+          send(state.bridge, {:iostream_closed, {:decode_failed, reason}})
+        end
+
+        {:stop, {:decode_failed, reason}, state}
+    end
   end
 
   # Pool forwards renderer responses for our session.

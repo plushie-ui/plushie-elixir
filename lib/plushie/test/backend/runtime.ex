@@ -467,6 +467,8 @@ defmodule Plushie.Test.Backend.Runtime do
     "command" => :command
   }
 
+  @windowed_draw_timeout 30_000
+
   # Case-insensitive lookup for named keys. Maps downcased input to
   # PascalCase wire format (matching what the renderer sends back in
   # events). Built from Protocol.Keys which is the source of truth
@@ -523,7 +525,12 @@ defmodule Plushie.Test.Backend.Runtime do
   defp wait_for_draw(_bridge, mode, _plushie_name) when mode in [:mock, :headless], do: :ok
 
   defp wait_for_draw(bridge, :windowed, plushie_name) do
-    case Plushie.Bridge.screenshot(bridge, "__sync__", width: 1, height: 1) do
+    case Plushie.Bridge.screenshot(
+           bridge,
+           "__sync__",
+           [width: 1, height: 1],
+           @windowed_draw_timeout
+         ) do
       %{"type" => "screenshot_response"} ->
         :ok
 

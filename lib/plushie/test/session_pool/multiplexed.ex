@@ -9,6 +9,10 @@ defmodule Plushie.Test.SessionPool.Multiplexed do
 
   alias Plushie.Test.SessionPool.Transport
 
+  require Logger
+
+  @max_json_buffer_bytes 1_048_576
+
   @typedoc "Internal session identifier assigned by `SessionPool`."
   @type session_id :: String.t()
   @typedoc "Request identifier attached to a message sent to the renderer."
@@ -108,16 +112,26 @@ defmodule Plushie.Test.SessionPool.Multiplexed do
     end
   end
 
-  @spec send_async(t(), session_id(), map(), Transport.format()) :: t()
+  @spec send_async(t(), session_id(), map(), Transport.format()) :: {:ok, t()} | :error
   def send_async(%__MODULE__{} = state, session_id, msg, format) do
-    Transport.send_to_port(state.port, format, Map.put(msg, :session, session_id))
-    state
+    case Map.has_key?(state.sessions, session_id) do
+      true ->
+        Transport.send_to_port(state.port, format, Map.put(msg, :session, session_id))
+        {:ok, state}
+
+      false ->
+        :error
+    end
   end
 
-  @spec handle_renderer_exit(t()) :: t()
-  def handle_renderer_exit(%__MODULE__{} = state) do
+  @spec handle_renderer_exit(t(), integer()) :: t()
+  def handle_renderer_exit(%__MODULE__{} = state, code) do
     for {_key, {_type, from}} <- state.pending do
       GenServer.reply(from, {:error, :renderer_exited})
+    end
+
+    for {session_id, {pid, _ref}} <- state.sessions, Process.alive?(pid) do
+      send(pid, {:plushie_pool_renderer_exited, session_id, code})
     end
 
     %{state | pending: %{}, pending_close: %{}}
@@ -125,11 +139,7 @@ defmodule Plushie.Test.SessionPool.Multiplexed do
 
   @spec handle_port_data(binary() | {:eol, binary()}, t(), Transport.format()) :: t()
   def handle_port_data(raw_data, %__MODULE__{} = state, :json) do
-    line =
-      case raw_data do
-        {:eol, l} -> l
-        l when is_binary(l) -> l
-      end
+    {line, complete?} = json_chunk(raw_data)
 
     buffer = state.buffer <> line
 
@@ -137,15 +147,41 @@ defmodule Plushie.Test.SessionPool.Multiplexed do
       {:ok, msg} ->
         dispatch_response(msg, %{state | buffer: ""})
 
-      {:error, _} ->
-        %{state | buffer: buffer}
+      {:error, error} ->
+        handle_json_decode_error(buffer, complete?, error, state)
     end
   end
 
   def handle_port_data(data, %__MODULE__{} = state, :msgpack) do
     case Msgpax.unpack(data) do
-      {:ok, msg} -> dispatch_response(msg, state)
-      {:error, _} -> state
+      {:ok, msg} ->
+        dispatch_response(msg, state)
+
+      {:error, reason} ->
+        Logger.warning("SessionPool: dropping malformed MessagePack frame: #{inspect(reason)}")
+
+        state
+    end
+  end
+
+  defp json_chunk({:eol, line}), do: {line, true}
+  defp json_chunk(line) when is_binary(line), do: {line, false}
+
+  defp handle_json_decode_error(_buffer, true, error, state) do
+    Logger.warning("SessionPool: dropping malformed JSON line: #{Exception.message(error)}")
+
+    %{state | buffer: ""}
+  end
+
+  defp handle_json_decode_error(buffer, false, error, state) do
+    if byte_size(buffer) > @max_json_buffer_bytes do
+      Logger.warning(
+        "SessionPool: dropping oversized JSON buffer after decode failure: #{Exception.message(error)}"
+      )
+
+      %{state | buffer: ""}
+    else
+      %{state | buffer: buffer}
     end
   end
 
@@ -195,7 +231,13 @@ defmodule Plushie.Test.SessionPool.Multiplexed do
     forward_to_session(state, session_id, msg)
   end
 
-  defp dispatch_response(_msg, state), do: state
+  defp dispatch_response(msg, state) do
+    Logger.warning(
+      "SessionPool: dropping unknown multiplexed renderer message: #{inspect(msg, limit: 20, printable_limit: 200)}"
+    )
+
+    state
+  end
 
   defp forward_to_session(%__MODULE__{} = state, session_id, msg) do
     case Map.get(state.sessions, session_id) do

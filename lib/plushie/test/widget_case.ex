@@ -163,9 +163,15 @@ defmodule Plushie.Test.WidgetCase.HarnessApp do
 
   defp atomize_data(data) when is_map(data) do
     Map.new(data, fn
-      {k, v} when is_binary(k) -> {String.to_atom(k), v}
+      {k, v} when is_binary(k) -> {safe_to_atom(k), v}
       {k, v} -> {k, v}
     end)
+  end
+
+  defp safe_to_atom(key) do
+    String.to_existing_atom(key)
+  rescue
+    ArgumentError -> key
   end
 end
 

@@ -11,6 +11,8 @@ defmodule Plushie.Test.SessionPool.Windowed do
 
   require Logger
 
+  @max_json_buffer_bytes 1_048_576
+
   @typedoc "Internal session identifier assigned by `SessionPool`."
   @type session_id :: String.t()
   @typedoc "Request identifier attached to a message sent to the renderer."
@@ -172,24 +174,50 @@ defmodule Plushie.Test.SessionPool.Windowed do
   end
 
   defp decode_message(raw_data, buffer, :json) do
-    line =
-      case raw_data do
-        {:eol, l} -> l
-        l when is_binary(l) -> l
-      end
+    {line, complete?} = json_chunk(raw_data)
 
     buffer = buffer <> line
 
     case Jason.decode(buffer) do
       {:ok, msg} -> {:ok, msg, ""}
-      {:error, _} -> {:cont, buffer}
+      {:error, error} -> handle_json_decode_error(buffer, complete?, error)
     end
   end
 
   defp decode_message(data, _buffer, :msgpack) do
     case Msgpax.unpack(data) do
-      {:ok, msg} -> {:ok, msg, ""}
-      {:error, _} -> {:cont, ""}
+      {:ok, msg} ->
+        {:ok, msg, ""}
+
+      {:error, reason} ->
+        Logger.warning(
+          "SessionPool: dropping malformed windowed MessagePack frame: #{inspect(reason)}"
+        )
+
+        {:cont, ""}
+    end
+  end
+
+  defp json_chunk({:eol, line}), do: {line, true}
+  defp json_chunk(line) when is_binary(line), do: {line, false}
+
+  defp handle_json_decode_error(_buffer, true, error) do
+    Logger.warning(
+      "SessionPool: dropping malformed windowed JSON line: #{Exception.message(error)}"
+    )
+
+    {:cont, ""}
+  end
+
+  defp handle_json_decode_error(buffer, false, error) do
+    if byte_size(buffer) > @max_json_buffer_bytes do
+      Logger.warning(
+        "SessionPool: dropping oversized windowed JSON buffer after decode failure: #{Exception.message(error)}"
+      )
+
+      {:cont, ""}
+    else
+      {:cont, buffer}
     end
   end
 
@@ -219,6 +247,10 @@ defmodule Plushie.Test.SessionPool.Windowed do
   defp dispatch_response(_session_id, %{"id" => req_id} = msg, session) do
     case Map.pop(session.pending, req_id) do
       {nil, pending} ->
+        Logger.warning(
+          "SessionPool: dropping windowed renderer response with unknown request id #{inspect(req_id)}"
+        )
+
         %{session | pending: pending}
 
       {{_expected_type, from}, pending} ->
@@ -227,5 +259,11 @@ defmodule Plushie.Test.SessionPool.Windowed do
     end
   end
 
-  defp dispatch_response(_session_id, _msg, session), do: session
+  defp dispatch_response(_session_id, msg, session) do
+    Logger.warning(
+      "SessionPool: dropping unknown windowed renderer message: #{inspect(msg, limit: 20, printable_limit: 200)}"
+    )
+
+    session
+  end
 end
