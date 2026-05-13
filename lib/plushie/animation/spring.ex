@@ -58,6 +58,7 @@ defmodule Plushie.Animation.Spring do
   }
 
   @known_keys ~w(to from stiffness damping mass velocity preset on_complete)a
+  @float_epsilon 2.220446049250313e-16
 
   @type preset :: :gentle | :bouncy | :stiff | :snappy | :molasses
 
@@ -227,8 +228,12 @@ defmodule Plushie.Animation.Spring do
     |> maybe_put("on_complete", encode_atom(s.on_complete), nil)
   end
 
-  defp maybe_put(map, _key, default, default), do: map
   defp maybe_put(map, _key, nil, nil), do: map
+
+  defp maybe_put(map, _key, value, default)
+       when is_number(value) and is_number(default) and abs(value - default) <= @float_epsilon,
+       do: map
+
   defp maybe_put(map, key, value, _default), do: Map.put(map, key, value)
 
   defp encode_atom(nil), do: nil

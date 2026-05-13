@@ -291,6 +291,58 @@ ignoring it.
 **Revisit when:** The code starts inspecting `MapSet` internals or
 Dialyzer's opaque handling changes.
 
+## Zero damping remains a valid spring shape
+
+Spring damping of zero is a valid damped-oscillator parameter, even
+though SDK-side tweens with zero damping may not settle without an
+external redirect or stop. The Rust APIs also allow zero damping, so a
+restriction here would be a cross-SDK behavior change.
+
+**Rules out:** Rejecting zero damping only in Elixir as a local guard
+against long-running spring animations.
+
+**Still in scope:** Rejecting non-numeric damping. Rejecting invalid
+mass values that make the solver divide by zero. Adding a parity-routed
+change if all SDKs decide zero damping should be disallowed.
+
+**Revisit when:** The parity workflow changes the shared spring
+configuration contract.
+
+## Cubic bezier validation stays cross-SDK aligned
+
+Custom cubic bezier easing accepts numeric control points. Restricting
+the x control points to the CSS `0..1` range would be a cross-SDK
+behavior change because the Rust decoder and SDK-side easing currently
+accept numeric points without that range check.
+
+**Rules out:** Adding an Elixir-only x-control range guard for cubic
+bezier easing.
+
+**Still in scope:** Validating that all cubic bezier control points are
+numeric. Routing a stricter CSS-compatible range rule through the
+cross-SDK parity workflow.
+
+**Revisit when:** The parity workflow changes the shared cubic bezier
+contract.
+
+## Renderer-side animation targets stay generic
+
+Renderer-side `Spring` and `Transition` descriptors can target numbers,
+colors, vectors, and other field-specific types. The descriptor carries
+the target value, while the field setter and renderer decode path decide
+whether that value is valid for the animated property.
+
+**Rules out:** Requiring renderer-side `Spring.to` or `Transition.to` to
+be numeric at descriptor construction time.
+
+**Still in scope:** Numeric validation for SDK-side `Tween`, whose
+solver performs arithmetic locally. Field-level validation for animated
+properties. Renderer decode failures for values that do not match the
+field type.
+
+**Revisit when:** Renderer-side animation descriptors become specialized
+per target type in the public API.
+
 ## Binary architecture validation is best effort
 
 `Plushie.Binary.validate_architecture!/1` raises when it can detect a

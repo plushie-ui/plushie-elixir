@@ -44,6 +44,45 @@ defmodule Plushie.Animation.TweenTest do
         Tween.new(from: 0.0, to: 1.0, duration: 300, easing: :nonexistent)
       end
     end
+
+    test "raises with non-numeric endpoints" do
+      assert_raise ArgumentError, ~r/expected from to be a number/, fn ->
+        Tween.new(from: "start", to: 1.0, duration: 300)
+      end
+
+      assert_raise ArgumentError, ~r/expected to to be a number/, fn ->
+        Tween.new(from: 0.0, to: "end", duration: 300)
+      end
+    end
+
+    test "raises with invalid duration and delay" do
+      assert_raise ArgumentError, ~r/expected duration to be a positive integer/, fn ->
+        Tween.new(from: 0.0, to: 1.0, duration: 0)
+      end
+
+      assert_raise ArgumentError, ~r/expected delay to be a non-negative integer/, fn ->
+        Tween.new(from: 0.0, to: 1.0, duration: 300, delay: -1)
+      end
+    end
+  end
+
+  describe "looping/4" do
+    test "creates a forever auto-reversing tween" do
+      anim = Tween.looping(0.0, 1.0, 500, easing: :linear)
+
+      assert anim.from == 0.0
+      assert anim.to == 1.0
+      assert anim.duration == 500
+      assert anim.repeat == :forever
+      assert anim.auto_reverse == true
+      assert anim.easing == :linear
+    end
+
+    test "validates duration through new/1" do
+      assert_raise ArgumentError, ~r/expected duration to be a positive integer/, fn ->
+        Tween.looping(0.0, 1.0, 0)
+      end
+    end
   end
 
   describe "spring/1" do
@@ -61,6 +100,30 @@ defmodule Plushie.Animation.TweenTest do
       anim = Tween.spring(from: 0.0, to: 1.0, stiffness: 200, damping: 20)
       assert anim.spring_config.stiffness == 200
       assert anim.spring_config.damping == 20
+    end
+
+    test "rejects invalid mass values" do
+      assert_raise ArgumentError, ~r/expected mass to be a positive number/, fn ->
+        Tween.spring(from: 0.0, to: 1.0, mass: 0)
+      end
+
+      assert_raise ArgumentError, ~r/expected mass to be a positive number/, fn ->
+        Tween.spring(from: 0.0, to: 1.0, mass: -1)
+      end
+    end
+
+    test "rejects non-numeric endpoints and spring parameters" do
+      assert_raise ArgumentError, ~r/expected to to be a number/, fn ->
+        Tween.spring(from: 0.0, to: "end")
+      end
+
+      assert_raise ArgumentError, ~r/expected stiffness to be a positive number/, fn ->
+        Tween.spring(from: 0.0, to: 1.0, stiffness: 0)
+      end
+
+      assert_raise ArgumentError, ~r/expected damping to be a non-negative number/, fn ->
+        Tween.spring(from: 0.0, to: 1.0, damping: -1)
+      end
     end
   end
 
@@ -231,6 +294,12 @@ defmodule Plushie.Animation.TweenTest do
       assert Tween.finished?(anim)
       assert_in_delta Tween.value(anim), 1.0, 0.001
     end
+
+    test "zero delta does not advance spring state" do
+      anim = Tween.spring(from: 0.0, to: 1.0, stiffness: 200, damping: 20) |> Tween.start(100)
+
+      assert Tween.advance(anim, 100) == anim
+    end
   end
 
   describe "redirect/2" do
@@ -255,6 +324,34 @@ defmodule Plushie.Animation.TweenTest do
         |> Tween.redirect(to: 0.0, at: 100, duration: 400)
 
       assert anim.duration == 400
+    end
+
+    test "spring redirect preserves velocity" do
+      anim =
+        Tween.spring(from: 0.0, to: 100.0, stiffness: 400, damping: 30)
+        |> Tween.start(0)
+        |> Tween.advance(50)
+
+      velocity_before = anim.spring_config.velocity
+      value_before = Tween.value(anim)
+
+      redirected = Tween.redirect(anim, to: 200.0, at: 50)
+
+      assert redirected.from == value_before
+      assert redirected.to == 200.0
+      assert redirected.spring_config.velocity == velocity_before
+    end
+
+    test "validates redirect target and timestamp" do
+      anim = Tween.new(from: 0.0, to: 1.0, duration: 200)
+
+      assert_raise ArgumentError, ~r/expected to to be a number/, fn ->
+        Tween.redirect(anim, to: "end", at: 100)
+      end
+
+      assert_raise ArgumentError, ~r/expected :at to be an integer timestamp/, fn ->
+        Tween.redirect(anim, to: 0.0, at: "now")
+      end
     end
   end
 

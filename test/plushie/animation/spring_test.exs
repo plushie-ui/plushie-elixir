@@ -113,6 +113,12 @@ defmodule Plushie.Animation.SpringTest do
       assert encoded["velocity"] == 5.0
     end
 
+    test "near-zero velocity is omitted" do
+      s = Spring.new(to: 1.0, velocity: 1.0e-17)
+      encoded = Spring.encode(s)
+      refute Map.has_key?(encoded, "velocity")
+    end
+
     test "from and on_complete are included when set" do
       s = Spring.new(to: 1.0, from: 0.0, on_complete: :settled)
       encoded = Spring.encode(s)

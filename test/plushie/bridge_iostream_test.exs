@@ -338,7 +338,7 @@ defmodule Plushie.BridgeIostreamTest do
         # test load because the capture sink's flush order is not
         # synchronised with the bridge process.
         assert_receive {:telemetry_event, [:plushie, :bridge, :protocol_error], %{}, metadata},
-                       1_000
+                       3_000
 
         assert match?(
                  {:invalid_event_field, "wheel_scrolled", :unit, "row", :unknown, _},

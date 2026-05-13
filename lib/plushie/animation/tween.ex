@@ -118,6 +118,16 @@ defmodule Plushie.Animation.Tween do
     to = Keyword.fetch!(opts, :to)
     duration = Keyword.fetch!(opts, :duration)
     easing = Keyword.get(opts, :easing, :ease_in_out)
+    delay = Keyword.get(opts, :delay, 0)
+    repeat = Keyword.get(opts, :repeat)
+    auto_reverse = Keyword.get(opts, :auto_reverse, false)
+
+    validate_number!(:from, from)
+    validate_number!(:to, to)
+    validate_duration!(duration)
+    validate_delay!(delay)
+    validate_repeat!(repeat)
+    validate_auto_reverse!(auto_reverse)
 
     unless Easing.valid?(easing) do
       raise ArgumentError, "invalid easing: #{inspect(easing)}"
@@ -129,9 +139,9 @@ defmodule Plushie.Animation.Tween do
       duration: duration,
       easing: easing,
       easing_fn: Easing.function(easing),
-      delay: Keyword.get(opts, :delay, 0),
-      repeat: Keyword.get(opts, :repeat),
-      auto_reverse: Keyword.get(opts, :auto_reverse, false),
+      delay: delay,
+      repeat: repeat,
+      auto_reverse: auto_reverse,
       value: from,
       finished: false
     }
@@ -182,6 +192,17 @@ defmodule Plushie.Animation.Tween do
   def spring(opts) when is_list(opts) do
     from = Keyword.fetch!(opts, :from)
     to = Keyword.fetch!(opts, :to)
+    stiffness = Keyword.get(opts, :stiffness, 100)
+    damping = Keyword.get(opts, :damping, 10)
+    mass = Keyword.get(opts, :mass, 1.0)
+    velocity = Keyword.get(opts, :velocity, 0.0)
+
+    validate_number!(:from, from)
+    validate_number!(:to, to)
+    validate_positive_number!(:stiffness, stiffness)
+    validate_non_negative_number!(:damping, damping)
+    validate_positive_number!(:mass, mass)
+    validate_number!(:velocity, velocity)
 
     %__MODULE__{
       from: from,
@@ -189,10 +210,10 @@ defmodule Plushie.Animation.Tween do
       value: from,
       finished: false,
       spring_config: %{
-        stiffness: Keyword.get(opts, :stiffness, 100),
-        damping: Keyword.get(opts, :damping, 10),
-        mass: Keyword.get(opts, :mass, 1.0),
-        velocity: Keyword.get(opts, :velocity, 0.0)
+        stiffness: stiffness,
+        damping: damping,
+        mass: mass,
+        velocity: velocity
       }
     }
   end
@@ -259,6 +280,21 @@ defmodule Plushie.Animation.Tween do
     new_to = Keyword.fetch!(opts, :to)
     timestamp = Keyword.fetch!(opts, :at)
     new_easing = Keyword.get(opts, :easing, anim.easing)
+    duration = Keyword.get(opts, :duration, anim.duration)
+
+    validate_number!(:to, new_to)
+
+    unless is_integer(timestamp) do
+      raise ArgumentError, "expected :at to be an integer timestamp, got: #{inspect(timestamp)}"
+    end
+
+    if duration != nil do
+      validate_duration!(duration)
+    end
+
+    unless Easing.valid?(new_easing) do
+      raise ArgumentError, "invalid easing: #{inspect(new_easing)}"
+    end
 
     # For spring mode, preserve velocity for natural momentum
     spring_config =
@@ -277,7 +313,7 @@ defmodule Plushie.Animation.Tween do
         easing: new_easing,
         easing_fn:
           if(new_easing != anim.easing, do: Easing.function(new_easing), else: anim.easing_fn),
-        duration: Keyword.get(opts, :duration, anim.duration),
+        duration: duration,
         spring_config: spring_config
     }
   end
@@ -359,9 +395,17 @@ defmodule Plushie.Animation.Tween do
     dt = 0.001
     steps = min(max(delta_ms, 0), 1000)
 
+    if steps == 0 do
+      anim
+    else
+      do_advance_spring(anim, config, timestamp, steps, dt)
+    end
+  end
+
+  defp do_advance_spring(anim, config, timestamp, steps, dt) do
     {pos, vel} =
       Enum.reduce(
-        1..max(1, steps)//1,
+        1..steps//1,
         {if(anim.value != nil, do: anim.value, else: anim.from), config.velocity},
         fn _, {pos, vel} ->
           force = -config.stiffness * (pos - anim.to) - config.damping * vel
@@ -394,4 +438,51 @@ defmodule Plushie.Animation.Tween do
   defp clamp(t) when t < 0, do: 0.0
   defp clamp(t) when t > 1.0, do: 1.0
   defp clamp(t), do: t * 1.0
+
+  defp validate_number!(_key, value) when is_number(value), do: :ok
+
+  defp validate_number!(key, value) do
+    raise ArgumentError, "expected #{key} to be a number, got: #{inspect(value)}"
+  end
+
+  defp validate_positive_number!(_key, value) when is_number(value) and value > 0, do: :ok
+
+  defp validate_positive_number!(key, value) do
+    raise ArgumentError, "expected #{key} to be a positive number, got: #{inspect(value)}"
+  end
+
+  defp validate_non_negative_number!(_key, value) when is_number(value) and value >= 0, do: :ok
+
+  defp validate_non_negative_number!(key, value) do
+    raise ArgumentError, "expected #{key} to be a non-negative number, got: #{inspect(value)}"
+  end
+
+  defp validate_duration!(duration) when is_integer(duration) and duration > 0, do: :ok
+
+  defp validate_duration!(duration) do
+    raise ArgumentError,
+          "expected duration to be a positive integer in milliseconds, got: #{inspect(duration)}"
+  end
+
+  defp validate_delay!(delay) when is_integer(delay) and delay >= 0, do: :ok
+
+  defp validate_delay!(delay) do
+    raise ArgumentError,
+          "expected delay to be a non-negative integer in milliseconds, got: #{inspect(delay)}"
+  end
+
+  defp validate_repeat!(nil), do: :ok
+  defp validate_repeat!(:forever), do: :ok
+  defp validate_repeat!(repeat) when is_integer(repeat) and repeat > 0, do: :ok
+
+  defp validate_repeat!(repeat) do
+    raise ArgumentError,
+          "expected repeat to be a positive integer or :forever, got: #{inspect(repeat)}"
+  end
+
+  defp validate_auto_reverse!(value) when is_boolean(value), do: :ok
+
+  defp validate_auto_reverse!(value) do
+    raise ArgumentError, "expected auto_reverse to be a boolean, got: #{inspect(value)}"
+  end
 end
