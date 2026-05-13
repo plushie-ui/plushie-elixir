@@ -1056,6 +1056,41 @@ properties.
 **Revisit when:** The renderer exposes orientation-neutral slider size
 props or measured user confusion warrants a parity-routed rename.
 
+## Scrollable status events are runtime-internal
+
+Renderer `status` events are a low-level interaction signal used by the
+runtime for focus tracking. The runtime absorbs raw status events and
+emits app-facing `focused` or `blurred` events when the focus state
+changes.
+
+**Rules out:** Adding `event :status` to `Scrollable` or other widgets
+only so apps can observe raw renderer status strings.
+
+**Still in scope:** Exposing a deliberate app-facing interaction event
+when a real use case needs more than focus and blur. Fixing status
+decode or runtime focus tracking when renderer behavior changes.
+
+**Revisit when:** The public event model intentionally exposes raw
+widget status values rather than derived semantic events.
+
+## Window lifecycle props are runtime-owned
+
+Window nodes carry lifecycle props such as title, size, position, and
+decorations so the runtime can open and update native windows through
+window operations. The renderer's window widget only consumes layout
+props needed to render the content container.
+
+**Rules out:** Treating lifecycle props on `Plushie.Widget.Window` as
+dead wire fields just because `plushie-rust` does not read them in
+`WindowWidget`.
+
+**Still in scope:** Adding renderer-consumed layout props to the window
+widget. Fixing runtime window prop extraction when a lifecycle prop is
+missing from window operations.
+
+**Revisit when:** Window lifecycle synchronization moves out of the
+runtime and into renderer-side widget props.
+
 ## Manual tree maps preserve unknown string prop keys
 
 Tree normalization accepts manually constructed maps in tests and low

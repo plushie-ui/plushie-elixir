@@ -125,6 +125,10 @@ defmodule Plushie.Type.ColorTest do
     test "non-color string returns error" do
       assert Color.cast("banana") == :error
     end
+
+    test "non-hex string with unsupported length returns error" do
+      assert Color.cast("notacolor") == :error
+    end
   end
 
   describe "encode/1" do

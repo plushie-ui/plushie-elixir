@@ -67,6 +67,15 @@ defmodule Plushie.Widget.ContainerTest do
       assert c.center == false
     end
 
+    test "center/2 unsets the center field with nil" do
+      c =
+        Container.new("c1")
+        |> Container.center(true)
+        |> Container.center(nil)
+
+      assert c.center == nil
+    end
+
     test "clip/2 sets the clip field" do
       c = Container.new("c1") |> Container.clip(true)
       assert c.clip == true
@@ -85,6 +94,14 @@ defmodule Plushie.Widget.ContainerTest do
     test "background/2 sets the background field" do
       c = Container.new("c1") |> Container.background("#ff0000")
       assert c.background == "#ff0000"
+    end
+
+    test "background/2 raises on invalid colors" do
+      assert_raise ArgumentError,
+                   ~r/container background must be a valid color or gradient/,
+                   fn ->
+                     Container.new("c1") |> Container.background("notacolor")
+                   end
     end
 
     test "color/2 casts and sets the color field" do

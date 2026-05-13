@@ -61,7 +61,8 @@ defmodule Plushie.Widget.KeyedColumnTest do
       c1 = %{id: "item1", type: "text", props: %{}, children: []}
       c2 = %{id: "item2", type: "text", props: %{}, children: []}
       kc = KeyedColumn.new("kc1") |> KeyedColumn.extend([c1, c2])
-      assert length(kc.children) == 2
+      assert kc.children == [c2, c1]
+      assert KeyedColumn.build(kc).children == [c1, c2]
     end
 
     test "push/2 preserves existing children order" do

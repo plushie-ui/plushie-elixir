@@ -11,15 +11,22 @@ defmodule Plushie.Widget.Container.Extras do
 
       @doc "Centers the child in both axes. Defaults to true when called with no argument."
       def center(%__MODULE__{} = c), do: %{c | center: true}
+      def center(%__MODULE__{} = c, nil), do: %{c | center: nil}
       def center(%__MODULE__{} = c, val) when is_boolean(val), do: %{c | center: val}
 
       @doc "Sets the background fill (color or gradient)."
-      def background(%__MODULE__{} = c, %Plushie.Type.Gradient{} = gradient),
-        do: %{c | background: gradient}
-
       def background(%__MODULE__{} = c, background) do
-        {:ok, casted} = Plushie.Type.Color.cast(background)
-        %{c | background: casted}
+        case Plushie.Type.cast_value(
+               {:union, [Plushie.Type.Color, Plushie.Type.Gradient]},
+               background
+             ) do
+          {:ok, casted} ->
+            %{c | background: casted}
+
+          :error ->
+            raise ArgumentError,
+                  "container background must be a valid color or gradient, got: #{inspect(background)}"
+        end
       end
 
       @doc "Centers content horizontally. Sets width and align_x: :center."

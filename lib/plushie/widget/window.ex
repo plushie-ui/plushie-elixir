@@ -20,6 +20,7 @@ defmodule Plushie.Widget.Window do
 
     field :width, Plushie.Type.Length, doc: "Content width layout. Default: fill."
     field :height, Plushie.Type.Length, doc: "Content height layout. Default: fill."
+    field :padding, Plushie.Type.Padding, doc: "Padding inside the window content."
     field :position, {:tuple, [:float, :float]}, doc: "Initial window position as `{x, y}` tuple."
 
     field :min_size, {:tuple, [:float, :float]},

@@ -272,6 +272,10 @@ defmodule Plushie.Type.Color do
     "#" <> String.downcase(hex)
   end
 
+  def from_hex(hex) when is_binary(hex) do
+    raise ArgumentError, "invalid hex color: #{inspect(hex)}"
+  end
+
   @doc "Returns black as a hex string."
   @spec black() :: t()
   def black, do: "#000000"
@@ -398,7 +402,7 @@ defmodule Plushie.Type.Color do
     |> String.pad_leading(2, "0")
   end
 
-  # -- Plushie.Type callbacks ----------------------------------------------------
+  # Plushie.Type callbacks
 
   @doc false
   @impl Plushie.Type
@@ -418,7 +422,7 @@ defmodule Plushie.Type.Color do
     quote do: is_binary(unquote(var))
   end
 
-  # -- Private -----------------------------------------------------------------
+  # Private
 
   defp validate_hex_digits!(hex) do
     unless Regex.match?(~r/\A[0-9a-fA-F]+\z/, hex) do

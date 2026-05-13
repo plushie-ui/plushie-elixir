@@ -7,8 +7,23 @@ defmodule Plushie.Widget.PaneGrid.PanesCoercion do
       defoverridable panes: 2
 
       @doc "Sets the list of pane identifiers. Atoms are coerced to strings."
+      def panes(%__MODULE__{} = pg, nil), do: %{pg | panes: nil}
+
       def panes(%__MODULE__{} = pg, panes) when is_list(panes),
-        do: %{pg | panes: Enum.map(panes, &to_string/1)}
+        do: %{pg | panes: Enum.map(panes, &normalize_pane_id!(pg.id, &1))}
+
+      def panes(%__MODULE__{} = pg, panes) do
+        raise ArgumentError,
+              "pane_grid #{inspect(pg.id)}: panes must be a list of strings or atoms, got: #{inspect(panes)}"
+      end
+
+      defp normalize_pane_id!(_id, pane) when is_binary(pane), do: pane
+      defp normalize_pane_id!(_id, pane) when is_atom(pane), do: Atom.to_string(pane)
+
+      defp normalize_pane_id!(id, pane) do
+        raise ArgumentError,
+              "pane_grid #{inspect(id)}: pane identifiers must be strings or atoms, got: #{inspect(pane)}"
+      end
     end
   end
 end

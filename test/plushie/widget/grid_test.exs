@@ -27,6 +27,25 @@ defmodule Plushie.Widget.GridTest do
       assert g.num_columns == 4
     end
 
+    test "num_columns/2 accepts nil to unset the field" do
+      g =
+        Grid.new("g1")
+        |> Grid.num_columns(4)
+        |> Grid.num_columns(nil)
+
+      assert g.num_columns == nil
+    end
+
+    test "num_columns/2 rejects non-positive values" do
+      assert_raise ArgumentError, ~r/num_columns must be a positive integer/, fn ->
+        Grid.new("g1") |> Grid.num_columns(0)
+      end
+
+      assert_raise ArgumentError, ~r/num_columns must be a positive integer/, fn ->
+        Grid.new("g1") |> Grid.num_columns(-1)
+      end
+    end
+
     test "spacing/2 sets the spacing field" do
       g = Grid.new("g1") |> Grid.spacing(8)
       assert g.spacing == 8
@@ -110,6 +129,12 @@ defmodule Plushie.Widget.GridTest do
       assert g.spacing == 12
       assert g.width == 800
       assert g.height == 600
+    end
+
+    test "raises on non-positive num_columns" do
+      assert_raise ArgumentError, ~r/num_columns must be a positive integer/, fn ->
+        Grid.new("g1", num_columns: -3)
+      end
     end
 
     test "raises on unknown option" do

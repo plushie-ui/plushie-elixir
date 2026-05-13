@@ -79,7 +79,8 @@ defmodule Plushie.Widget.ColumnTest do
       c1 = %{id: "c1", type: "text", props: %{}, children: []}
       c2 = %{id: "c2", type: "text", props: %{}, children: []}
       col = Column.new("col1") |> Column.extend([c1, c2])
-      assert length(col.children) == 2
+      assert col.children == [c2, c1]
+      assert Column.build(col).children == [c1, c2]
     end
 
     test "push/2 preserves existing children" do

@@ -11,6 +11,7 @@ defmodule Plushie.Widget.WindowTest do
       assert w.size == nil
       assert w.width == nil
       assert w.height == nil
+      assert w.padding == nil
       assert w.position == nil
       assert w.min_size == nil
       assert w.max_size == nil
@@ -54,6 +55,11 @@ defmodule Plushie.Widget.WindowTest do
     test "height/2 sets the height" do
       w = Window.new("w") |> Window.height(600)
       assert w.height == 600
+    end
+
+    test "padding/2 sets the padding" do
+      w = Window.new("w") |> Window.padding(12)
+      assert w.padding == 12
     end
 
     test "position/2 sets the position" do
@@ -130,9 +136,11 @@ defmodule Plushie.Widget.WindowTest do
 
     test "includes non-nil props" do
       node =
-        Window.new("main", title: "App", size: {800, 600}, resizable: false) |> Window.build()
+        Window.new("main", title: "App", size: {800, 600}, padding: 16, resizable: false)
+        |> Window.build()
 
       assert node.props[:title] == "App"
+      assert node.props[:padding] == 16
       assert node.props[:resizable] == false
       # size stays as a raw tuple; encoding happens in Tree.normalize
       assert node.props[:size] == {800, 600}
@@ -161,6 +169,7 @@ defmodule Plushie.Widget.WindowTest do
           size: {800, 600},
           width: 800,
           height: 600,
+          padding: 12,
           position: {50, 50},
           min_size: {320, 240},
           max_size: {1920, 1080},
@@ -181,6 +190,7 @@ defmodule Plushie.Widget.WindowTest do
       assert w.size == {800, 600}
       assert w.width == 800
       assert w.height == 600
+      assert w.padding == 12
       assert w.position == {50, 50}
       assert w.min_size == {320, 240}
       assert w.max_size == {1920, 1080}

@@ -32,6 +32,28 @@ defmodule Plushie.Widget.PaneGridTest do
     end
   end
 
+  describe "panes/2" do
+    test "coerces atom pane identifiers to strings" do
+      pg = PaneGrid.new("pg1") |> PaneGrid.panes([:left, "right"])
+      assert pg.panes == ["left", "right"]
+    end
+
+    test "accepts nil to unset panes" do
+      pg =
+        PaneGrid.new("pg1")
+        |> PaneGrid.panes([:left])
+        |> PaneGrid.panes(nil)
+
+      assert pg.panes == nil
+    end
+
+    test "raises on unsupported pane identifiers" do
+      assert_raise ArgumentError, ~r/pane identifiers must be strings or atoms/, fn ->
+        PaneGrid.new("pg1") |> PaneGrid.panes(["left", 2])
+      end
+    end
+  end
+
   describe "width/2" do
     test "sets the width field" do
       pg = PaneGrid.new("pg1") |> PaneGrid.width(:fill)
@@ -117,7 +139,16 @@ defmodule Plushie.Widget.PaneGridTest do
 
   describe "with_options/2" do
     test "routes all known options" do
-      pg = PaneGrid.new("pg1", spacing: 3, width: :fill, height: 400, min_size: 25)
+      pg =
+        PaneGrid.new("pg1",
+          panes: [:left, "right"],
+          spacing: 3,
+          width: :fill,
+          height: 400,
+          min_size: 25
+        )
+
+      assert pg.panes == ["left", "right"]
       assert pg.spacing == 3
       assert pg.width == :fill
       assert pg.height == 400
