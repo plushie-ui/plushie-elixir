@@ -54,7 +54,8 @@ defmodule Plushie.Command.Image do
           pixels :: binary()
         ) :: Command.t()
   def create_image_rgba(handle, width, height, pixels)
-      when is_binary(handle) and is_integer(width) and is_integer(height) and is_binary(pixels) do
+      when is_binary(handle) and is_integer(width) and width > 0 and is_integer(height) and
+             height > 0 and is_binary(pixels) do
     expected = width * height * 4
 
     if byte_size(pixels) != expected do
@@ -102,7 +103,8 @@ defmodule Plushie.Command.Image do
           pixels :: binary()
         ) :: Command.t()
   def update_image_rgba(handle, width, height, pixels)
-      when is_binary(handle) and is_integer(width) and is_integer(height) and is_binary(pixels) do
+      when is_binary(handle) and is_integer(width) and width > 0 and is_integer(height) and
+             height > 0 and is_binary(pixels) do
     expected = width * height * 4
 
     if byte_size(pixels) != expected do

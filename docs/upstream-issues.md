@@ -11,3 +11,23 @@ Format per entry:
 - What the limitation is
 - Any local workaround currently in place
 - What the upstream fix would look like
+
+## Window resize increments cannot be cleared through nil payload values
+
+Dependency: `plushie-rust`
+
+The Elixir command `Plushie.Command.Window.set_resize_increments/3`
+documents `nil, nil` as the clear operation and sends those values in
+the window-op payload. The Rust deserializer currently reads resize
+increment fields through numeric extraction with a `0.0` fallback, then
+the renderer always applies `Some(Size::new(width, height))`. JSON null
+therefore becomes `0.0` instead of clearing the constraint.
+
+Local workaround: none in plushie-elixir without changing the shared
+wire shape. The SDK now validates that resize increments are either
+numeric width and height values or both nil, but the nil clear path still
+needs renderer support.
+
+Upstream fix: represent resize increments as optional dimensions in the
+Rust operation model, or add a dedicated clear operation in the protocol
+and renderer dispatch.

@@ -223,11 +223,22 @@ defmodule Plushie.CommandTest do
       assert batch.payload.commands == []
     end
 
-    test "normalises a nested list via List.wrap semantics" do
+    test "rejects nested lists" do
       inner = Command.none()
-      # List.wrap on a list passes it through; a single item becomes [item]
-      batch = Command.batch([inner])
-      assert length(batch.payload.commands) == 1
+
+      assert_raise ArgumentError, ~r/expected %Plushie.Command{}/, fn ->
+        Command.batch([[inner]])
+      end
+    end
+
+    test "rejects non-command input" do
+      assert_raise FunctionClauseError, fn ->
+        Command.batch(nil)
+      end
+
+      assert_raise ArgumentError, ~r/expected %Plushie.Command{}/, fn ->
+        Command.batch([Command.none(), :not_a_command])
+      end
     end
   end
 
@@ -377,6 +388,119 @@ defmodule Plushie.CommandTest do
     test "raises when given a non-list" do
       assert_raise FunctionClauseError, fn ->
         Command.widget_batch("not a list")
+      end
+    end
+
+    test "raises when list elements are not widget command tuples" do
+      assert_raise ArgumentError, ~r/expected widget command tuple/, fn ->
+        Command.widget_batch([{"n1", "op1", nil}, :not_a_tuple])
+      end
+    end
+  end
+
+  describe "image RGBA commands" do
+    test "create_image_rgba/4 stores dimensions and pixels" do
+      pixels = <<255, 0, 0, 255>>
+
+      assert %Command{
+               type: :image_op,
+               payload: %{
+                 op: "create_image",
+                 handle: "pixel",
+                 width: 1,
+                 height: 1,
+                 pixels: ^pixels
+               }
+             } = Command.create_image_rgba("pixel", 1, 1, pixels)
+    end
+
+    test "update_image_rgba/4 stores dimensions and pixels" do
+      pixels = <<0, 0, 0, 0>>
+
+      assert %Command{
+               type: :image_op,
+               payload: %{
+                 op: "update_image",
+                 handle: "pixel",
+                 width: 1,
+                 height: 1,
+                 pixels: ^pixels
+               }
+             } = Command.update_image_rgba("pixel", 1, 1, pixels)
+    end
+
+    test "RGBA commands reject non-positive dimensions" do
+      assert_raise FunctionClauseError, fn ->
+        Command.create_image_rgba("pixel", 0, 1, <<>>)
+      end
+
+      assert_raise FunctionClauseError, fn ->
+        Command.update_image_rgba("pixel", 1, -1, <<>>)
+      end
+    end
+  end
+
+  describe "query and utility constructors" do
+    test "tree_hash/1 creates a widget op query" do
+      assert %Command{type: :widget_op, payload: %{op: "tree_hash", tag: "hash"}} =
+               Command.tree_hash(:hash)
+    end
+
+    test "find_focused/1 creates a widget op query" do
+      assert %Command{type: :widget_op, payload: %{op: "find_focused", tag: "focus"}} =
+               Command.find_focused(:focus)
+    end
+
+    test "load_font/2 stores family and font data" do
+      data = <<0, 1, 2>>
+
+      assert %Command{type: :load_font, payload: %{family: "Custom", data: ^data}} =
+               Command.load_font("Custom", data)
+    end
+
+    test "advance_frame/1 stores the timestamp" do
+      assert %Command{type: :advance_frame, payload: %{timestamp: 16}} =
+               Command.advance_frame(16)
+    end
+  end
+
+  describe "window visual constructors" do
+    test "set_icon/4 stores icon data and dimensions" do
+      pixels = <<0, 0, 0, 0>>
+
+      assert %Command{
+               type: :window_op,
+               payload: %{
+                 op: "set_icon",
+                 window_id: "main",
+                 icon_data: ^pixels,
+                 width: 1,
+                 height: 1
+               }
+             } = Command.set_icon("main", pixels, 1, 1)
+    end
+
+    test "set_resize_increments/3 stores numeric increments" do
+      assert %Command{
+               type: :window_op,
+               payload: %{op: "set_resize_increments", window_id: "main", width: 8, height: 16}
+             } = Command.set_resize_increments("main", 8, 16)
+    end
+
+    test "set_resize_increments/3 allows clearing with nil values" do
+      assert %Command{
+               type: :window_op,
+               payload: %{op: "set_resize_increments", window_id: "main", width: nil, height: nil}
+             } = Command.set_resize_increments("main", nil, nil)
+    end
+
+    test "set_resize_increments/3 rejects mixed or non-numeric dimensions" do
+      assert_raise FunctionClauseError, fn ->
+        Command.set_resize_increments("main", nil, 10)
+      end
+
+      assert_raise FunctionClauseError, fn ->
+        Command.set_resize_increments("main", "8", 10)
       end
     end
   end

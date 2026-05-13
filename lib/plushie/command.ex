@@ -7,7 +7,7 @@ defmodule Plushie.Command do
 
   ## Categories
 
-  - **Basic**: `none/0`, `done/2`, `async/2`, `stream/2`, `cancel/1`, `send_after/2`, `exit/0`
+  - **Basic**: `none/0`, `dispatch/2`, `task/2`, `stream/2`, `cancel/1`, `send_after/2`, `exit/0`
   - **Focus**: `focus/1` (widget command), `focus_next/0`, `focus_previous/0` (widget ops)
   - **Text**: `select_all/1`, `move_cursor_to_front/1`, `move_cursor_to_end/1`,
     `move_cursor_to/2`, `select_range/3` (see `Command.Text`)
@@ -42,7 +42,7 @@ defmodule Plushie.Command do
 
   Commands deliver results back to `update/2` through three mechanisms:
 
-  - **Async/Stream**: `async/2` delivers `%Plushie.Event.AsyncEvent{tag: tag, result: result}`.
+  - **Task/Stream**: `task/2` delivers `%Plushie.Event.AsyncEvent{tag: tag, result: result}`.
     `stream/2` delivers `%Plushie.Event.StreamEvent{tag: tag, value: value}` for each chunk.
   - **Window and system queries**: `window_size/2`, `window_mode/2`, etc. deliver
     `%Plushie.Event.SystemEvent{}` structs through `update/2`. The `type` field identifies the
@@ -533,6 +533,15 @@ defmodule Plushie.Command do
   """
   @spec widget_batch(commands :: [{String.t(), String.t(), term()}]) :: %__MODULE__{}
   def widget_batch(commands) when is_list(commands) do
+    Enum.each(commands, fn
+      {id, family, _value} when is_binary(id) and is_binary(family) ->
+        :ok
+
+      other ->
+        raise ArgumentError,
+              "expected widget command tuple {id, family, value}, got: #{inspect(other)}"
+    end)
+
     %__MODULE__{type: :commands, payload: %{commands: commands}}
   end
 
@@ -562,12 +571,23 @@ defmodule Plushie.Command do
   Issue multiple commands. Commands in the batch execute sequentially
   in list order, with state threaded through each.
 
-  Accepts a single command, a list of commands, or a nested list; anything
-  `List.wrap/1` can normalize.
+  Accepts a single command or a flat list of commands.
   """
   @spec batch(commands :: t() | [t()]) :: %__MODULE__{}
-  def batch(commands) do
-    %__MODULE__{type: :batch, payload: %{commands: List.wrap(commands)}}
+  def batch(%__MODULE__{} = command) do
+    %__MODULE__{type: :batch, payload: %{commands: [command]}}
+  end
+
+  def batch(commands) when is_list(commands) do
+    Enum.each(commands, fn
+      %__MODULE__{} ->
+        :ok
+
+      other ->
+        raise ArgumentError, "expected %Plushie.Command{}, got: #{inspect(other)}"
+    end)
+
+    %__MODULE__{type: :batch, payload: %{commands: commands}}
   end
 
   # ---------------------------------------------------------------------------

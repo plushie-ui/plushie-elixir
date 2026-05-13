@@ -258,3 +258,66 @@ cross-SDK parity workflow if the shared canvas shape vocabulary changes.
 
 **Revisit when:** Canvas gains a new circle-like shape with a separate
 corner or smoothing radius.
+
+## Command constructors are the command validation boundary
+
+Commands are host-authored pure data. The runtime's unknown-command
+catch-all is a programming-error backstop for manually constructed or
+corrupted internal command structs, not a renderer-to-host wire boundary.
+
+**Rules out:** Adding runtime rate limiting or malformed-wire tests for
+unknown command structs as if they were adversarial renderer input.
+
+**Still in scope:** Tightening public command constructors so malformed
+command data is harder to produce through the SDK API. Testing malformed
+renderer-to-host protocol messages in protocol decode tests.
+
+**Revisit when:** Commands become accepted input from an untrusted
+external source.
+
+## Narrow command runtime tests may use explicit tree maps
+
+Some runtime command integration tests construct small window trees
+directly to keep the test focused on command execution. These tests still
+exercise the real runtime, bridge, renderer binary, and wire protocol.
+
+**Rules out:** Rewriting command-focused tests solely to exercise the DSL
+when the DSL is not the behavior under test.
+
+**Still in scope:** DSL tests and user-facing integration tests should
+use the DSL path. Command tests should still return valid window nodes.
+
+**Revisit when:** A command test depends on widget DSL behavior or misses
+a bug because its hand-built tree differs from normalized DSL output.
+
+## Pending effect tag lookup stays simple
+
+Pending effects are keyed by wire ID, and cancelling by tag scans the
+small pending-effects map. The realistic profile is one pending effect
+per user action, so the linear scan keeps state shape simple without a
+measured cost.
+
+**Rules out:** Adding a secondary tag index for pending effects based on
+big-O concern alone.
+
+**Still in scope:** Replacing the scan if measured contention or a real
+workflow shows many concurrent pending effects with tag cancellation.
+
+**Revisit when:** Pending effect cancellation appears in a measured hot
+path or an application pattern creates many simultaneous effects.
+
+## Command DSL specs are generated source
+
+Modules that use `use Plushie.Command` declare command functions through
+the command DSL. Their specs are generated from the same declarations as
+the functions, so explicit duplicate `@spec` lines in each module would
+add drift risk rather than clarity.
+
+**Rules out:** Adding hand-written specs beside command DSL declarations
+solely because generated specs are not visible in the source file.
+
+**Still in scope:** Testing and fixing DSL spec generation itself.
+Adding explicit specs for hand-written command functions.
+
+**Revisit when:** The generated specs become hard to inspect in docs or
+Dialyzer output shows a concrete mismatch.

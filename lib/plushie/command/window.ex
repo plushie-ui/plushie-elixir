@@ -253,7 +253,20 @@ defmodule Plushie.Command.Window do
           width :: number() | nil,
           height :: number() | nil
         ) :: Command.t()
-  def set_resize_increments(window_id, width, height) do
+  def set_resize_increments(window_id, nil, nil) when is_binary(window_id) do
+    %Command{
+      type: :window_op,
+      payload: %{
+        op: "set_resize_increments",
+        window_id: window_id,
+        width: nil,
+        height: nil
+      }
+    }
+  end
+
+  def set_resize_increments(window_id, width, height)
+      when is_binary(window_id) and is_number(width) and is_number(height) do
     %Command{
       type: :window_op,
       payload: %{

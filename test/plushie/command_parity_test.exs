@@ -313,10 +313,16 @@ defmodule Plushie.CommandParityTest do
         Command.enable_mouse_passthrough("w"),
         Command.disable_mouse_passthrough("w"),
         Command.show_system_menu("w"),
+        Command.set_icon("w", <<0, 0, 0, 0>>, 1, 1),
+        Command.set_resize_increments("w", 1, 1),
         Command.window_size("w", :t),
         Command.window_position("w", :t),
         Command.is_maximized("w", :t),
-        Command.is_minimized("w", :t)
+        Command.is_minimized("w", :t),
+        Command.tree_hash(:t),
+        Command.find_focused(:t),
+        Command.load_font("Font", <<0>>),
+        Command.advance_frame(16)
       ]
 
       for cmd <- commands do
