@@ -44,6 +44,7 @@ defmodule Plushie.Protocol do
                backend: String.t(),
                transport: String.t(),
                native_widgets: [String.t()],
+               widget_sets: [String.t()],
                widgets: [String.t()]
              }}
           | {:settings, map()}
@@ -54,15 +55,19 @@ defmodule Plushie.Protocol do
           | {:subscribe, String.t(), String.t()}
           | {:unsubscribe, String.t()}
           | {:image_op, String.t(), map()}
+          | {:load_font, String.t(), binary()}
           | {:command, String.t(), String.t(), term()}
           | {:commands, [{String.t(), String.t(), term()}]}
           | {:window_op, String.t(), String.t(), map()}
           | {:system_op, String.t(), map()}
           | {:system_query, String.t(), map()}
+          | {:screenshot, String.t(), String.t(), keyword()}
           | {:interact, String.t(), String.t(), map(), map()}
           | {:interact_step, String.t(), [map()]}
           | {:interact_response, String.t(), [map()]}
           | {:screenshot_response, map()}
+          | {:query_response, String.t(), String.t(), term()}
+          | {:reset_response, String.t(), String.t()}
           | {:advance_frame, non_neg_integer()}
           | {:register_effect_stub, String.t(), term()}
           | {:unregister_effect_stub, String.t()}
@@ -70,6 +75,7 @@ defmodule Plushie.Protocol do
           | {:session_error, String.t(), String.t() | nil, term()}
           | {:session_closed, String.t(), term()}
           | {:prop_validation, String.t(), map() | nil}
+          | Plushie.Event.DiagnosticMessage.t()
 
   @typedoc """
   Structured decode error returned by `decode_message/2`.
@@ -112,7 +118,7 @@ defmodule Plushie.Protocol do
   ## Example
 
       Plushie.Protocol.encode_settings(%{antialiasing: true, default_text_size: 16}, :json)
-      #=> ~s({"session":"","settings":{"antialiasing":true,"default_text_size":16,"protocol_version":1},"type":"settings"}) <> "\\n"
+      #=> ~s({"session":"","settings":{"antialiasing":true,"default_text_size":16,"protocol_version":1},"type":"settings"}) <> "\n"
   """
   @spec encode_settings(settings :: map(), format :: format()) :: iodata()
   defdelegate encode_settings(settings, format \\ :msgpack), to: Plushie.Protocol.Encode
@@ -123,9 +129,9 @@ defmodule Plushie.Protocol do
   ## Example
 
       Plushie.Protocol.encode_snapshot(%{tag: "text", value: "hello"}, :json)
-      #=> ~s({"session":"","tree":{"tag":"text","value":"hello"},"type":"snapshot"}) <> "\\n"
+      #=> ~s({"session":"","tree":{"tag":"text","value":"hello"},"type":"snapshot"}) <> "\n"
   """
-  @spec encode_snapshot(tree :: term(), format :: format()) :: iodata()
+  @spec encode_snapshot(tree :: map(), format :: format()) :: iodata()
   defdelegate encode_snapshot(tree, format \\ :msgpack), to: Plushie.Protocol.Encode
 
   @doc """
@@ -136,7 +142,7 @@ defmodule Plushie.Protocol do
   ## Example
 
       Plushie.Protocol.encode_patch([], :json)
-      #=> ~s({"ops":[],"session":"","type":"patch"}) <> "\\n"
+      #=> ~s({"ops":[],"session":"","type":"patch"}) <> "\n"
   """
   @spec encode_patch(ops :: list(), format :: format()) :: iodata()
   defdelegate encode_patch(ops, format \\ :msgpack), to: Plushie.Protocol.Encode
@@ -147,7 +153,7 @@ defmodule Plushie.Protocol do
   ## Example
 
       Plushie.Protocol.encode_effect("req_1", "file_open", %{title: "Pick a file"}, :json)
-      #=> ~s({"id":"req_1","kind":"file_open","payload":{"title":"Pick a file"},"session":"","type":"effect"}) <> "\\n"
+      #=> ~s({"id":"req_1","kind":"file_open","payload":{"title":"Pick a file"},"session":"","type":"effect"}) <> "\n"
   """
   @spec encode_effect(
           id :: String.t(),
@@ -163,7 +169,7 @@ defmodule Plushie.Protocol do
   ## Example
 
       Plushie.Protocol.encode_widget_op("focus", %{target: "username"}, :json)
-      #=> ~s({"op":"focus","payload":{"target":"username"},"session":"","type":"widget_op"}) <> "\\n"
+      #=> ~s({"op":"focus","payload":{"target":"username"},"session":"","type":"widget_op"}) <> "\n"
   """
   @spec encode_widget_op(op :: String.t(), payload :: map(), format :: format()) :: iodata()
   defdelegate encode_widget_op(op, payload, format \\ :msgpack), to: Plushie.Protocol.Encode
@@ -188,7 +194,7 @@ defmodule Plushie.Protocol do
   ## Example
 
       Plushie.Protocol.encode_subscribe("on_key_press", "keys", :json)
-      #=> ~s({"kind":"on_key_press","session":"","tag":"keys","type":"subscribe"}) <> "\\n"
+      #=> ~s({"kind":"on_key_press","session":"","tag":"keys","type":"subscribe"}) <> "\n"
   """
   @spec encode_subscribe(
           kind :: String.t(),
@@ -209,7 +215,7 @@ defmodule Plushie.Protocol do
   ## Example
 
       Plushie.Protocol.encode_unsubscribe("on_key_press", :json)
-      #=> ~s({"kind":"on_key_press","session":"","type":"unsubscribe"}) <> "\\n"
+      #=> ~s({"kind":"on_key_press","session":"","type":"unsubscribe"}) <> "\n"
   """
   @spec encode_unsubscribe(
           kind :: String.t(),
@@ -232,7 +238,7 @@ defmodule Plushie.Protocol do
   ## Example
 
       Plushie.Protocol.encode_image_op("create_image", %{handle: "logo", data: <<1, 2, 3>>}, :json)
-      #=> ~s({"op":"create_image","payload":{"data":"AQID","handle":"logo"},"session":"","type":"image_op"}) <> "\\n"
+      #=> ~s({"op":"create_image","payload":{"data":"AQID","handle":"logo"},"session":"","type":"image_op"}) <> "\n"
   """
   @spec encode_image_op(op :: String.t(), payload :: map(), format :: format()) :: iodata()
   defdelegate encode_image_op(op, payload, format \\ :msgpack), to: Plushie.Protocol.Encode
@@ -272,7 +278,7 @@ defmodule Plushie.Protocol do
   ## Example
 
       Plushie.Protocol.encode_window_op("open", "main", %{title: "My App"}, :json)
-      #=> ~s({"op":"open","payload":{"title":"My App"},"session":"","type":"window_op","window_id":"main"}) <> "\\n"
+      #=> ~s({"op":"open","payload":{"title":"My App"},"session":"","type":"window_op","window_id":"main"}) <> "\n"
   """
   @spec encode_window_op(
           op :: String.t(),
@@ -282,6 +288,15 @@ defmodule Plushie.Protocol do
         ) :: iodata()
   defdelegate encode_window_op(op, window_id, payload, format \\ :msgpack),
     to: Plushie.Protocol.Encode
+
+  @doc "Encodes a screenshot request as a protocol message."
+  @spec encode_screenshot(
+          id :: String.t(),
+          name :: String.t(),
+          opts :: keyword(),
+          format :: format()
+        ) :: iodata()
+  defdelegate encode_screenshot(id, name, opts, format \\ :msgpack), to: Plushie.Protocol.Encode
 
   @doc """
   Encodes a system-wide operation as a protocol message.

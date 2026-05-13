@@ -47,7 +47,7 @@ defmodule Plushie.Protocol.Decode do
     |> Map.put_new("type", "event")
     |> safe_dispatch()
     |> case do
-      {:error, reason} -> raise Error, reason: reason, format: :msgpack, data: <<>>
+      {:error, reason} -> raise Error, reason: reason, format: :decoded, data: <<>>
       decoded -> decoded
     end
   end
@@ -137,6 +137,13 @@ defmodule Plushie.Protocol.Decode do
   defp event_identity!(%{"family" => family, "id" => id} = msg) when is_binary(id) do
     {local, scope, window_from_id} = split_scoped_id(id)
 
+    if local == "" do
+      raise Plushie.Protocol.Error,
+        reason: {:invalid_event_field, family, "id", id, :empty, msg},
+        format: :msgpack,
+        data: <<>>
+    end
+
     # Prefer window from # in ID; fall back to separate field
     window_id = window_from_id || msg["window_id"]
 
@@ -155,6 +162,8 @@ defmodule Plushie.Protocol.Decode do
   # Modifier parsing helper
   # ---------------------------------------------------------------------------
 
+  defp parse_modifiers(nil), do: %Plushie.KeyModifiers{}
+
   defp parse_modifiers(mods) when is_map(mods) do
     %Plushie.KeyModifiers{
       ctrl: Map.get(mods, "ctrl", false),
@@ -165,7 +174,12 @@ defmodule Plushie.Protocol.Decode do
     }
   end
 
-  defp parse_modifiers(_), do: %Plushie.KeyModifiers{}
+  defp parse_modifiers(mods) do
+    raise Plushie.Protocol.Error,
+      reason: {:invalid_event_field, "modifiers", :modifiers, mods, :invalid, %{}},
+      format: :msgpack,
+      data: <<>>
+  end
 
   # IME cursor: {start, end} tuple from map, or nil when absent/null.
   defp parse_ime_cursor(%{"start" => s, "end" => e}), do: {s, e}
@@ -784,18 +798,17 @@ defmodule Plushie.Protocol.Decode do
 
     tag =
       if data["tag"] do
-        try do
-          String.to_existing_atom(data["tag"])
-        rescue
-          ArgumentError ->
-            reraise Error.exception(
-                      reason:
-                        {:invalid_event_field, "transition_complete", :tag, data["tag"],
-                         :unknown_atom, msg},
-                      format: :msgpack,
-                      data: <<>>
-                    ),
-                    __STACKTRACE__
+        case existing_atom(data["tag"]) do
+          {:ok, tag} ->
+            tag
+
+          :error ->
+            raise Error,
+              reason:
+                {:invalid_event_field, "transition_complete", :tag, data["tag"], :unknown_atom,
+                 msg},
+              format: :msgpack,
+              data: <<>>
         end
       end
 
@@ -1390,7 +1403,7 @@ defmodule Plushie.Protocol.Decode do
         other -> invalid_diagnostic_level!(other, msg)
       end
 
-    typed = Plushie.Event.Diagnostic.decode!(diag)
+    typed = decode_diagnostic!(diag, msg)
 
     %Plushie.Event.DiagnosticMessage{
       session: msg["session"] || "",
@@ -1418,10 +1431,31 @@ defmodule Plushie.Protocol.Decode do
     {:screenshot_response, msg}
   end
 
+  defp dispatch(%{"type" => "query_response", "id" => id, "target" => target} = msg) do
+    {:query_response, id, target, msg["data"]}
+  end
+
+  defp dispatch(%{"type" => "reset_response", "id" => id, "status" => status}) do
+    {:reset_response, id, status}
+  end
+
+  defp dispatch(%{"type" => "screenshot", "id" => id, "name" => name} = msg) do
+    opts =
+      []
+      |> maybe_put_dimension(msg, "width", :width)
+      |> maybe_put_dimension(msg, "height", :height)
+
+    {:screenshot, id, name, opts}
+  end
+
   # -- Outbound command messages (for diagnostics / parity tests) --
 
   defp dispatch(%{"type" => "image_op", "op" => op, "payload" => payload}) do
     {:image_op, op, payload}
+  end
+
+  defp dispatch(%{"type" => "load_font", "payload" => %{"family" => family, "data" => data}}) do
+    {:load_font, family, data}
   end
 
   defp dispatch(%{"type" => "command", "id" => id, "family" => family} = msg) do
@@ -1659,6 +1693,31 @@ defmodule Plushie.Protocol.Decode do
     error in Plushie.Protocol.Error -> {:error, error.reason}
   end
 
+  defp decode_diagnostic!(diag, msg) do
+    case decode_diagnostic(diag) do
+      {:ok, typed} ->
+        typed
+
+      {:error, message} ->
+        raise Error,
+          reason: {:invalid_event_field, "diagnostic", :diagnostic, diag, message, msg},
+          format: :msgpack,
+          data: <<>>
+    end
+  end
+
+  defp decode_diagnostic(diag) do
+    {:ok, Plushie.Event.Diagnostic.decode!(diag)}
+  rescue
+    error in ArgumentError -> {:error, Exception.message(error)}
+  end
+
+  defp existing_atom(value) do
+    {:ok, String.to_existing_atom(value)}
+  rescue
+    ArgumentError -> :error
+  end
+
   defp invalid_diagnostic_level!(value, msg) do
     raise Error,
       reason: {:invalid_event_field, "diagnostic", :level, value, :invalid, msg},
@@ -1670,17 +1729,99 @@ defmodule Plushie.Protocol.Decode do
   # need to know the wire format. JSON encodes raw bytes as base64 strings;
   # this decodes them back to raw binaries after dispatch.
   @spec normalize_binary_fields(Plushie.Protocol.decoded_message(), Plushie.Protocol.format()) ::
-          Plushie.Protocol.decoded_message()
+          Plushie.Protocol.decoded_message() | {:error, Plushie.Protocol.decode_error_reason()}
   defp normalize_binary_fields({:screenshot_response, %{"rgba" => rgba} = msg}, :json)
        when is_binary(rgba) do
-    case Base.decode64(rgba) do
-      {:ok, decoded} ->
-        {:screenshot_response, %{msg | "rgba" => decoded}}
+    with {:ok, decoded} <- decode_base64_field(rgba, "screenshot_response.rgba") do
+      {:screenshot_response, %{msg | "rgba" => decoded}}
+    end
+  end
 
-      :error ->
-        {:error, {:decode_failed, {:invalid_base64, "screenshot_response.rgba"}}}
+  defp normalize_binary_fields({:image_op, op, payload}, :json) do
+    with {:ok, payload} <- decode_binary_payload(payload, ["data", "pixels"], "image_op.payload") do
+      {:image_op, op, payload}
+    end
+  end
+
+  defp normalize_binary_fields({:widget_op, op, payload}, :json) do
+    with {:ok, payload} <- decode_binary_payload(payload, ["data"], "widget_op.payload") do
+      {:widget_op, op, payload}
+    end
+  end
+
+  defp normalize_binary_fields({:window_op, op, window_id, payload}, :json) do
+    with {:ok, payload} <- decode_binary_payload(payload, ["icon_data"], "window_op.payload") do
+      {:window_op, op, window_id, payload}
+    end
+  end
+
+  defp normalize_binary_fields({:effect_response, id, "ok", result}, :json) do
+    with {:ok, result} <- decode_binary_payload(result, ["rgba"], "effect_response.result") do
+      {:effect_response, id, "ok", result}
+    end
+  end
+
+  defp normalize_binary_fields({:load_font, family, data}, :json) when is_binary(data) do
+    with {:ok, data} <- decode_base64_field(data, "load_font.payload.data") do
+      {:load_font, family, data}
     end
   end
 
   defp normalize_binary_fields(message, _format), do: message
+
+  defp decode_binary_payload(payload, keys, path) when is_map(payload) do
+    Enum.reduce_while(keys, {:ok, payload}, fn key, {:ok, acc} ->
+      case fetch_binary_field(acc, key) do
+        {:ok, actual_key, value} when is_binary(value) ->
+          case decode_base64_field(value, "#{path}.#{key}") do
+            {:ok, decoded} -> {:cont, {:ok, Map.put(acc, actual_key, decoded)}}
+            {:error, _reason} = error -> {:halt, error}
+          end
+
+        _ ->
+          {:cont, {:ok, acc}}
+      end
+    end)
+  end
+
+  defp decode_binary_payload(payload, _keys, _path), do: {:ok, payload}
+
+  defp fetch_binary_field(payload, key) do
+    cond do
+      Map.has_key?(payload, key) ->
+        {:ok, key, Map.fetch!(payload, key)}
+
+      is_binary(key) ->
+        fetch_existing_atom_field(payload, key)
+
+      true ->
+        :error
+    end
+  end
+
+  defp fetch_existing_atom_field(payload, key) do
+    atom_key = String.to_existing_atom(key)
+
+    if Map.has_key?(payload, atom_key) do
+      {:ok, atom_key, Map.fetch!(payload, atom_key)}
+    else
+      :error
+    end
+  rescue
+    ArgumentError -> :error
+  end
+
+  defp decode_base64_field(value, path) do
+    case Base.decode64(value) do
+      {:ok, decoded} -> {:ok, decoded}
+      :error -> {:error, {:decode_failed, {:invalid_base64, path}}}
+    end
+  end
+
+  defp maybe_put_dimension(opts, msg, wire_key, opt_key) do
+    case Map.fetch(msg, wire_key) do
+      {:ok, value} when is_integer(value) and value > 0 -> Keyword.put(opts, opt_key, value)
+      _ -> opts
+    end
+  end
 end

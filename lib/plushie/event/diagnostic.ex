@@ -29,9 +29,11 @@ defmodule Plushie.Event.Diagnostic do
 
   alias Plushie.Event.Diagnostic.{
     A11yRefUnresolved,
+    AnimationDescriptorInvalid,
     BufferOverflow,
     ContentLengthExceeded,
     DashCacheCapExceeded,
+    DashSegmentsCapExceeded,
     DispatchLoopExceeded,
     DuplicateId,
     EmitterCoalesceCapExceeded,
@@ -45,19 +47,22 @@ defmodule Plushie.Event.Diagnostic do
     PropRangeExceeded,
     PropTypeMismatch,
     PropUnknown,
+    RendererRuntimeError,
     RequiredWidgetsMissing,
     SvgDecodeTimeout,
     SvgParseError,
     TooManyDuplicates,
     TreeDepthExceeded,
     UnknownMessageType,
+    UnknownPatchOp,
     UnknownWindow,
     UnrecognizedWidgetPlaceholder,
     UpdatePanicked,
     ViewPanicked,
     WidgetIdInvalid,
     WidgetIdTypeCollision,
-    WidgetPanic
+    WidgetPanic,
+    WireInputError
   }
 
   @kinds %{
@@ -84,13 +89,18 @@ defmodule Plushie.Event.Diagnostic do
     "svg_parse_error" => SvgParseError,
     "svg_decode_timeout" => SvgDecodeTimeout,
     "dash_cache_cap_exceeded" => DashCacheCapExceeded,
+    "dash_segments_cap_exceeded" => DashSegmentsCapExceeded,
     "emitter_coalesce_cap_exceeded" => EmitterCoalesceCapExceeded,
     "widget_id_type_collision" => WidgetIdTypeCollision,
     "view_panicked" => ViewPanicked,
     "update_panicked" => UpdatePanicked,
     "unknown_message_type" => UnknownMessageType,
+    "unknown_patch_op" => UnknownPatchOp,
     "dispatch_loop_exceeded" => DispatchLoopExceeded,
-    "buffer_overflow" => BufferOverflow
+    "buffer_overflow" => BufferOverflow,
+    "wire_input_error" => WireInputError,
+    "animation_descriptor_invalid" => AnimationDescriptorInvalid,
+    "renderer_runtime_error" => RendererRuntimeError
   }
 
   @typedoc """
@@ -120,13 +130,18 @@ defmodule Plushie.Event.Diagnostic do
           | SvgParseError.t()
           | SvgDecodeTimeout.t()
           | DashCacheCapExceeded.t()
+          | DashSegmentsCapExceeded.t()
           | EmitterCoalesceCapExceeded.t()
           | WidgetIdTypeCollision.t()
           | ViewPanicked.t()
           | UpdatePanicked.t()
           | UnknownMessageType.t()
+          | UnknownPatchOp.t()
           | DispatchLoopExceeded.t()
           | BufferOverflow.t()
+          | WireInputError.t()
+          | AnimationDescriptorInvalid.t()
+          | RendererRuntimeError.t()
 
   @doc """
   Decode a typed diagnostic from a wire payload map.

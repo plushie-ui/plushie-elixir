@@ -22,7 +22,7 @@ defmodule Plushie.Protocol.Encode do
   ## Example
 
       Plushie.Protocol.Encode.encode_settings(%{antialiasing: true, default_text_size: 16}, :json)
-      #=> ~s({"session":"","settings":{"antialiasing":true,"default_text_size":16,"protocol_version":1},"type":"settings"}) <> "\\n"
+      #=> ~s({"session":"","settings":{"antialiasing":true,"default_text_size":16,"protocol_version":1},"type":"settings"}) <> "\n"
   """
   @spec encode_settings(settings :: map(), format :: Plushie.Protocol.format()) :: iodata()
   def encode_settings(settings, format \\ :msgpack) when is_map(settings) do
@@ -62,10 +62,10 @@ defmodule Plushie.Protocol.Encode do
   ## Example
 
       Plushie.Protocol.Encode.encode_snapshot(%{tag: "text", value: "hello"}, :json)
-      #=> ~s({"session":"","tree":{"tag":"text","value":"hello"},"type":"snapshot"}) <> "\\n"
+      #=> ~s({"session":"","tree":{"tag":"text","value":"hello"},"type":"snapshot"}) <> "\n"
   """
-  @spec encode_snapshot(tree :: term(), format :: Plushie.Protocol.format()) :: iodata()
-  def encode_snapshot(tree, format \\ :msgpack) do
+  @spec encode_snapshot(tree :: map(), format :: Plushie.Protocol.format()) :: iodata()
+  def encode_snapshot(tree, format \\ :msgpack) when is_map(tree) do
     serialize(%{type: "snapshot", tree: stringify_tree(tree)}, format)
   end
 
@@ -77,7 +77,7 @@ defmodule Plushie.Protocol.Encode do
   ## Example
 
       Plushie.Protocol.Encode.encode_patch([], :json)
-      #=> ~s({"ops":[],"session":"","type":"patch"}) <> "\\n"
+      #=> ~s({"ops":[],"session":"","type":"patch"}) <> "\n"
   """
   @spec encode_patch(ops :: list(), format :: Plushie.Protocol.format()) :: iodata()
   def encode_patch(ops, format \\ :msgpack) do
@@ -90,7 +90,7 @@ defmodule Plushie.Protocol.Encode do
   ## Example
 
       Plushie.Protocol.Encode.encode_effect("req_1", "file_open", %{title: "Pick a file"}, :json)
-      #=> ~s({"id":"req_1","kind":"file_open","payload":{"title":"Pick a file"},"session":"","type":"effect"}) <> "\\n"
+      #=> ~s({"id":"req_1","kind":"file_open","payload":{"title":"Pick a file"},"session":"","type":"effect"}) <> "\n"
   """
   @spec encode_effect(
           id :: String.t(),
@@ -108,7 +108,7 @@ defmodule Plushie.Protocol.Encode do
   ## Example
 
       Plushie.Protocol.Encode.encode_widget_op("focus", %{target: "username"})
-      #=> ~s({"op":"focus","payload":{"target":"username"},"session":"","type":"widget_op"}) <> "\\n"
+      #=> ~s({"op":"focus","payload":{"target":"username"},"session":"","type":"widget_op"}) <> "\n"
   """
   @spec encode_widget_op(op :: String.t(), payload :: map(), format :: Plushie.Protocol.format()) ::
           iodata()
@@ -134,7 +134,7 @@ defmodule Plushie.Protocol.Encode do
   ## Example
 
       Plushie.Protocol.Encode.encode_load_font("Inter", <<1, 2, 3>>, :json)
-      #=> ~s({"payload":{"data":"AQID","family":"Inter"},"session":"","type":"load_font"}) <> "\\n"
+      #=> ~s({"payload":{"data":"AQID","family":"Inter"},"session":"","type":"load_font"}) <> "\n"
   """
   @spec encode_load_font(
           family :: String.t(),
@@ -156,10 +156,10 @@ defmodule Plushie.Protocol.Encode do
   ## Example
 
       Plushie.Protocol.Encode.encode_subscribe("on_key_press", "keys")
-      #=> ~s({"kind":"on_key_press","session":"","tag":"keys","type":"subscribe"}) <> "\\n"
+      #=> ~s({"kind":"on_key_press","session":"","tag":"keys","type":"subscribe"}) <> "\n"
 
       Plushie.Protocol.Encode.encode_subscribe("on_pointer_move", "pointer", :json, 30)
-      #=> ~s({"kind":"on_pointer_move","max_rate":30,"session":"","tag":"pointer","type":"subscribe"}) <> "\\n"
+      #=> ~s({"kind":"on_pointer_move","max_rate":30,"session":"","tag":"pointer","type":"subscribe"}) <> "\n"
   """
   @spec encode_subscribe(
           kind :: String.t(),
@@ -181,7 +181,7 @@ defmodule Plushie.Protocol.Encode do
   ## Example
 
       Plushie.Protocol.Encode.encode_unsubscribe("on_key_press")
-      #=> ~s({"kind":"on_key_press","session":"","type":"unsubscribe"}) <> "\\n"
+      #=> ~s({"kind":"on_key_press","session":"","type":"unsubscribe"}) <> "\n"
   """
   @spec encode_unsubscribe(
           kind :: String.t(),
@@ -207,7 +207,7 @@ defmodule Plushie.Protocol.Encode do
   ## Example
 
       Plushie.Protocol.Encode.encode_image_op("create_image", %{handle: "logo", data: <<1, 2, 3>>}, :json)
-      #=> ~s({"op":"create_image","payload":{"data":"AQID","handle":"logo"},"session":"","type":"image_op"}) <> "\\n"
+      #=> ~s({"op":"create_image","payload":{"data":"AQID","handle":"logo"},"session":"","type":"image_op"}) <> "\n"
   """
   @spec encode_image_op(
           op :: String.t(),
@@ -262,7 +262,7 @@ defmodule Plushie.Protocol.Encode do
   ## Example
 
       Plushie.Protocol.Encode.encode_window_op("open", "main", %{title: "My App"})
-      #=> ~s({"op":"open","payload":{"title":"My App"},"session":"","type":"window_op","window_id":"main"}) <> "\\n"
+      #=> ~s({"op":"open","payload":{"title":"My App"},"session":"","type":"window_op","window_id":"main"}) <> "\n"
   """
   @spec encode_window_op(
           op :: String.t(),
@@ -275,6 +275,21 @@ defmodule Plushie.Protocol.Encode do
     # format-specific encoding, same as image ops.
     payload = encode_binary_fields(payload, format, [:icon_data])
     serialize(%{type: "window_op", op: op, window_id: window_id, payload: payload}, format)
+  end
+
+  @doc "Encodes a screenshot request as a protocol message."
+  @spec encode_screenshot(
+          id :: String.t(),
+          name :: String.t(),
+          opts :: keyword(),
+          format :: Plushie.Protocol.format()
+        ) :: iodata()
+  def encode_screenshot(id, name, opts, format \\ :msgpack)
+      when is_binary(id) and is_binary(name) and is_list(opts) do
+    %{type: "screenshot", id: id, name: name}
+    |> maybe_put_dimension(opts, :width)
+    |> maybe_put_dimension(opts, :height)
+    |> serialize(format)
   end
 
   @doc """
@@ -441,6 +456,19 @@ defmodule Plushie.Protocol.Encode do
       {nil, _} -> payload
       {bin, actual_key} when is_binary(bin) -> Map.put(payload, actual_key, Base.encode64(bin))
       _ -> payload
+    end
+  end
+
+  defp maybe_put_dimension(message, opts, key) do
+    case Keyword.get(opts, key) do
+      value when is_integer(value) and value > 0 ->
+        Map.put(message, key, value)
+
+      nil ->
+        message
+
+      other ->
+        raise ArgumentError, "expected #{key} to be a positive integer, got: #{inspect(other)}"
     end
   end
 

@@ -77,7 +77,8 @@ The SDK and renderer follow a fixed startup sequence:
 3. **Renderer sends Hello** - reports its version, mode (`mock`,
    `headless`, `windowed`), backend, transport, registered
    `native_widgets` (type names from native widgets),
-   and `widgets` (all compiled widget type names, built-in + native).
+   `widget_sets`, and `widgets` (all compiled widget type names,
+   built-in + native).
 4. **SDK sends Snapshot** - the Runtime calls `view/1`, normalises the
    tree via `Plushie.Tree.normalize/1`, and sends the full tree via
    `Plushie.Protocol.encode_snapshot/2`.
@@ -103,7 +104,11 @@ module for all outbound messages:
 | `encode_commands/2` | `commands` | Batch of widget-targeted commands |
 | `encode_widget_op/3` | `widget_op` | Non-targeted operations (focus_next, focus_previous, announce) |
 | `encode_window_op/4` | `window_op` | Window open, close, update |
+| `encode_system_op/3` | `system_op` | System-level operations |
+| `encode_system_query/3` | `system_query` | System-level queries |
 | `encode_image_op/3` | `image_op` | In-memory image lifecycle |
+| `encode_load_font/3` | `load_font` | Runtime font loading |
+| `encode_screenshot/4` | `screenshot` | Renderer screenshot request |
 | `encode_interact/5` | `interact` | Test interactions |
 | `encode_advance_frame/2` | `advance_frame` | Manual frame step (test/headless) |
 | `encode_register_effect_stub/3` | `register_effect_stub` | Register a stubbed effect response for testing |
@@ -131,9 +136,14 @@ messages and dispatches them to typed structs:
 | `hello` | `{:hello, map}` | Bridge stores and notifies Runtime |
 | `event` | `WidgetEvent`, `KeyEvent`, `WindowEvent`, etc. | `update/2` |
 | `effect_response` | `{:effect_response, wire_id, result}` | Runtime maps to `%EffectEvent{tag: tag}` |
+| `op_query_response` | `SystemEvent` | Runtime delivers system query responses |
 | `interact_step` | `{:interact_step, id, events}` | Test backend processes |
 | `interact_response` | `{:interact_response, id, events}` | Test backend resolves |
 | `screenshot_response` | `{:screenshot_response, data}` | `update/2` as raw tuple |
+| `query_response` | `{:query_response, id, target, data}` | Test and automation query responses |
+| `reset_response` | `{:reset_response, id, status}` | Test session lifecycle |
+| `diagnostic` | `DiagnosticMessage` | Runtime delivers renderer diagnostics |
+| `prop_validation` event | `{:prop_validation, id, data}` | SDK-internal diagnostic handling |
 | `effect_stub_register_ack` | `{:effect_stub_ack, kind}` | Runtime resolves pending stub call |
 | `session_error` | `{:session_error, session_id, code, error}` | Session pool handles |
 | `session_closed` | `{:session_closed, data}` | Session pool handles |

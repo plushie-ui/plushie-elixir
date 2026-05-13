@@ -11,7 +11,7 @@ defmodule Plushie.Protocol.Error do
 
   @type t :: %__MODULE__{
           reason: Plushie.Protocol.decode_error_reason(),
-          format: Plushie.Protocol.format(),
+          format: Plushie.Protocol.format() | :decoded,
           data: binary(),
           message: String.t()
         }

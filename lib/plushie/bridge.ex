@@ -575,13 +575,8 @@ defmodule Plushie.Bridge do
   def handle_call({:screenshot, name, opts}, from, %{pending_screenshot: nil} = state) do
     id = "sc_" <> Integer.to_string(System.unique_integer([:positive, :monotonic]))
 
-    message =
-      %{type: "screenshot", id: id, name: name}
-      |> maybe_put_dimension(opts, :width)
-      |> maybe_put_dimension(opts, :height)
-
     case encode_and_send_result(state, :screenshot, fn fmt ->
-           Plushie.Protocol.encode(message, fmt)
+           Plushie.Protocol.encode_screenshot(id, name, opts, fmt)
          end) do
       {:ok, state} ->
         {:noreply, %{state | pending_screenshot: monitor_screenshot(id, from)}}
@@ -964,19 +959,6 @@ defmodule Plushie.Bridge do
 
   defp log_transport_close(Plushie.Transport.Port, _reason) do
     Logger.info("plushie bridge: stdio port closed, shutting down")
-  end
-
-  defp maybe_put_dimension(map, opts, key) do
-    case Keyword.get(opts, key) do
-      value when is_integer(value) and value > 0 ->
-        Map.put(map, key, value)
-
-      nil ->
-        map
-
-      other ->
-        raise ArgumentError, "expected #{key} to be a positive integer, got: #{inspect(other)}"
-    end
   end
 
   defp fail_pending_screenshot(%{pending_screenshot: nil} = state, _reason), do: state

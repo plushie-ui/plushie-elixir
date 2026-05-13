@@ -527,3 +527,58 @@ behavior is only local to the task.
 **Revisit when:** Mix tasks start multiple apps with independent
 reloader settings in the same VM, or code reloader configuration stops
 flowing through application env.
+
+## Protocol tests target invariants, not test style
+
+The protocol suite uses examples, round trips, malformed payload cases,
+and parity checks where those expose real codec contracts. Property tests
+are welcome when they express a useful invariant, but the absence of
+`StreamData` in a specific file is not itself a defect.
+
+**Rules out:** Adding property-based protocol tests solely because the
+dependency exists or because a test file currently uses only example
+tests.
+
+**Still in scope:** Property tests for concrete invariants such as
+codec round trips over a well-defined value domain, key normalization
+idempotence, or binary field preservation. Focused example tests remain
+appropriate for wire shapes with small closed vocabularies.
+
+**Revisit when:** A protocol bug would have been naturally caught by a
+compact generated-input invariant rather than by a clearer targeted
+case.
+
+## Protocol handshake errors live in the protocol namespace
+
+`ProtocolVersionMismatchError` is raised by the bridge, but it describes
+the renderer's advertised wire protocol version and the SDK's expected
+version. The protocol namespace is the right home for that structured
+error even though the bridge is the component that observes it during
+startup.
+
+**Rules out:** Moving protocol-version handshake exceptions into
+`Plushie.Bridge` solely because the bridge performs the check.
+
+**Still in scope:** Moving the error if protocol version negotiation
+stops being a wire-protocol concern, or if a broader startup-error
+hierarchy emerges with a real caller-facing need.
+
+**Revisit when:** More bridge-only startup errors need shared structured
+exception handling and the current namespace becomes misleading in use.
+
+## Protocol version is read from the public protocol boundary
+
+`Plushie.Protocol.protocol_version/0` is the source of truth for the
+wire protocol version. `Plushie.Protocol.Encode` reads that public
+boundary into a module attribute so encoded settings carry the same value
+that bridge startup checks use.
+
+**Rules out:** Introducing a separate constant module or file solely to
+avoid the encoder referencing `Plushie.Protocol.protocol_version/0`.
+
+**Still in scope:** Moving the version source if multiple packages must
+generate it, if the value stops being a compile-time constant, or if
+compiler ordering becomes an observed problem.
+
+**Revisit when:** Protocol versioning is generated from the renderer
+contract or the SDK needs multi-version negotiation.

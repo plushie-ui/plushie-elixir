@@ -372,6 +372,17 @@ defmodule Plushie.Event.Diagnostic.DashCacheCapExceeded do
   def from_wire(p), do: %__MODULE__{max: p["max"]}
 end
 
+defmodule Plushie.Event.Diagnostic.DashSegmentsCapExceeded do
+  @moduledoc "A canvas dash pattern exceeded the per-pattern segment limit."
+  @enforce_keys [:max]
+  defstruct [:max]
+
+  @type t :: %__MODULE__{max: non_neg_integer()}
+
+  @doc false
+  def from_wire(p), do: %__MODULE__{max: p["max"]}
+end
+
 defmodule Plushie.Event.Diagnostic.EmitterCoalesceCapExceeded do
   @moduledoc "The renderer-lib event coalesce map hit its cap and was force-flushed."
   @enforce_keys [:cap]
@@ -447,6 +458,17 @@ defmodule Plushie.Event.Diagnostic.UnknownMessageType do
   def from_wire(p), do: %__MODULE__{msg_type: p["msg_type"]}
 end
 
+defmodule Plushie.Event.Diagnostic.UnknownPatchOp do
+  @moduledoc "A patch operation name was not recognised by the renderer."
+  @enforce_keys [:op, :payload]
+  defstruct [:op, :payload]
+
+  @type t :: %__MODULE__{op: String.t(), payload: term()}
+
+  @doc false
+  def from_wire(p), do: %__MODULE__{op: p["op"], payload: p["payload"]}
+end
+
 defmodule Plushie.Event.Diagnostic.DispatchLoopExceeded do
   @moduledoc """
   The runtime's command dispatch chain exceeded the configured depth
@@ -474,4 +496,37 @@ defmodule Plushie.Event.Diagnostic.BufferOverflow do
 
   @doc false
   def from_wire(p), do: %__MODULE__{size: p["size"], limit: p["limit"]}
+end
+
+defmodule Plushie.Event.Diagnostic.WireInputError do
+  @moduledoc "A renderer input frame was readable but could not be decoded."
+  @enforce_keys [:detail]
+  defstruct [:detail]
+
+  @type t :: %__MODULE__{detail: String.t()}
+
+  @doc false
+  def from_wire(p), do: %__MODULE__{detail: p["detail"]}
+end
+
+defmodule Plushie.Event.Diagnostic.AnimationDescriptorInvalid do
+  @moduledoc "A renderer-side animation descriptor could not be parsed."
+  @enforce_keys [:id, :prop]
+  defstruct [:id, :prop]
+
+  @type t :: %__MODULE__{id: String.t(), prop: String.t()}
+
+  @doc false
+  def from_wire(p), do: %__MODULE__{id: p["id"], prop: p["prop"]}
+end
+
+defmodule Plushie.Event.Diagnostic.RendererRuntimeError do
+  @moduledoc "The renderer event loop returned a terminal runtime error after startup."
+  @enforce_keys [:detail]
+  defstruct [:detail]
+
+  @type t :: %__MODULE__{detail: String.t()}
+
+  @doc false
+  def from_wire(p), do: %__MODULE__{detail: p["detail"]}
 end

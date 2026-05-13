@@ -1,6 +1,8 @@
 defmodule Plushie.ProtocolTest do
   use ExUnit.Case, async: true
 
+  alias Plushie.Event.Diagnostic
+  alias Plushie.Event.DiagnosticMessage
   alias Plushie.Event.ImeEvent
   alias Plushie.Event.KeyEvent
   alias Plushie.Event.ModifiersEvent
@@ -1355,6 +1357,7 @@ defmodule Plushie.ProtocolTest do
                 backend: "tiny-skia",
                 transport: "stdio",
                 native_widgets: ["charts"],
+                widget_sets: [],
                 widgets: ["button", "text", "charts"]
               }} = Protocol.decode_message(json, :json)
     end
@@ -1383,6 +1386,7 @@ defmodule Plushie.ProtocolTest do
                 mode: "headless",
                 backend: "tiny-skia",
                 native_widgets: ["charts"],
+                widget_sets: [],
                 widgets: ["button", "text", "charts"]
               }} = Protocol.decode_message(packed, :msgpack)
     end
@@ -1982,6 +1986,222 @@ defmodule Plushie.ProtocolTest do
       msgpack_decoded = Protocol.decode_message(msgpack_wire, :msgpack)
 
       assert json_decoded == msgpack_decoded
+    end
+  end
+
+  describe "diagnostic messages" do
+    test "decodes typed diagnostics with explicit levels" do
+      json =
+        Jason.encode!(%{
+          type: "diagnostic",
+          session: "pool_1",
+          level: "info",
+          diagnostic: %{kind: "font_family_not_found", family: "Missing"}
+        })
+
+      assert %DiagnosticMessage{
+               session: "pool_1",
+               level: :info,
+               diagnostic: %Diagnostic.FontFamilyNotFound{family: "Missing"}
+             } = Protocol.decode_message(json, :json)
+    end
+
+    test "defaults missing diagnostic level to warn" do
+      json =
+        Jason.encode!(%{
+          type: "diagnostic",
+          diagnostic: %{kind: "wire_input_error", detail: "bad frame"}
+        })
+
+      assert %DiagnosticMessage{
+               level: :warn,
+               diagnostic: %Diagnostic.WireInputError{detail: "bad frame"}
+             } = Protocol.decode_message(json, :json)
+    end
+
+    test "returns a protocol error for unknown diagnostic level" do
+      json =
+        Jason.encode!(%{
+          type: "diagnostic",
+          level: "trace",
+          diagnostic: %{kind: "font_family_not_found", family: "Missing"}
+        })
+
+      assert {:error, {:invalid_event_field, "diagnostic", :level, "trace", :invalid, _}} =
+               Protocol.decode_message(json, :json)
+    end
+
+    test "returns a protocol error for unknown diagnostic kind" do
+      json =
+        Jason.encode!(%{
+          type: "diagnostic",
+          diagnostic: %{kind: "future_diagnostic"}
+        })
+
+      assert {:error,
+              {:invalid_event_field, "diagnostic", :diagnostic, %{"kind" => "future_diagnostic"},
+               message, _}} = Protocol.decode_message(json, :json)
+
+      assert message =~ "unknown diagnostic kind"
+    end
+
+    test "decodes renderer diagnostic variants" do
+      assert %Diagnostic.DashSegmentsCapExceeded{max: 8} =
+               Diagnostic.decode!(%{"kind" => "dash_segments_cap_exceeded", "max" => 8})
+
+      assert %Diagnostic.UnknownPatchOp{op: "replace_all", payload: %{"op" => "replace_all"}} =
+               Diagnostic.decode!(%{
+                 "kind" => "unknown_patch_op",
+                 "op" => "replace_all",
+                 "payload" => %{"op" => "replace_all"}
+               })
+
+      assert %Diagnostic.AnimationDescriptorInvalid{id: "btn", prop: "opacity"} =
+               Diagnostic.decode!(%{
+                 "kind" => "animation_descriptor_invalid",
+                 "id" => "btn",
+                 "prop" => "opacity"
+               })
+
+      assert %Diagnostic.RendererRuntimeError{detail: "event loop failed"} =
+               Diagnostic.decode!(%{
+                 "kind" => "renderer_runtime_error",
+                 "detail" => "event loop failed"
+               })
+    end
+  end
+
+  describe "protocol response messages" do
+    test "decodes query_response messages" do
+      json =
+        Jason.encode!(%{
+          type: "query_response",
+          id: "q1",
+          target: "tree",
+          data: %{id: "main"}
+        })
+
+      assert {:query_response, "q1", "tree", %{"id" => "main"}} =
+               Protocol.decode_message(json, :json)
+    end
+
+    test "decodes reset_response messages" do
+      json = Jason.encode!(%{type: "reset_response", id: "r1", status: "ok"})
+
+      assert {:reset_response, "r1", "ok"} = Protocol.decode_message(json, :json)
+    end
+  end
+
+  describe "protocol validation" do
+    test "rejects widget events with empty local IDs" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "click",
+          id: "main#",
+          window_id: "main"
+        })
+
+      assert {:error, {:invalid_event_field, "click", "id", "main#", :empty, _}} =
+               Protocol.decode_message(json, :json)
+    end
+
+    test "rejects malformed modifier payloads" do
+      json =
+        Jason.encode!(%{
+          type: "event",
+          family: "modifiers_changed",
+          modifiers: "ctrl"
+        })
+
+      assert {:error, {:invalid_event_field, "modifiers", :modifiers, "ctrl", :invalid, _}} =
+               Protocol.decode_message(json, :json)
+    end
+
+    test "reports decoded-map protocol errors without pretending to know the wire format" do
+      error =
+        assert_raise Plushie.Protocol.Error, fn ->
+          Protocol.decode_event(%{"family" => "click", "id" => "main#"})
+        end
+
+      assert error.format == :decoded
+    end
+
+    test "rejects non-map snapshots" do
+      assert_raise FunctionClauseError, fn ->
+        Protocol.encode_snapshot("not a tree", :json)
+      end
+    end
+  end
+
+  describe "binary field normalization" do
+    test "decodes JSON image_op binary fields from string-keyed payloads" do
+      raw = <<1, 2, 3>>
+
+      encoded =
+        Protocol.encode_image_op("create_image", %{"handle" => "logo", "data" => raw}, :json)
+
+      assert {:image_op, "create_image", %{"handle" => "logo", "data" => ^raw}} =
+               Protocol.decode_message(encoded, :json)
+    end
+
+    test "decodes JSON load_font binary payloads" do
+      raw = <<7, 8, 9>>
+      encoded = Protocol.encode_load_font("Inter", raw, :json)
+
+      assert {:load_font, "Inter", ^raw} = Protocol.decode_message(encoded, :json)
+    end
+
+    test "reports invalid base64 in JSON binary fields" do
+      json =
+        Jason.encode!(%{
+          type: "image_op",
+          op: "create_image",
+          payload: %{handle: "logo", data: "not base64"}
+        })
+
+      assert {:error, {:decode_failed, {:invalid_base64, "image_op.payload.data"}}} =
+               Protocol.decode_message(json, :json)
+    end
+
+    test "decodes effect_response screenshot rgba payloads" do
+      raw = <<4, 5, 6>>
+
+      json =
+        Jason.encode!(%{
+          type: "effect_response",
+          id: "main",
+          status: "ok",
+          result: %{op: "screenshot", rgba: Base.encode64(raw)}
+        })
+
+      assert {:effect_response, "main", "ok", %{op: "screenshot", rgba: ^raw}} =
+               Protocol.decode_message(json, :json)
+    end
+
+    test "decodes truncated MessagePack as a decode failure" do
+      truncated_bin8 = <<0xC4, 0x04, 0x01>>
+
+      assert {:error, {:decode_failed, _}} = Protocol.decode_message(truncated_bin8, :msgpack)
+    end
+  end
+
+  describe "screenshot encoding" do
+    test "encodes screenshot requests with optional dimensions" do
+      encoded = Protocol.encode_screenshot("sc_1", "main", [width: 320, height: 200], :json)
+
+      assert {:screenshot, "sc_1", "main", [height: 200, width: 320]} =
+               Protocol.decode_message(encoded, :json)
+    end
+  end
+
+  describe "ProtocolVersionMismatchError" do
+    test "formats expected and actual versions" do
+      error = Protocol.ProtocolVersionMismatchError.exception(expected: 1, got: 2)
+
+      assert error.expected == 1
+      assert error.got == 2
+      assert error.message == "protocol version mismatch: expected 1, got 2"
     end
   end
 end
