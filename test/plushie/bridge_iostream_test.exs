@@ -47,6 +47,24 @@ defmodule Plushie.BridgeIostreamTest do
     handler_id
   end
 
+  defp decode_msgpack(data) do
+    {:ok, decoded} = data |> IO.iodata_to_binary() |> Msgpax.unpack(binary: true)
+    decoded
+  end
+
+  defp screenshot_response(id, name) do
+    %{
+      "type" => "screenshot_response",
+      "id" => id,
+      "name" => name,
+      "hash" => "sha256:test",
+      "width" => 1,
+      "height" => 1
+    }
+    |> Plushie.Protocol.encode(:msgpack)
+    |> IO.iodata_to_binary()
+  end
+
   describe "iostream transport init" do
     test "sends {:iostream_bridge, pid} to the iostream adapter on start" do
       {:ok, bridge} =
@@ -135,6 +153,53 @@ defmodule Plushie.BridgeIostreamTest do
       json = IO.iodata_to_binary(data)
       assert {:ok, decoded} = Jason.decode(json)
       assert decoded["type"] == "settings"
+
+      GenServer.stop(bridge)
+    end
+
+    test "does not route a stale screenshot response to a new caller" do
+      {:ok, bridge} =
+        Plushie.Bridge.start_link(
+          transport: {:iostream, self()},
+          format: :msgpack,
+          runtime: self()
+        )
+
+      assert_receive {:iostream_bridge, ^bridge}
+
+      caller =
+        spawn(fn ->
+          Plushie.Bridge.screenshot(bridge, "first", [], 5_000)
+        end)
+
+      assert_receive {:iostream_send, first_data}, 1_000
+      %{"id" => first_id} = decode_msgpack(first_data)
+
+      caller_ref = Process.monitor(caller)
+      Process.exit(caller, :kill)
+      assert_receive {:DOWN, ^caller_ref, :process, ^caller, :killed}, 1_000
+
+      Process.sleep(20)
+
+      task =
+        Task.async(fn ->
+          Plushie.Bridge.screenshot(bridge, "second", [], 5_000)
+        end)
+
+      assert_receive {:iostream_send, second_data}, 1_000
+      %{"id" => second_id} = decode_msgpack(second_data)
+
+      send(bridge, {:iostream_data, screenshot_response(first_id, "first")})
+
+      assert_receive {:renderer_event,
+                      {:screenshot_response, %{"id" => ^first_id, "name" => "first"}}},
+                     1_000
+
+      refute Task.yield(task, 100)
+
+      send(bridge, {:iostream_data, screenshot_response(second_id, "second")})
+
+      assert %{"id" => ^second_id, "name" => "second"} = Task.await(task)
 
       GenServer.stop(bridge)
     end

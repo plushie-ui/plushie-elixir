@@ -36,6 +36,13 @@ defmodule Plushie.Bridge do
   settings, a full snapshot, subscriptions, and windows. Transient commands
   that cannot be rebuilt from that state are held until the runtime finishes
   resync, then sent in order.
+
+  While `awaiting_resync` is true, the bridge only forwards messages that are
+  safe before the runtime's fresh snapshot. Command-like messages that would
+  otherwise be lost are kept in `queued_messages` and flushed after
+  `resync_complete`. A successful resync resets `restart_count`, so the
+  restart budget applies to a crash burst rather than the whole lifetime of a
+  long-running application.
   """
   use GenServer
 
@@ -573,17 +580,28 @@ defmodule Plushie.Bridge do
       |> maybe_put_dimension(opts, :width)
       |> maybe_put_dimension(opts, :height)
 
-    state =
-      encode_and_send(state, :screenshot, fn fmt ->
-        Plushie.Protocol.encode(message, fmt)
-      end)
+    case encode_and_send_result(state, :screenshot, fn fmt ->
+           Plushie.Protocol.encode(message, fmt)
+         end) do
+      {:ok, state} ->
+        {:noreply, %{state | pending_screenshot: monitor_screenshot(id, from)}}
 
-    {:noreply, %{state | pending_screenshot: from}}
+      {:error, state} ->
+        {:reply, {:error, :send_failed}, state}
+    end
   end
 
   @impl GenServer
   def handle_call({:screenshot, _name, _opts}, _from, state) do
     {:reply, {:error, :screenshot_in_progress}, state}
+  end
+
+  @impl GenServer
+  def handle_info(
+        {:DOWN, ref, :process, _pid, _reason},
+        %{pending_screenshot: %{monitor: ref}} = state
+      ) do
+    {:noreply, %{state | pending_screenshot: nil}}
   end
 
   @impl GenServer
@@ -660,17 +678,24 @@ defmodule Plushie.Bridge do
   # Encodes a protocol message and sends it via the transport. When
   # session_id is set (multiplexed mode), the message is re-serialized
   # with the session field injected.
-  defp encode_and_send(%{session_id: ""} = state, kind, encode_fn) do
+  defp encode_and_send(state, kind, encode_fn) do
+    case encode_and_send_result(state, kind, encode_fn) do
+      {:ok, state} -> state
+      {:error, state} -> state
+    end
+  end
+
+  defp encode_and_send_result(%{session_id: ""} = state, kind, encode_fn) do
     data = encode_fn.(state.format)
-    maybe_send_or_queue(state, kind, data)
+    maybe_send_or_queue_result(state, kind, data)
   rescue
     e ->
       Logger.error("plushie bridge: failed to encode #{kind} message: #{Exception.message(e)}")
 
-      state
+      {:error, state}
   end
 
-  defp encode_and_send(state, kind, encode_fn) do
+  defp encode_and_send_result(state, kind, encode_fn) do
     # Multiplexed mode: encode with the default empty session first,
     # then decode, inject session_id, and re-encode. This is only used
     # by the test pool adapter where the overhead is negligible.
@@ -682,20 +707,20 @@ defmodule Plushie.Bridge do
       {:ok, map} ->
         map = Map.put(map, "session", state.session_id)
         reencoded = reserialize(map, state.format)
-        maybe_send_or_queue(state, kind, reencoded)
+        maybe_send_or_queue_result(state, kind, reencoded)
 
       {:error, reason} ->
         Logger.error(
           "plushie bridge: failed to inject session_id into #{kind} message: #{inspect(reason)}"
         )
 
-        state
+        {:error, state}
     end
   rescue
     e ->
       Logger.error("plushie bridge: failed to encode #{kind} message: #{Exception.message(e)}")
 
-      state
+      {:error, state}
   end
 
   defp deserialize(data, :json), do: Jason.decode(data)
@@ -796,9 +821,15 @@ defmodule Plushie.Bridge do
                     send(state.runtime, {:renderer_event, {:screenshot_response, response}})
                     state
 
-                  from ->
-                    GenServer.reply(from, response)
-                    %{state | pending_screenshot: nil}
+                  %{id: id, from: from, monitor: ref} = pending ->
+                    if screenshot_response_matches?(response, id) do
+                      Process.demonitor(ref, [:flush])
+                      GenServer.reply(from, response)
+                      %{state | pending_screenshot: nil}
+                    else
+                      send(state.runtime, {:renderer_event, {:screenshot_response, response}})
+                      %{state | pending_screenshot: pending}
+                    end
                 end
 
               {:continue, reset_heartbeat_timer(state)}
@@ -904,13 +935,13 @@ defmodule Plushie.Bridge do
       {:noreply, %{state | awaiting_resync: true}}
     else
       Logger.error("""
-      plushie bridge: renderer crashed #{state.max_restarts} times, giving up.
+      plushie bridge: renderer reached the restart limit, giving up.
 
       Troubleshooting:
-        1. Check RUST_LOG=plushie=debug for renderer errors
-        2. Verify the binary exists: mix plushie.build
-        3. Check system dependencies (libxkbcommon, etc.)
-        4. Try running the renderer directly: ./path/to/plushie --json
+        - Check RUST_LOG=plushie=debug for renderer errors
+        - Verify the binary exists: mix plushie.build
+        - Check system dependencies (libxkbcommon, etc.)
+        - Try running the renderer directly: ./path/to/plushie --json
       """)
 
       :telemetry.execute([:plushie, :bridge, :max_restarts_reached], %{}, %{
@@ -950,24 +981,38 @@ defmodule Plushie.Bridge do
 
   defp fail_pending_screenshot(%{pending_screenshot: nil} = state, _reason), do: state
 
-  defp fail_pending_screenshot(%{pending_screenshot: from} = state, reason) do
+  defp fail_pending_screenshot(%{pending_screenshot: %{from: from, monitor: ref}} = state, reason) do
+    Process.demonitor(ref, [:flush])
     GenServer.reply(from, {:error, reason})
     %{state | pending_screenshot: nil}
   end
 
-  defp maybe_send_or_queue(state, kind, data) do
+  defp monitor_screenshot(id, {pid, _tag} = from) do
+    %{id: id, from: from, monitor: Process.monitor(pid)}
+  end
+
+  defp screenshot_response_id(%{"id" => id}), do: id
+  defp screenshot_response_id(%{id: id}), do: id
+  defp screenshot_response_id(_response), do: nil
+
+  defp screenshot_response_matches?(response, id) do
+    response_id = screenshot_response_id(response)
+    response_id == nil or response_id == id
+  end
+
+  defp maybe_send_or_queue_result(state, kind, data) do
     cond do
       send_now?(state, kind) ->
         case send_data(state, data) do
-          {:ok, state} -> state
-          :error -> queue_message(state, kind, data)
+          {:ok, state} -> {:ok, state}
+          :error -> {:ok, queue_message(state, kind, data)}
         end
 
       queue_during_restart?(kind) ->
-        queue_message(state, kind, data)
+        {:ok, queue_message(state, kind, data)}
 
       true ->
-        state
+        {:error, state}
     end
   end
 
@@ -1016,7 +1061,7 @@ defmodule Plushie.Bridge do
   defp do_flush_queued_messages(state, [data | rest]) do
     case send_data(state, data) do
       {:ok, state} -> do_flush_queued_messages(state, rest)
-      :error -> %{state | queued_messages: [data | rest]}
+      :error -> %{state | queued_messages: Enum.reverse([data | rest])}
     end
   end
 

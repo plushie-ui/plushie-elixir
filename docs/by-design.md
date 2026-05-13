@@ -194,3 +194,51 @@ fields.
 
 **Revisit when:** `ScopedId.parse/1` becomes a user-input validation API
 rather than a structural parser.
+
+## Stdio transport does not own renderer process environment
+
+The `:stdio` transport attaches the bridge to the BEAM process's existing
+stdin and stdout. It does not spawn the renderer, so there is no child
+process environment for `Plushie.RendererEnv` to filter. Environment
+bounding for `plushie --exec` belongs to the renderer process that chose
+to start the host.
+
+**Rules out:** Applying the renderer environment whitelist to `:stdio`
+mode as if the host SDK were spawning a new renderer child.
+
+**Still in scope:** Applying `Plushie.RendererEnv` to `:spawn` mode,
+where the bridge actually owns the child process environment.
+
+**Revisit when:** The host SDK gains a stdio mode that launches a child
+process instead of attaching to inherited file descriptors.
+
+## Bridge restart budget is per crash burst
+
+The bridge resets `restart_count` after the runtime finishes resync. The
+limit bounds consecutive renderer restart attempts before a successful
+resync, not the lifetime total for a long-running application.
+
+**Rules out:** Treating a successful resync followed by a later crash as
+part of the previous crash burst.
+
+**Still in scope:** Clear module documentation for the restart state
+machine. Changing the restart policy if resilience requirements move
+from burst containment to lifetime containment.
+
+**Revisit when:** The resilience posture calls for cumulative lifetime
+restart limits.
+
+## GenServer late replies are safe
+
+`GenServer.reply/2` may be called after the original caller exits or
+times out. The reply is a message send through the `from` token; it does
+not crash the replying GenServer when the caller is gone.
+
+**Rules out:** Wrapping every `GenServer.reply/2` solely to defend
+against exited callers.
+
+**Still in scope:** Tracking pending calls when late replies would block
+future work or could be misrouted to a newer caller.
+
+**Revisit when:** A call path uses a reply token in a way that can raise
+for reasons other than the caller exiting.
