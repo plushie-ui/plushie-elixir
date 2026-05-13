@@ -315,7 +315,7 @@ end
 | `:pane_clicked` | *n/a* | Emitted when a pane is selected |
 | `:pane_resized` | `%{split: string, ratio: float}` | Emitted when a split divider is moved |
 | `:pane_dragged` | *n/a* | Emitted during pane drag operations |
-| `:pane_focus_cycle` | *n/a* | Emitted on F6/Shift+F6 focus cycling |
+| `:pane_focus_cycle` | `%{pane: pane}` | Emitted on F6/Shift+F6 focus cycling |
 
 ### Usage patterns
 

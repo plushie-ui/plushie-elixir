@@ -51,8 +51,8 @@ defmodule Plushie.Command do
     `%SystemEvent{type: :system_theme, tag: "my_tag", value: "dark"}`.
   - **Platform effects**: `Plushie.Effect` functions deliver
     `%Plushie.Event.EffectEvent{tag: tag, result: result}`. The `tag` matches the
-    atom you provided when creating the effect command. Timeouts deliver the
-    same struct with `result: {:error, :timeout}`. See `Plushie.Effect`.
+    atom you provided when creating the effect command. The result is a
+    typed `Plushie.Effect.Result.*` struct. See `Plushie.Effect`.
 
   ## Usage
 

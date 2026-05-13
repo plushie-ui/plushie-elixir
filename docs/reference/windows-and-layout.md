@@ -395,7 +395,7 @@ explicit ID (holds renderer-side state for pane sizes).
 | `width` | Length | `:fill` | Grid width |
 | `height` | Length | `:fill` | Grid height |
 | `min_size` | number | `10` | Minimum pane size in pixels |
-| `leeway` | number | `min_size` | Grabbable area around dividers |
+| `leeway` | number | `2` | Grabbable area around dividers |
 | `divider_color` | Color | *n/a* | Divider colour |
 | `divider_width` | number | *n/a* | Divider thickness |
 | `a11y` | map | *n/a* | Accessibility overrides. See [Accessibility](accessibility.md). |
@@ -407,7 +407,7 @@ Pane grid emits these events:
 | `:pane_clicked` | `pane` | Pane selected |
 | `:pane_resized` | `split`, `ratio` | Divider moved |
 | `:pane_dragged` | `pane`, `target`, `action`, `region`, `edge` | Pane drag (picked/dropped/canceled) |
-| `:pane_focus_cycle` | *n/a* | F6/Shift+F6 focus cycling |
+| `:pane_focus_cycle` | `pane` | F6/Shift+F6 focus cycling |
 
 Manage pane layout with commands: `Command.pane_split/4`,
 `Command.pane_close/2`, `Command.pane_swap/3`,

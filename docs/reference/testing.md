@@ -283,9 +283,9 @@ These are separate environment variables.
 
 The mock backend resolves renderer-side transitions instantly. Props
 snap to their target values without interpolation. The headless backend
-runs real interpolation; use `Command.advance_frame/1` to step through
-frames deterministically. The `skip_transitions` helper fast-forwards
-all in-flight transitions to completion in a single call.
+runs real interpolation; use the `advance_frame/1` test helper to step
+through frames deterministically. The `skip_transitions/0` helper
+fast-forwards all in-flight transitions to completion in a single call.
 
 ## .plushie scripting format
 

@@ -28,9 +28,10 @@ Use the union type when writing generic event-handling helpers. For
 | Pointer (touch)    | `Plushie.Event.WidgetEvent`                     | Subscription (touchscreen)               |
 | IME                | `Plushie.Event.ImeEvent`                        | Subscription (input method editor)       |
 | Window lifecycle   | `Plushie.Event.WindowEvent`                     | Renderer (open, close, resize, etc.)     |
-| System             | `Plushie.Event.SystemEvent`                     | Renderer (queries, theme, diagnostics)   |
+| System             | `Plushie.Event.SystemEvent`                     | Renderer (queries, theme, recovery)      |
+| Diagnostics        | `Plushie.Event.DiagnosticMessage`               | Renderer diagnostic channel              |
 | Timer              | `Plushie.Event.TimerEvent`                      | Subscription (`every/2`)                 |
-| Async result       | `Plushie.Event.AsyncEvent`                      | Command (`async/2`)                      |
+| Async result       | `Plushie.Event.AsyncEvent`                      | Command (`task/2`)                       |
 | Stream value       | `Plushie.Event.StreamEvent`                     | Command (`stream/2`)                     |
 | Effect response    | `Plushie.Event.EffectEvent`                     | Renderer (file dialogs, clipboard, etc.) |
 | Command error      | `Plushie.Event.CommandError`                    | Renderer (command failure)               |
@@ -57,10 +58,11 @@ Carrier indicates where data lands in the `Plushie.Event.WidgetEvent` struct:
 | `:close`           | none    | Expandable closed                          |
 | `:option_hovered`  | value (any) | Pick list option hovered                |
 | `:key_binding`     | value (map) | Key binding activated (empty map)     |
+| `:link_click`      | value (string) | Rich text link clicked (URL)        |
 | `:sort`            | value (map) | Table column sort requested (`column`)     |
-| `:scrolled`        | value (map) | Scrollable viewport offset changed (`absolute_x`, `absolute_y`, `relative_x`, `relative_y`, `bounds`, `content_bounds`) |
-| `:pane_focus_cycle` | none   | Pane focus cycle requested                 |
-| `:transition_complete` | value (any) | Emitted when a renderer-side transition completes (requires `on_complete: tag`) |
+| `:scrolled`        | value (map) | Scrollable viewport offset changed (`absolute_x`, `absolute_y`, `relative_x`, `relative_y`, `bounds` as `{width, height}`, `content_bounds` as `{width, height}`) |
+| `:pane_focus_cycle` | value (map) | Pane focus cycle requested (`pane`)       |
+| `:transition_complete` | value (map) | Renderer-side transition completed (`tag`, `prop`) |
 | `:status`          | value (string) | Widget interaction status changed (see below) |
 
 ### Status events
@@ -88,8 +90,8 @@ identifies which button was involved.
 | `:release`        | value (map) | `x`, `y`, `button`, `pointer`, `finger`, `modifiers` |
 | `:move`           | value (map) | `x`, `y`, `pointer`, `finger`, `modifiers`           |
 | `:scroll`         | value (map) | `x`, `y`, `delta_x`, `delta_y`, `pointer`, `modifiers` |
-| `:enter`          | none        |                                                       |
-| `:exit`           | none        |                                                       |
+| `:enter`          | value (map) | `x`, `y`, `captured`                                  |
+| `:exit`           | value (map) | `x`, `y`, `captured`                                  |
 | `:double_click`   | value (map) | `x`, `y`, `pointer`, `modifiers`                     |
 | `:resize`         | value (map) | `width`, `height`                                     |
 
@@ -253,8 +255,7 @@ Window lifecycle events from the renderer.
 | `window_id`    | `String.t()`                   | Window identifier               |
 | `x`, `y`       | `number() \| nil`             | Position (for `:moved`)         |
 | `width`, `height` | `number() \| nil`          | Size (for `:resized`)          |
-| `position`     | `{number(), number()} \| nil`  | Window position tuple           |
-| `path`         | `String.t() \| nil`           | File path (for file drop)       |
+| `path`         | `String.t() \| nil`           | File path (for file hover/drop) |
 | `scale_factor` | `number() \| nil`             | DPI scale (for `:rescaled`)     |
 
 Window event types: `:opened`, `:closed`, `:close_requested`, `:moved`,
@@ -269,11 +270,14 @@ System query responses and platform events.
 | ------ | ---------------------------------- | -------------------------------- |
 | `type` | see below                          | System event kind                |
 | `tag`  | `String.t() \| nil`               | Correlation tag from the query   |
-| `data` | `map() \| String.t() \| number() \| nil` | Payload (shape depends on type) |
+| `value` | `map() \| String.t() \| number() \| nil` | Payload (shape depends on type) |
 
 System event types: `:system_info`, `:system_theme`, `:animation_frame`,
 `:theme_changed`, `:all_windows_closed`, `:image_list`, `:tree_hash`,
-`:find_focused`, `:diagnostic`, `:announce`, `:error`.
+`:find_focused`, `:recovery_failed`, `:announce`, `:error`.
+
+Diagnostics use `Plushie.Event.DiagnosticMessage` rather than
+`SystemEvent`.
 
 ### `Plushie.Event.TimerEvent`
 
@@ -309,10 +313,20 @@ Platform effect responses (file dialogs, clipboard, notifications).
 | Field    | Type                                          | Description        |
 | -------- | --------------------------------------------- | ------------------ |
 | `tag`    | `atom()`                                      | User-defined tag   |
-| `result` | `{:ok, term()} \| :cancelled \| {:error, term()}` | Effect result |
+| `result` | `Plushie.Effect.Result.t()` | Typed effect result |
 
-The `:cancelled` result is a normal outcome (user dismissed a dialog),
-not an error.
+`%Plushie.Effect.Result.Cancelled{}` is a normal outcome (user dismissed
+a dialog), not an error.
+
+### `Plushie.Event.DiagnosticMessage`
+
+Structured diagnostics from the renderer.
+
+| Field        | Type                            | Description                  |
+| ------------ | ------------------------------- | ---------------------------- |
+| `session`    | `String.t()`                    | Renderer session ID, or `""` |
+| `level`      | `:info \| :warn \| :error`     | Diagnostic severity          |
+| `diagnostic` | `Plushie.Event.Diagnostic.t()` | Typed diagnostic payload     |
 
 ### `Plushie.Event.CommandError`
 
@@ -438,11 +452,13 @@ end
 ### Match effect result
 
 ```elixir
-def update(model, %EffectEvent{tag: :open_file, result: {:ok, %{path: path}}}) do
+alias Plushie.Effect.Result
+
+def update(model, %EffectEvent{tag: :open_file, result: %Result.FileOpened{path: path}}) do
   load_file(model, path)
 end
 
-def update(model, %EffectEvent{tag: :open_file, result: :cancelled}) do
+def update(model, %EffectEvent{tag: :open_file, result: %Result.Cancelled{}}) do
   model
 end
 ```

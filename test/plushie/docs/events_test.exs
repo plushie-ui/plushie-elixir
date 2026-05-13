@@ -14,6 +14,8 @@ defmodule Plushie.Docs.EventsTest do
     WindowEvent
   }
 
+  alias Plushie.Effect.Result
+
   # -- Widget events -----------------------------------------------------------
 
   test "events_widget_click_construct_test" do
@@ -123,10 +125,10 @@ defmodule Plushie.Docs.EventsTest do
   end
 
   test "events_widget_sort_match_test" do
-    event = %WidgetEvent{type: :sort, id: "users", scope: [], value: "name"}
+    event = %WidgetEvent{type: :sort, id: "users", scope: [], value: %{column: "name"}}
 
     assert match?(%WidgetEvent{type: :sort, id: "users"}, event)
-    assert event.value == "name"
+    assert event.value.column == "name"
   end
 
   # -- Pointer events (mouse area + canvas unified) ----------------------------
@@ -449,21 +451,21 @@ defmodule Plushie.Docs.EventsTest do
   # -- Effect result events ----------------------------------------------------
 
   test "events_effect_response_ok_match_test" do
-    event = %EffectEvent{tag: :open, result: {:ok, %{}}}
+    event = %EffectEvent{tag: :open, result: %Result.FileOpened{path: "/tmp/file.ex"}}
 
-    assert match?(%EffectEvent{tag: :open, result: {:ok, _}}, event)
+    assert match?(%EffectEvent{tag: :open, result: %Result.FileOpened{}}, event)
   end
 
   test "events_effect_response_cancelled_match_test" do
-    event = %EffectEvent{tag: :open, result: :cancelled}
+    event = %EffectEvent{tag: :open, result: %Result.Cancelled{}}
 
-    assert match?(%EffectEvent{tag: :open, result: :cancelled}, event)
+    assert match?(%EffectEvent{tag: :open, result: %Result.Cancelled{}}, event)
   end
 
   test "events_effect_response_error_match_test" do
-    event = %EffectEvent{tag: :open, result: {:error, "err"}}
+    event = %EffectEvent{tag: :open, result: %Result.Error{message: "err"}}
 
-    assert match?(%EffectEvent{result: {:error, _}}, event)
+    assert match?(%EffectEvent{result: %Result.Error{}}, event)
   end
 
   # -- Pattern matching tips ---------------------------------------------------

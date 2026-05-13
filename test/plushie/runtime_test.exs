@@ -529,8 +529,8 @@ defmodule Plushie.RuntimeTest do
       assert text_node.props[:content] == "ticks:2"
     end
 
-    test "done/2 dispatches the mapped value through update" do
-      defmodule DoneApp do
+    test "dispatch/2 dispatches the mapped value through update" do
+      defmodule DispatchApp do
         use Plushie.App
 
         def init(_opts), do: %{result: nil}
@@ -554,12 +554,12 @@ defmodule Plushie.RuntimeTest do
         end
       end
 
-      {runtime, _bridge} = start_runtime(DoneApp)
+      {runtime, _bridge} = start_runtime(DispatchApp)
       await_initial_render(runtime)
 
       dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "go"})
 
-      # done/2 uses send_to_self, so the event arrives in the next message.
+      # dispatch/2 uses send_to_self, so the event arrives in the next message.
       model = await_model(runtime, fn m -> m.result == :raw_value end)
       assert model.result == :raw_value
     end

@@ -338,3 +338,21 @@ the separate module no longer carries its weight.
 
 **Revisit when:** A support module is no longer loaded by the test
 environment or becomes a single-use abstraction that obscures the test.
+
+## Examples may show defaulted call arities
+
+Elixir functions with default arguments intentionally expose multiple
+call arities. Reference examples may use the shorter, common call form
+when the omitted trailing arguments have defaults and the surrounding
+text names how to pass options.
+
+**Rules out:** Treating a valid example such as a function call without
+optional trailing options as an API mismatch solely because the generated
+spec lists the full arity.
+
+**Still in scope:** Correcting tables that claim a non-existent function
+name, adding text that explains optional options, or showing the full
+arity when the optional argument is the subject being documented.
+
+**Revisit when:** A short example hides a required argument or users need
+the omitted option to understand the feature.

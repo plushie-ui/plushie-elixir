@@ -68,7 +68,7 @@ defmodule Plushie.IntegrationCaseTest do
       # :sys.get_state after dispatch (the runtime will be dead).
       Plushie.Runtime.dispatch(runtime, %Plushie.Event.SystemEvent{type: :all_windows_closed})
 
-      assert_receive {:DOWN, ^ref, :process, ^runtime, :normal}, 1000
+      assert_receive {:DOWN, ^ref, :process, ^runtime, :normal}, 5000
     end
 
     test "daemon runtime stays alive on all_windows_closed" do

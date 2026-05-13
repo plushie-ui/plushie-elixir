@@ -390,7 +390,8 @@ defmodule Plushie.EventDeclarationTest do
 
   describe "BuiltinSpecs" do
     test "has spec for all builtin event types" do
-      for type <- ~w(click input submit toggle select slide slide_release paste open close)a do
+      for type <-
+            ~w(click input submit toggle select slide slide_release paste open close option_hovered key_binding link_click sort scrolled pane_focus_cycle)a do
         assert BuiltinSpecs.spec(type) != nil, "missing spec for #{type}"
       end
     end
@@ -415,6 +416,11 @@ defmodule Plushie.EventDeclarationTest do
 
     test "toggle spec has value :boolean" do
       assert %{carrier: :value, type: :boolean} = BuiltinSpecs.spec(:toggle)
+    end
+
+    test "sort spec has column field" do
+      assert %{carrier: :value, fields: fields} = BuiltinSpecs.spec(:sort)
+      assert Keyword.fetch!(fields, :column) == :string
     end
 
     test "key_press spec has parsed data fields" do

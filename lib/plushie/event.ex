@@ -15,6 +15,7 @@ defmodule Plushie.Event do
   - `StreamEvent` - intermediate values from streaming commands
   - `EffectEvent` - platform effect responses (file dialogs, clipboard)
   - `SystemEvent` - system queries and platform events
+  - `DiagnosticMessage` - structured diagnostics from the renderer
   - `CommandError` - command failures
 
   See the [Events reference](docs/reference/events.md) for the full
@@ -24,6 +25,7 @@ defmodule Plushie.Event do
   alias Plushie.Event.{
     AsyncEvent,
     CommandError,
+    DiagnosticMessage,
     EffectEvent,
     ImeEvent,
     KeyEvent,
@@ -43,6 +45,7 @@ defmodule Plushie.Event do
           | WindowEvent.delivered_t()
           | EffectEvent.t()
           | CommandError.t()
+          | DiagnosticMessage.t()
           | SystemEvent.delivered_t()
           | TimerEvent.t()
           | AsyncEvent.t()
@@ -56,6 +59,7 @@ defmodule Plushie.Event do
           | WindowEvent.t()
           | EffectEvent.t()
           | CommandError.t()
+          | DiagnosticMessage.t()
           | SystemEvent.t()
           | TimerEvent.t()
           | AsyncEvent.t()

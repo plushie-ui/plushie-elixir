@@ -4,19 +4,19 @@ defmodule Plushie.Event.SystemEvent do
 
   Covers responses to system queries (`system_info`, `system_theme`)
   as well as recurring platform events like animation frames and OS theme
-  changes.
+  changes. Renderer diagnostics are delivered as
+  `Plushie.Event.DiagnosticMessage`, not as `SystemEvent`.
 
   ## Fields
 
     * `type` - `:system_info`, `:system_theme`, `:animation_frame`,
       `:theme_changed`, `:all_windows_closed`, `:image_list`,
-      `:tree_hash`, `:find_focused`, `:diagnostic`, `:recovery_failed`,
+      `:tree_hash`, `:find_focused`, `:recovery_failed`,
       `:announce`, or `:error`
-    * `tag` - caller-supplied correlation tag from the originating query;
-      for diagnostics, the diagnostic code
+    * `tag` - caller-supplied correlation tag from the originating query
     * `value` - payload; shape depends on event type
-    * `id` - originating widget/canvas ID (diagnostics only)
-    * `window_id` - originating window ID (diagnostics only)
+    * `id` - optional originating widget/canvas ID for renderer errors
+    * `window_id` - optional originating window ID for renderer errors
 
   ## Pattern matching
 
@@ -44,7 +44,6 @@ defmodule Plushie.Event.SystemEvent do
             | :tree_hash
             | :find_focused
             | :announce
-            | :diagnostic
             | :recovery_failed
             | :error,
           tag: String.t() | nil,

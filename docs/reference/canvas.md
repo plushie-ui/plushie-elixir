@@ -334,8 +334,8 @@ Require interaction props on interactive elements:
 | Event type | Trigger | Data fields |
 |---|---|---|
 | `:click` | `on_click: true` | Scoped under canvas ID (see below) |
-| `:enter` | `on_hover: true` | *n/a* |
-| `:exit` | `on_hover: true` | *n/a* |
+| `:enter` | `on_hover: true` | `x`, `y`, `captured` |
+| `:exit` | `on_hover: true` | `x`, `y`, `captured` |
 | `:drag` | `draggable: true` | `x`, `y`, `delta_x`, `delta_y` |
 | `:drag_end` | `draggable: true` | `x`, `y` |
 | `:key_press` | `focusable: true` | `key`, `modifiers`, `text` |

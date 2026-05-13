@@ -12,9 +12,9 @@ defmodule Plushie.Docs.CommandsTest do
     assert %Command{type: :none, payload: %{}} = cmd
   end
 
-  # -- command.async ----------------------------------------------------------
+  # -- command.task -----------------------------------------------------------
 
-  test "commands_async_construct_test" do
+  test "commands_task_construct_test" do
     cmd = Command.task(fn -> {:ok, "data"} end, :data_fetched)
     assert %Command{type: :task, payload: %{tag: :data_fetched}} = cmd
   end

@@ -43,7 +43,7 @@ All functions live in `Plushie.Command` unless noted otherwise.
 | Function | Purpose |
 |---|---|
 | `none/0` | No-op command (useful in conditional pipelines) |
-| `done/2` | Lift a value into the command pipeline. Calls `mapper.(value)` and queues the result for `update/2` in the next message cycle, no task spawned. |
+| `dispatch/2` | Lift a value into the command pipeline. Calls `mapper.(value)` and queues the result for `update/2` in the next message cycle, no task spawned. |
 | `batch/1` | Execute a list of commands sequentially |
 | `exit/0` | Shut down the app |
 
@@ -55,7 +55,7 @@ multiple side effects from a single `update/2` clause.
 
 | Function | Purpose |
 |---|---|
-| `async/2` | Run a function in a background Task. Result delivered as `%AsyncEvent{tag: tag, result: result}`. |
+| `task/2` | Run a function in a background Task. Result delivered as `%AsyncEvent{tag: tag, result: result}`. |
 | `stream/2` | Run a function with an `emit` callback. Each `emit.(value)` delivers `%StreamEvent{tag: tag, value: value}`. Final return delivered as `%AsyncEvent{}`. |
 | `cancel/1` | Kill an in-flight async or stream task by tag. |
 | `send_after/2` | One-shot delayed event. Sends `event` through `update/2` after `delay_ms` milliseconds. If a timer with the same event is already pending, the old one is cancelled. |
@@ -116,12 +116,12 @@ in `update/2` (not a `SystemEvent`). The data map contains `name`,
 
 | Function | Purpose |
 |---|---|
-| `get_window_size/2` | Query window dimensions |
-| `get_window_position/2` | Query window position |
+| `window_size/2` | Query window dimensions |
+| `window_position/2` | Query window position |
 | `is_maximized/2` | Query maximized state |
 | `is_minimized/2` | Query minimized state |
-| `get_mode/2` | Query fullscreen/windowed mode |
-| `get_scale_factor/2` | Query DPI scale factor |
+| `window_mode/2` | Query fullscreen/windowed mode |
+| `scale_factor/2` | Query DPI scale factor |
 | `raw_id/2` | Query platform window handle |
 | `monitor_size/2` | Query monitor dimensions |
 
@@ -133,8 +133,8 @@ The `tag` matches the atom you provided. Data maps use atom keys:
 
 | Function | Purpose |
 |---|---|
-| `get_system_theme/1` | Query OS light/dark preference |
-| `get_system_info/1` | Query system information |
+| `system_theme/1` | Query OS light/dark preference |
+| `system_info/1` | Query system information |
 | `allow_automatic_tabbing/1` | macOS automatic tab management |
 | `announce/1` | Screen reader announcement |
 
@@ -185,7 +185,7 @@ DSL internally.
 All functions live in `Plushie.Effect`. Each takes an atom **tag** as
 its first argument and returns a `Plushie.Command` struct. Results
 arrive as `%Plushie.Event.EffectEvent{tag: tag, result: result}` in
-`update/2`.
+`update/2`, where `result` is a `Plushie.Effect.Result.*` struct.
 
 ### File dialogs
 
@@ -200,8 +200,15 @@ arrive as `%Plushie.Event.EffectEvent{tag: tag, result: result}` in
 ```elixir
 {model, Effect.file_open(:import, title: "Import", filters: [{"Elixir", "*.ex"}])}
 
-def update(model, %EffectEvent{tag: :import, result: {:ok, %{path: path}}}), do: ...
-def update(model, %EffectEvent{tag: :import, result: :cancelled}), do: model
+def update(model, %EffectEvent{
+  tag: :import,
+  result: %Plushie.Effect.Result.FileOpened{path: path}
+}), do: ...
+
+def update(model, %EffectEvent{
+  tag: :import,
+  result: %Plushie.Effect.Result.Cancelled{}
+}), do: model
 ```
 
 ### Clipboard
@@ -227,7 +234,7 @@ Options: `:icon`, `:timeout` (auto-dismiss ms), `:urgency`
 
 ## Async mechanics
 
-- **One task per tag.** Starting `async/2` or `stream/2` with a tag
+- **One task per tag.** Starting `task/2` or `stream/2` with a tag
   that is already in-flight kills the previous task. Use unique tags for
   concurrent work.
 
@@ -269,10 +276,10 @@ yourself if you want to follow the async convention.
 - **Default timeouts:** file dialogs 120s, clipboard/notifications 5s.
   Override with `:timeout` option.
 
-- **Timeout delivery.** `result: {:error, :timeout}`.
+- **Timeout delivery.** `result: %Plushie.Effect.Result.Timeout{}`.
 
 - **Cancellation.** User dismissing a dialog delivers
-  `result: :cancelled` (not an error).
+  `result: %Plushie.Effect.Result.Cancelled{}` (not an error).
 
 - **Effect stubs.** `register_effect_stub(:file_open, {:ok, %{path: "..."}})`
   intercepts effects by kind in tests. See the
@@ -301,7 +308,7 @@ end
 This is useful for integrating with existing OTP infrastructure --
 supervisors, GenServers, Phoenix PubSub. Messages arrive as events in
 the next update cycle. The tradeoff: you lose tag-based cancellation
-and stale-result rejection that `async/2` provides.
+and stale-result rejection that `task/2` provides.
 
 ## See also
 
