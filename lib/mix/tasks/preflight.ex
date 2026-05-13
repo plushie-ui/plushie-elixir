@@ -31,6 +31,7 @@ defmodule Mix.Tasks.Preflight do
   use Mix.Task
 
   @shortdoc "Run all CI checks locally"
+  @port_idle_timeout_ms :timer.minutes(15)
 
   @typep step_result :: :ok | {:error, pos_integer()}
 
@@ -124,7 +125,7 @@ defmodule Mix.Tasks.Preflight do
 
   @spec mix_compile() :: step_result()
   defp mix_compile do
-    case Mix.Task.run("compile", ["--warnings-as-errors"]) do
+    case Mix.Task.run("compile", ["--warnings-as-errors", "--return-errors"]) do
       {:error, _} -> {:error, 1}
       _ -> :ok
     end
@@ -190,7 +191,23 @@ defmodule Mix.Tasks.Preflight do
 
       {^port, {:exit_status, code}} ->
         code
+
+      {^port, :closed} ->
+        1
+    after
+      @port_idle_timeout_ms ->
+        close_port(port)
+        Mix.shell().error("    process produced no output or exit status before timeout")
+        124
     end
+  end
+
+  @spec close_port(port()) :: :ok
+  defp close_port(port) do
+    Port.close(port)
+    :ok
+  rescue
+    ArgumentError -> :ok
   end
 
   @spec exit_code_to_result(non_neg_integer()) :: step_result()

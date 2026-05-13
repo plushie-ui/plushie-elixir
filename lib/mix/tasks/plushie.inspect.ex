@@ -68,7 +68,7 @@ defmodule Mix.Tasks.Plushie.Inspect do
         # Override the script's app with the one from the command line
         script = %{script | header: %{script.header | app: module}}
 
-        case Plushie.Automation.Runner.run(script) do
+        case Plushie.Automation.Runner.run(script, replay: true) do
           :ok ->
             Mix.shell().info("Script completed successfully.")
 

@@ -56,9 +56,9 @@ defmodule Mix.Tasks.Plushie.Connect do
 
     {app_module, socket_addr} =
       case argv do
-        [module_str, addr | _] -> {Module.concat([module_str]), addr}
+        [module_str, addr] -> {Module.concat([module_str]), addr}
         [module_str] -> {Module.concat([module_str]), nil}
-        [] -> Mix.raise("Usage: mix plushie.connect MyModule [socket_path_or_addr]")
+        _ -> Mix.raise("Usage: mix plushie.connect MyModule [socket_path_or_addr]")
       end
 
     format = if opts[:json], do: :json, else: :msgpack
@@ -110,6 +110,7 @@ defmodule Mix.Tasks.Plushie.Connect do
     end
   end
 
+  @spec resolve_token(String.t() | nil) :: String.t() | nil
   defp resolve_token(cli_token) do
     cond do
       cli_token != nil ->

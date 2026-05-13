@@ -61,7 +61,7 @@ defmodule Mix.Tasks.Plushie.Download do
   # Refuse to download a precompiled binary when native widgets are
   # detected; the stock binary won't have them registered.
   defp check_native_widgets! do
-    Mix.Task.run("compile", [])
+    Mix.PlushieHelpers.compile_project!()
 
     native = Plushie.WidgetRegistry.native_widgets()
 
@@ -203,6 +203,7 @@ defmodule Mix.Tasks.Plushie.Download do
   end
 
   @doc false
+  @spec format_download_error_reason(reason :: term()) :: String.t()
   def format_download_error_reason({:http_status, status}) do
     "server returned HTTP #{status}"
   end
@@ -282,10 +283,10 @@ defmodule Mix.Tasks.Plushie.Download do
 
     [
       verify: :verify_peer,
-      cacerts: apply(:public_key, :cacerts_get, []),
+      cacerts: :public_key.cacerts_get(),
       depth: 3,
       customize_hostname_check: [
-        match_fun: apply(:public_key, :pkix_verify_hostname_match_fun, [:https])
+        match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
       ]
     ]
   end

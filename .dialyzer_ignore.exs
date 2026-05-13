@@ -15,5 +15,5 @@
 
   # :erl_tar.extract/2 typespec does not include {:safe_relative_path, true}
   # in OTP 28's dialyzer PLT, but the option works at runtime.
-  {"lib/mix/tasks/plushie.download.ex", :no_return},
+  {"lib/mix/tasks/plushie.download.ex", "Function extract_tarball!/2 has no local return."}
 ]

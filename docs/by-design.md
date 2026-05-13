@@ -490,3 +490,40 @@ rewrites.
 by supported Elixir control flow.
 
 **Revisit when:** Elixir adds `else:` support to `case`.
+
+## Download symlink is best effort
+
+`mix plushie.download` installs the renderer at the platform-specific
+download path resolved by `Plushie.Binary.path!/0`. The
+`bin/plushie-renderer` symlink is a convenience for scripts on
+filesystems that support it, not the authoritative installation record.
+
+**Rules out:** Failing an otherwise verified and executable download
+solely because a convenience symlink cannot be created.
+
+**Still in scope:** Raising on failed download, checksum mismatch,
+unusable configured binary paths, or any failure that prevents
+`Plushie.Binary.path!/0` from resolving the installed renderer. Improving
+the symlink path or adding a portable stable-path mechanism when the
+implementation stays clear.
+
+**Revisit when:** The stable symlink becomes a documented contract rather
+than a convenience, or binary resolution starts depending on it.
+
+## Mix task CLI overrides may update application env
+
+Mix tasks run in the same VM as the app they start. Flags such as
+`mix plushie.gui --watch` and `--no-watch` update
+`config :plushie, :code_reloader` so downstream startup code observes
+the same value that the CLI selected.
+
+**Rules out:** Treating the application-env write as a leak merely
+because it persists for the lifetime of the Mix VM.
+
+**Still in scope:** Making flag resolution clearer, rejecting invalid
+flag values, and avoiding application-env writes when the selected
+behavior is only local to the task.
+
+**Revisit when:** Mix tasks start multiple apps with independent
+reloader settings in the same VM, or code reloader configuration stops
+flowing through application env.

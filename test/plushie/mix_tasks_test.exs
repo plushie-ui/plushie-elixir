@@ -33,4 +33,20 @@ defmodule Plushie.MixTasksTest do
       assert function_exported?(Mix.Tasks.Plushie.Build, :run, 1)
     end
   end
+
+  describe "Mix.Tasks.Plushie.Connect" do
+    test "raises on extra positional arguments" do
+      assert_raise Mix.Error, ~r/Usage: mix plushie.connect/, fn ->
+        Mix.Tasks.Plushie.Connect.run(["Counter", "/tmp/plushie.sock", "extra"])
+      end
+    end
+  end
+
+  describe "Mix.Tasks.Plushie.Gui" do
+    test "raises on extra positional arguments" do
+      assert_raise Mix.Error, ~r/Usage: mix plushie.gui/, fn ->
+        Mix.Tasks.Plushie.Gui.run(["Counter", "extra"])
+      end
+    end
+  end
 end

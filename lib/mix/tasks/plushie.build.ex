@@ -96,7 +96,7 @@ defmodule Mix.Tasks.Plushie.Build do
 
     # Ensure the project is compiled so widget modules are available
     # for protocol-based discovery.
-    Mix.Task.run("compile", [])
+    Mix.PlushieHelpers.compile_project!()
 
     native = Plushie.WidgetRegistry.native_widgets()
     bin_name = binary_name_for(native)
@@ -142,7 +142,7 @@ defmodule Mix.Tasks.Plushie.Build do
   defp build_wasm(release?, verbose?, opts) do
     check_cargo()
 
-    Mix.Task.run("compile", [])
+    Mix.PlushieHelpers.compile_project!()
 
     # cargo-plushie's --wasm path needs a plushie-rust checkout. Error
     # out early with the same guidance the user would hit later.
@@ -157,8 +157,6 @@ defmodule Mix.Tasks.Plushie.Build do
     spec_dir = spec_dir()
     File.mkdir_p!(spec_dir)
     write_spec_cargo_toml!(spec_dir, binary_name_for([]), [], %{})
-
-    release? = release? or Application.get_env(:plushie, :build_profile) == :release
 
     Mix.shell().info("Building plushie-wasm#{if release?, do: " (release)", else: ""}...")
 
@@ -228,7 +226,7 @@ defmodule Mix.Tasks.Plushie.Build do
       Enum.map_join(widgets, "\n", fn mod ->
         path = crate_paths[mod]
         crate_basename = Path.basename(path)
-        ~s(#{crate_basename} = { path = "#{path}" })
+        ~s(#{toml_string(crate_basename)} = { path = #{toml_string(path)} })
       end)
 
     deps_block = if deps == "", do: "", else: deps <> "\n"
@@ -240,7 +238,7 @@ defmodule Mix.Tasks.Plushie.Build do
 
         source ->
           abs = Path.expand(source)
-          ~s(source_path = "#{abs}"\n)
+          "source_path = #{toml_string(abs)}\n"
       end
 
     package_name = "#{bin_name}-spec"
@@ -256,15 +254,15 @@ defmodule Mix.Tasks.Plushie.Build do
       # `target/plushie-renderer/`.
 
       [package]
-      name = "#{package_name}"
-      version = "#{version}"
+      name = #{toml_string(package_name)}
+      version = #{toml_string(version)}
       edition = "2024"
       publish = false
 
       [dependencies]
       #{deps_block}
       [package.metadata.plushie]
-      binary_name = "#{bin_name}"
+      binary_name = #{toml_string(bin_name)}
       #{source_line}\
       """
       |> String.trim_trailing()
@@ -287,6 +285,9 @@ defmodule Mix.Tasks.Plushie.Build do
       File.write!(path, content)
     end
   end
+
+  @spec toml_string(String.t()) :: String.t()
+  defp toml_string(value), do: Jason.encode!(value)
 
   # -- Widget crate paths ---------------------------------------------------
 
@@ -351,7 +352,13 @@ defmodule Mix.Tasks.Plushie.Build do
     {min_major, min_minor, min_patch} = @min_rust_version
     min_str = "#{min_major}.#{min_minor}.#{min_patch}"
 
-    case System.cmd("rustc", ["--version"], stderr_to_stdout: true) do
+    executable = System.find_executable("rustc")
+
+    unless executable do
+      Mix.raise("rustc not found. Install Rust #{min_str}+ via https://rustup.rs")
+    end
+
+    case System.cmd(executable, ["--version"], stderr_to_stdout: true) do
       {output, 0} ->
         case Regex.run(~r/rustc (\d+)\.(\d+)\.(\d+)/, output) do
           [_, major, minor, patch] ->
@@ -371,15 +378,9 @@ defmodule Mix.Tasks.Plushie.Build do
             )
         end
 
-      {_, _} ->
-        Mix.raise("rustc not found. Install Rust #{min_str}+ via https://rustup.rs")
+      {output, status} ->
+        Mix.raise("rustc --version failed (exit code #{status}): #{String.trim(output)}")
     end
-  rescue
-    ErlangError ->
-      {min_major, min_minor, min_patch} = @min_rust_version
-      min_str = "#{min_major}.#{min_minor}.#{min_patch}"
-
-      Mix.raise("rustc not found. Install Rust #{min_str}+ via https://rustup.rs")
   end
 
   defp check_cargo do

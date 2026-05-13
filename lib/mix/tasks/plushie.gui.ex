@@ -45,13 +45,14 @@ defmodule Mix.Tasks.Plushie.Gui do
 
     app_module =
       case args do
-        [mod_str | _] -> Module.concat([mod_str])
+        [mod_str] -> Module.concat([mod_str])
         [] -> Mix.raise("Usage: mix plushie.gui ModuleName")
+        _ -> Mix.raise("Usage: mix plushie.gui ModuleName")
       end
 
     watch? = resolve_watch_flag(opts)
 
-    Mix.Task.run("compile")
+    Mix.PlushieHelpers.compile_project!()
 
     Mix.PlushieHelpers.validate_module!(app_module)
 

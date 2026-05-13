@@ -35,7 +35,6 @@ defmodule Mix.PlushieHelpersTest do
                "-p",
                "cargo-plushie",
                "--release",
-               "--quiet",
                "--"
              ]
     end
@@ -108,6 +107,14 @@ defmodule Mix.PlushieHelpersTest do
       assert error.message =~ "version mismatch"
       assert error.message =~ "installed 0.0.1"
       assert error.message =~ "expected #{Plushie.Binary.plushie_rust_version()}"
+    end
+  end
+
+  describe "validate_module!/1" do
+    test "raises a clear error for non-atom input" do
+      assert_raise Mix.Error, ~r/Module name must be an atom/, fn ->
+        PlushieHelpers.validate_module!("Counter")
+      end
     end
   end
 end

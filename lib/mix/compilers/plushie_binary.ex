@@ -19,11 +19,11 @@ defmodule Mix.Tasks.Compile.PlushieBinary do
     _path = Plushie.Binary.path!()
     {:noop, []}
   rescue
-    _ ->
+    error in RuntimeError ->
       diagnostic = %Mix.Task.Compiler.Diagnostic{
         file: "plushie-renderer",
         severity: :warning,
-        message: Plushie.Binary.not_found_message(),
+        message: Exception.message(error),
         position: nil,
         compiler_name: "plushie_binary"
       }

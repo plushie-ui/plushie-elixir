@@ -106,6 +106,20 @@ defmodule Mix.PlushieHelpers do
     end
   end
 
+  @doc false
+  @spec compile_project!(args :: [String.t()]) :: :ok
+  def compile_project!(args \\ []) do
+    args = Enum.uniq(args ++ ["--return-errors"])
+
+    case Mix.Task.run("compile", args) do
+      {:error, _diagnostics} ->
+        Mix.raise("Compilation failed")
+
+      {_status, _diagnostics} ->
+        :ok
+    end
+  end
+
   @doc """
   Resolves how to invoke `cargo-plushie` for renderer workspace generation.
 
@@ -144,8 +158,7 @@ defmodule Mix.PlushieHelpers do
           """)
         end
 
-        {"cargo",
-         ["run", "--manifest-path", manifest, "-p", "cargo-plushie", "--release", "--quiet", "--"]}
+        {"cargo", ["run", "--manifest-path", manifest, "-p", "cargo-plushie", "--release", "--"]}
     end
   end
 
@@ -224,7 +237,7 @@ defmodule Mix.PlushieHelpers do
 
   @doc "Validates that a module is loaded. Raises with a clear message if not."
   @spec validate_module!(module :: module()) :: :ok
-  def validate_module!(mod) do
+  def validate_module!(mod) when is_atom(mod) do
     unless Code.ensure_loaded?(mod) do
       Mix.raise("""
       Module #{inspect(mod)} could not be loaded.
@@ -234,6 +247,10 @@ defmodule Mix.PlushieHelpers do
     end
 
     :ok
+  end
+
+  def validate_module!(mod) do
+    Mix.raise("Module name must be an atom, got: #{inspect(mod)}")
   end
 
   @doc """
