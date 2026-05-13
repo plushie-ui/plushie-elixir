@@ -321,3 +321,20 @@ Adding explicit specs for hand-written command functions.
 
 **Revisit when:** The generated specs become hard to inspect in docs or
 Dialyzer output shows a concrete mismatch.
+
+## Test support modules may live outside the test file
+
+Tests can use modules defined under `test/support/` when the helper is
+shared, isolates a dependency, or keeps the test body focused on the
+behavior under assertion. A reference to such a module from a test file
+is not missing code just because the module is not defined inline.
+
+**Rules out:** Treating test helper modules as undefined without checking
+`test/support/` and the test compilation path.
+
+**Still in scope:** Removing dead test helpers, renaming confusing test
+helpers when a real test change touches them, or inlining a helper when
+the separate module no longer carries its weight.
+
+**Revisit when:** A support module is no longer loaded by the test
+environment or becomes a single-use abstraction that obscures the test.

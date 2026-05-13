@@ -60,42 +60,42 @@ defmodule Plushie.Automation.Runner do
     Session.click(session, selector)
     :ok
   rescue
-    e -> {:error, Exception.message(e)}
+    e in [ArgumentError, RuntimeError] -> {:error, Exception.message(e)}
   end
 
   defp execute(session, {:toggle, selector, value}, _header, _replay?, _output_dir) do
     Session.toggle(session, selector, value)
     :ok
   rescue
-    e -> {:error, Exception.message(e)}
+    e in [ArgumentError, RuntimeError] -> {:error, Exception.message(e)}
   end
 
   defp execute(session, {:type_text, selector, text}, _header, _replay?, _output_dir) do
     Session.type_text(session, selector, text)
     :ok
   rescue
-    e -> {:error, Exception.message(e)}
+    e in [ArgumentError, RuntimeError] -> {:error, Exception.message(e)}
   end
 
   defp execute(session, {:type_key, key}, _header, _replay?, _output_dir) do
     Session.type_key(session, key)
     :ok
   rescue
-    e -> {:error, Exception.message(e)}
+    e in [ArgumentError, RuntimeError] -> {:error, Exception.message(e)}
   end
 
   defp execute(session, {:press, key}, _header, _replay?, _output_dir) do
     Session.press(session, key)
     :ok
   rescue
-    e -> {:error, Exception.message(e)}
+    e in [ArgumentError, RuntimeError] -> {:error, Exception.message(e)}
   end
 
   defp execute(session, {:release, key}, _header, _replay?, _output_dir) do
     Session.release(session, key)
     :ok
   rescue
-    e -> {:error, Exception.message(e)}
+    e in [ArgumentError, RuntimeError] -> {:error, Exception.message(e)}
   end
 
   defp execute(_session, {:move, _selector}, _header, _replay?, _output_dir) do
@@ -108,7 +108,7 @@ defmodule Plushie.Automation.Runner do
     Session.move_to(session, x, y)
     :ok
   rescue
-    e -> {:error, Exception.message(e)}
+    e in [ArgumentError, RuntimeError] -> {:error, Exception.message(e)}
   end
 
   defp execute(session, {:assert_model, expression}, _header, _replay?, _output_dir) do
@@ -141,7 +141,7 @@ defmodule Plushie.Automation.Runner do
     Screenshot.save_png(screenshot, Path.join(dir, "#{name}.png"))
     :ok
   rescue
-    e -> {:error, Exception.message(e)}
+    e in [ArgumentError, File.Error, RuntimeError] -> {:error, Exception.message(e)}
   end
 
   defp execute(session, {:assert_text, selector, expected}, _header, _replay?, _output_dir) do

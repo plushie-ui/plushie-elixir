@@ -99,16 +99,21 @@ defmodule Plushie.Automation.File do
         :error -> nil
       end
 
-    viewport = parse_viewport(Map.get(fields, "viewport", "800x600"))
-    theme = Map.get(fields, "theme", "dark")
-    backend = parse_backend(Map.get(fields, "backend", "mock"))
-    {:ok, %{app: app, viewport: viewport, theme: theme, backend: backend}}
+    with {:ok, viewport} <- parse_viewport(Map.get(fields, "viewport", "800x600")) do
+      theme = Map.get(fields, "theme", "dark")
+      backend = parse_backend(Map.get(fields, "backend", "mock"))
+      {:ok, %{app: app, viewport: viewport, theme: theme, backend: backend}}
+    end
   end
 
   defp parse_viewport(str) do
-    case String.split(str, "x") do
-      [w, h] -> {String.to_integer(w), String.to_integer(h)}
-      _ -> {800, 600}
+    with [w, h] <- String.split(str, "x"),
+         {width, ""} <- Integer.parse(w),
+         {height, ""} <- Integer.parse(h),
+         true <- width > 0 and height > 0 do
+      {:ok, {width, height}}
+    else
+      _ -> {:error, "invalid viewport #{inspect(str)}; expected WIDTHxHEIGHT"}
     end
   end
 
@@ -136,8 +141,14 @@ defmodule Plushie.Automation.File do
   end
 
   defp parse_instruction(line) do
-    tokens = tokenize(line)
-    parse_action(tokens) || parse_assertion(tokens) || {:error, "unknown instruction: #{line}"}
+    case tokenize(line) do
+      {:ok, tokens} ->
+        parse_action(tokens) || parse_assertion(tokens) ||
+          {:error, "unknown instruction: #{line}"}
+
+      {:error, reason} ->
+        {:error, "#{reason}: #{line}"}
+    end
   end
 
   # Actions: interactions and input
@@ -189,11 +200,39 @@ defmodule Plushie.Automation.File do
   # "click \"#foo\"" -> ["click", "#foo"]
   # "type \"#input\" \"hello world\"" -> ["type", "#input", "hello world"]
   defp tokenize(line) do
-    ~r/"([^"]*)"|\S+/
-    |> Regex.scan(line)
-    |> Enum.map(fn
-      [_full, inner] -> inner
-      [bare] -> bare
-    end)
+    line
+    |> String.to_charlist()
+    |> tokenize([], [])
+  end
+
+  defp tokenize([], [], tokens), do: {:ok, Enum.reverse(tokens)}
+
+  defp tokenize([], current, tokens) do
+    {:ok, Enum.reverse([current |> Enum.reverse() |> to_string() | tokens])}
+  end
+
+  defp tokenize([char | rest], [], tokens) when char in [?\s, ?\t], do: tokenize(rest, [], tokens)
+  defp tokenize([?" | rest], [], tokens), do: quoted_token(rest, [], tokens)
+
+  defp tokenize([char | rest], current, tokens) when char in [?\s, ?\t] do
+    token = current |> Enum.reverse() |> to_string()
+    tokenize(rest, [], [token | tokens])
+  end
+
+  defp tokenize([char | rest], current, tokens), do: tokenize(rest, [char | current], tokens)
+
+  defp quoted_token([], _current, _tokens), do: {:error, "unterminated quoted string"}
+
+  defp quoted_token([?" | rest], current, tokens) do
+    token = current |> Enum.reverse() |> to_string()
+    tokenize(rest, [], [token | tokens])
+  end
+
+  defp quoted_token([?\\, char | rest], current, tokens) when char in [?", ?\\] do
+    quoted_token(rest, [char | current], tokens)
+  end
+
+  defp quoted_token([char | rest], current, tokens) do
+    quoted_token(rest, [char | current], tokens)
   end
 end

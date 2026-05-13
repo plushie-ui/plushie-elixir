@@ -148,6 +148,43 @@ defmodule Plushie.Automation.FileTest do
       assert {:assert_text, "#label", "Count: 42"} = Enum.at(script.instructions, 1)
     end
 
+    test "handles escaped quotes in quoted instruction strings" do
+      input = """
+      app: Counter
+      -----
+      type "#search" "hello \\"world\\""
+      """
+
+      assert {:ok, script} = File.parse(input)
+      assert script.instructions == [{:type_text, "#search", "hello \"world\""}]
+    end
+
+    test "returns error for unterminated quoted strings" do
+      input = """
+      app: Counter
+      -----
+      type "#search" "hello
+      """
+
+      assert {:error, msg} = File.parse(input)
+      assert msg =~ "unterminated quoted string"
+    end
+
+    test "returns error for invalid viewport values" do
+      for viewport <- ["800x600xextra", "800x", "x600", "0x600"] do
+        input = """
+        app: Counter
+        viewport: #{viewport}
+        -----
+        click "#btn"
+        """
+
+        assert {:error, msg} = File.parse(input)
+        assert msg =~ "invalid viewport"
+        assert msg =~ viewport
+      end
+    end
+
     test "returns error for unknown instruction" do
       input = """
       app: Counter
