@@ -94,6 +94,7 @@ defmodule Plushie.MixProject do
           Plushie.Runtime,
           Plushie.Bridge,
           Plushie.Binary,
+          Plushie.Connect,
           Plushie.Dev.DevServer,
           Plushie.Dev.RebuildingOverlay
         ],

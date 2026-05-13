@@ -74,76 +74,30 @@ defmodule Mix.Tasks.Plushie.Connect do
       socket_addr || System.get_env("PLUSHIE_SOCKET") ||
         Mix.raise("No socket address provided. Pass as argument or set PLUSHIE_SOCKET.")
 
-    # Resolve token (--token > env > stdin > none).
-    token = resolve_token(opts[:token])
-
-    # Connect to the renderer's socket via the iostream adapter.
-    adapter =
-      case Plushie.SocketAdapter.start_link(socket, format) do
-        {:ok, pid} ->
-          pid
-
-        {:error, reason} ->
-          Mix.raise("""
-          Could not connect to renderer at #{socket}: #{inspect(reason)}
-
-          Make sure the renderer is running with --listen and the socket
-          path is correct. You can also set PLUSHIE_SOCKET in the environment.
-          """)
-      end
-
-    case Plushie.start_link(app_module,
-           transport: {:iostream, adapter},
-           format: format,
-           daemon: daemon,
-           token: token
-         ) do
-      {:ok, pid} ->
-        ref = Process.monitor(pid)
-
-        receive do
-          {:DOWN, ^ref, :process, _, _reason} -> :ok
-        end
-
-      {:error, reason} ->
-        Mix.raise("Failed to start plushie: #{inspect(reason)}")
-    end
-  end
-
-  @spec resolve_token(String.t() | nil) :: String.t() | nil
-  defp resolve_token(cli_token) do
-    cond do
-      cli_token != nil ->
-        cli_token
-
-      (env_token = System.get_env("PLUSHIE_TOKEN")) != nil ->
-        env_token
-
-      true ->
-        read_token_from_stdin()
-    end
-  end
-
-  defp read_token_from_stdin do
-    task =
-      Task.async(fn ->
-        case IO.gets("") do
-          :eof -> nil
-          {:error, _} -> nil
-          line when is_binary(line) -> parse_negotiation_json(String.trim(line))
+    connect_opts =
+      [socket: socket, format: format, daemon: daemon]
+      |> then(fn connect_opts ->
+        if opts[:token] do
+          Keyword.put(connect_opts, :token, opts[:token])
+        else
+          connect_opts
         end
       end)
 
-    case Task.yield(task, 1_000) || Task.shutdown(task, :brutal_kill) do
-      {:ok, token} -> token
-      _ -> nil
-    end
-  end
+    case Plushie.Connect.run(app_module, connect_opts) do
+      :ok ->
+        :ok
 
-  defp parse_negotiation_json(line) do
-    case Jason.decode(line) do
-      {:ok, %{"token" => token}} when is_binary(token) -> token
-      _ -> nil
+      {:error, {:connect_failed, reason}} ->
+        Mix.raise("""
+        Could not connect to renderer at #{socket}: #{inspect(reason)}
+
+        Make sure the renderer is running with --listen and the socket
+        path is correct. You can also set PLUSHIE_SOCKET in the environment.
+        """)
+
+      {:error, reason} ->
+        Mix.raise("Failed to start plushie: #{inspect(reason)}")
     end
   end
 end
