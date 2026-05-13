@@ -118,6 +118,8 @@ error.
 
 All interactions are synchronous. They wait for the full update cycle
 (event -> update -> view -> patch) to complete before returning.
+Most interaction helpers also accept an optional final keyword list for
+options such as `window:`.
 
 ## Assertions
 
@@ -130,6 +132,9 @@ assert_role("#save", :button)            # accessibility role
 assert_a11y("#email", %{required: true}) # accessibility properties
 assert_no_diagnostics()                  # no prop validation warnings
 ```
+
+`assert_role/2` and `assert_a11y/2` are assertion macros, so use them
+directly in tests rather than passing them as function references.
 
 ## State inspection
 
@@ -208,6 +213,10 @@ Effect stubs register by **kind** (the operation type atom like
 `:file_open`), not by tag. This means the stub applies to all effects of
 that kind regardless of which tag they use. Stubs are scoped to the test
 process and cleaned up automatically on teardown.
+
+The [Testing reference](../reference/testing.md) lists the full helper API,
+including screenshot and tree hash assertions, accessibility resolution,
+frame advancement, effect stub management, and lower-level session helpers.
 
 ### Applying it: test import/export
 

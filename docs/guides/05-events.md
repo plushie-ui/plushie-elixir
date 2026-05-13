@@ -19,8 +19,7 @@ structs. Here are the key fields:
 | `type` | atom | The kind of interaction: `:click`, `:input`, `:toggle`, `:submit`, `:select`, `:slide`, etc. |
 | `id` | string | The widget's local ID |
 | `scope` | list of strings | Ancestor container IDs (nearest parent first, window ID last) |
-| `value` | term or nil | Scalar payload: text content for `:input`, boolean for `:toggle`, number for `:slide` |
-| `data` | map or nil | Structured payload for events with multiple fields |
+| `value` | term or nil | Payload: scalar values for simple events, or an atom-keyed map for events with multiple fields |
 | `window_id` | string | Which window the event came from |
 
 You pattern match on these fields in `update/2`:
@@ -71,7 +70,7 @@ Pointer events (mouse, touch, pen) from subscriptions and widgets like
 `pointer_area` are also delivered as `WidgetEvent` structs using the
 unified pointer event types (`:press`, `:release`, `:move`, `:scroll`,
 `:enter`, `:exit`). There are no separate MouseEvent or TouchEvent
-structs. The `pointer` field in the event data identifies the input
+structs. The `pointer` field in the event `value` map identifies the input
 device (`:mouse`, `:touch`, `:pen`).
 
 We will cover each of these in the chapters where they are introduced. For
@@ -140,7 +139,7 @@ end
 This works for any event type, not just `WidgetEvent`. When you click a
 button in the preview, the log shows all fields:
 
-    %WidgetEvent{type: :click, id: "btn", value: nil, value: nil, scope: ["preview", "main"], window_id: "main"}
+    %WidgetEvent{type: :click, id: "btn", value: nil, scope: ["preview", "main"], window_id: "main"}
 
 When you type in a text input:
 

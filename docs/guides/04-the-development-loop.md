@@ -179,10 +179,13 @@ iex> {:ok, pid} = Plushie.start_link(PlushiePad, binary: Plushie.Binary.path!())
 Now the app is running and you have the iex prompt. Query the runtime:
 
 ```elixir
-iex> Plushie.Runtime.get_model(Plushie.Runtime)
+iex> runtime = Plushie.runtime_for()
+:"Plushie.Runtime"
+
+iex> Plushie.Runtime.get_model(runtime)
 %{source: "...", preview: ..., error: nil}
 
-iex> Plushie.Runtime.get_tree(Plushie.Runtime)
+iex> Plushie.Runtime.get_tree(runtime)
 %{id: "main", type: "window", children: [...]}
 ```
 
@@ -190,9 +193,9 @@ iex> Plushie.Runtime.get_tree(Plushie.Runtime)
 UI tree. These are the same values your `view/1` and `update/2` work with --
 seeing them directly helps when debugging layout issues or unexpected state.
 
-The default runtime name is `Plushie.Runtime`. If you started Plushie with
-a custom `name:` option, the runtime name follows the convention
-`{name}.Runtime`.
+The default runtime process is registered as `:"Plushie.Runtime"`.
+`Plushie.runtime_for/1` returns the right registered name for the default
+instance or for a custom `name:` option.
 
 ## The complete pad
 
@@ -337,7 +340,8 @@ work. We will use them more in chapter 6.
   or a progress bar with a label.
 - Start iex (`iex -S mix`), launch the pad with
   `Plushie.start_link(PlushiePad, binary: Plushie.Binary.path!())`,
-  and inspect the model with `Plushie.Runtime.get_model(Plushie.Runtime)`.
+  and inspect the model with
+  `Plushie.Runtime.get_model(Plushie.runtime_for())`.
 
 In the next chapter, we will add an event log to the pad so you can see
 exactly what events widgets produce when you interact with them.

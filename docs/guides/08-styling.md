@@ -287,10 +287,10 @@ App-level font defaults are set via the `c:Plushie.App.settings/0` callback:
 
 ```elixir
 def settings do
-  [
+  %{
     default_text_size: 14,
     fonts: ["/path/to/custom-font.ttf"]
-  ]
+  }
 end
 ```
 

@@ -30,7 +30,7 @@ the model. When the model changes, the active subscriptions change with it.
 
 ## Keyboard subscriptions
 
-`Plushie.Subscription.on_key_press/0` subscribes to keyboard events. It
+`Plushie.Subscription.on_key_press/1` subscribes to keyboard events. It
 delivers `Plushie.Event.KeyEvent` structs to `update/2`:
 
 ```elixir
@@ -65,10 +65,10 @@ The `command` field is particularly useful. Matching on `command: true`
 gives you Ctrl+S on Linux/Windows and Cmd+S on macOS without platform
 checks.
 
-There is also `Plushie.Subscription.on_key_release/0` if you need to track
+There is also `Plushie.Subscription.on_key_release/1` if you need to track
 key-up events.
 
-`Plushie.Subscription.on_modifiers_changed/0` tracks modifier key state
+`Plushie.Subscription.on_modifiers_changed/1` tracks modifier key state
 changes (Shift, Ctrl, Alt, etc.) without requiring a regular key press.
 It delivers `Plushie.Event.ModifiersEvent` structs:
 
@@ -212,23 +212,25 @@ stops, until the next edit.
 Plushie provides subscriptions for many event sources beyond keyboard and
 timers:
 
-- **Pointer**: `on_pointer_move/0`, `on_pointer_button/0`, `on_pointer_scroll/0`, `on_pointer_touch/0`.
+- **Pointer**: `on_pointer_move/1`, `on_pointer_button/1`, `on_pointer_scroll/1`, `on_pointer_touch/1`.
   These deliver `WidgetEvent` structs with `id` set to the window ID
-  and `scope` set to `[]`. The `data` map includes `pointer` (`:mouse`
+  and `scope` set to `[]`. The `value` map includes `pointer` (`:mouse`
   or `:touch`) and `modifiers` (current modifier key state).
-- **Window lifecycle**: `on_window_close/0`, `on_window_resize/0`,
-  `on_window_event/0`, `on_window_open/0`, `on_window_focus/0`,
-  `on_window_unfocus/0`, `on_window_move/0`
-- **IME**: `on_ime/0` for input method editor events
-- **System**: `on_theme_change/0`, `on_animation_frame/0`, `on_file_drop/0`
+- **Window lifecycle**: `on_window_close/1`, `on_window_resize/1`,
+  `on_window_event/1`, `on_window_open/1`, `on_window_focus/1`,
+  `on_window_unfocus/1`, `on_window_move/1`
+- **IME**: `on_ime/1` for input method editor events
+- **System**: `on_theme_change/1`, `on_animation_frame/1`, `on_file_drop/1`
   (Note: renderer-side transitions run independently and do not require
   `on_animation_frame` or timer subscriptions.)
-- **Catch-all**: `on_event/0` for any renderer event
+- **Catch-all**: `on_event/1` for any renderer event
 
 Each returns its corresponding event struct in `update/2`. Renderer
-subscriptions take no tag; they are keyed by `{kind, window_id}` for
-lifecycle management. Timer subscriptions are different: the tag is
-embedded in the `%TimerEvent{}` event and is required.
+subscriptions accept an optional keyword list for settings like
+`window:` and `max_rate:`. They take no tag; they are keyed by
+`{kind, window_id}` for lifecycle management. Timer subscriptions are
+different: the tag is embedded in the `%TimerEvent{}` event and is
+required.
 
 See the [Subscriptions reference](../reference/subscriptions.md) for the
 complete list and details.

@@ -72,18 +72,19 @@ The result arrives as a `Plushie.Event.EffectEvent` struct. Match on the tag:
 
 ```elixir
 alias Plushie.Event.EffectEvent
+alias Plushie.Effect.Result
 
-def update(model, %EffectEvent{tag: :import, result: {:ok, %{path: path}}}) do
+def update(model, %EffectEvent{tag: :import, result: %Result.FileOpened{path: path}}) do
   source = File.read!(path)
   # ... load the experiment
 end
 
-def update(model, %EffectEvent{tag: :import, result: :cancelled}) do
+def update(model, %EffectEvent{tag: :import, result: %Result.Cancelled{}}) do
   model  # user closed the dialog
 end
 
-def update(model, %EffectEvent{tag: :import, result: {:error, reason}}) do
-  %{model | error: inspect(reason)}
+def update(model, %EffectEvent{tag: :import, result: %Result.Error{message: message}}) do
+  %{model | error: message}
 end
 ```
 
@@ -103,7 +104,7 @@ Available file dialogs:
 
 # Read from clipboard
 {model, Effect.clipboard_read(:paste)}
-# Result: %EffectEvent{tag: :paste, result: {:ok, %{text: content}}}
+# Result: %EffectEvent{tag: :paste, result: %Result.ClipboardText{text: content}}
 ```
 
 Also available: `clipboard_read_html/1`, `clipboard_write_html/3`,
@@ -116,14 +117,14 @@ Also available: `clipboard_read_html/1`, `clipboard_write_html/3`,
 {model, Effect.notification(:exported, "Exported", "Experiment saved to #{path}")}
 ```
 
-Options include `:icon`, `:timeout`, and `:urgency` (`:low`, `:normal`,
-`:critical`).
+Pass options as the fourth argument. Options include `:icon`, `:timeout`,
+and `:urgency` (`:low`, `:normal`, `:critical`).
 
 ### Effect timeouts
 
 Effects have default timeouts: 120 seconds for file dialogs (the user may
 browse for a while), 5 seconds for clipboard and notifications. If the
-renderer does not respond in time, you get `{:error, :timeout}`.
+renderer does not respond in time, you get `%Plushie.Effect.Result.Timeout{}`.
 
 ### Applying it: import and export
 
@@ -143,6 +144,8 @@ Handle the events. Each effect gets a distinct tag, so matching the
 result is straightforward:
 
 ```elixir
+alias Plushie.Effect.Result
+
 def update(model, %WidgetEvent{type: :click, id: "import"}) do
   {model, Effect.file_open(:import, title: "Import Experiment")}
 end
@@ -151,17 +154,18 @@ def update(model, %WidgetEvent{type: :click, id: "export"}) do
   {model, Effect.file_save(:export, title: "Export Experiment")}
 end
 
-def update(model, %EffectEvent{tag: :import, result: {:ok, %{path: path}}}) do
+def update(model, %EffectEvent{tag: :import, result: %Result.FileOpened{path: path}}) do
   source = File.read!(path)
   %{model | source: source}
 end
 
-def update(model, %EffectEvent{tag: :export, result: {:ok, %{path: path}}}) do
+def update(model, %EffectEvent{tag: :export, result: %Result.FileSaved{path: path}}) do
   File.write!(path, model.source)
   model
 end
 
-def update(model, %EffectEvent{tag: tag, result: :cancelled}) when tag in [:import, :export] do
+def update(model, %EffectEvent{tag: tag, result: %Result.Cancelled{}})
+    when tag in [:import, :export] do
   model
 end
 ```
@@ -309,6 +313,8 @@ returns to the preview pane.
 Always handle both success and failure for async and effects:
 
 ```elixir
+alias Plushie.Effect.Result
+
 def update(model, %AsyncEvent{tag: :export, result: {:ok, _}}) do
   %{model | status: "Exported"}
 end
@@ -317,13 +323,13 @@ def update(model, %AsyncEvent{tag: :export, result: {:error, reason}}) do
   %{model | error: "Export failed: #{inspect(reason)}"}
 end
 
-def update(model, %EffectEvent{tag: _tag, result: :cancelled}) do
+def update(model, %EffectEvent{tag: _tag, result: %Result.Cancelled{}}) do
   model  # user cancelled the dialog, not an error
 end
 ```
 
-The `:cancelled` result is distinct from `{:error, reason}`. A user
-cancelling a file dialog is expected behaviour, not a failure.
+The `%Result.Cancelled{}` result is distinct from `%Result.Error{}`. A
+user cancelling a file dialog is expected behaviour, not a failure.
 
 ## Verify it
 
