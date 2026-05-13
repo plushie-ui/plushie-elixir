@@ -2,13 +2,13 @@ defmodule Plushie.Widget.Handler do
   @moduledoc """
   Runtime support for stateful widgets.
 
-  Canvas widgets are pure-Elixir widgets that render via canvas shapes,
-  manage internal state (hover, focus, animation), and transform raw
-  canvas events into semantic widget events via `handle_event/2`.
+  Stateful widgets are pure-Elixir widgets that render a tree, manage
+  internal state, and transform raw events into semantic widget events
+  via `handle_event/2`.
 
   ## Widget lifecycle
 
-  Canvas widgets follow the standard Widget protocol pipeline:
+  Stateful widgets follow the standard Widget protocol pipeline:
 
   1. `new/2` returns a struct (like all other widgets)
   2. `Widget.to_node/1` produces a placeholder node tagged with the
@@ -41,8 +41,6 @@ defmodule Plushie.Widget.Handler do
   continue). If no handler captures, the event reaches `app.update/2`.
   """
 
-  require Logger
-
   @widget_states_key :__plushie_widget_states__
 
   @doc "Process dictionary key used to pass canvas widget states during normalization."
@@ -56,6 +54,8 @@ defmodule Plushie.Widget.Handler do
           | {:update_state, map()}
           | :consumed
           | :ignored
+
+  @typep invoke_result :: {{:emit, struct()} | :consumed | :ignored, map()}
 
   @doc "Transforms a raw event into a semantic widget event (or ignores it)."
   @callback handle_event(event :: struct(), state :: map()) :: handle_event_result()
@@ -76,13 +76,21 @@ defmodule Plushie.Widget.Handler do
   - `:consumed` - captured, no output
   - `:ignored` - not captured, continue to next handler
   """
+  @spec invoke_handler(module :: module(), event :: struct(), state :: map()) :: invoke_result()
+  @spec invoke_handler(
+          module :: module(),
+          event :: struct(),
+          state :: map(),
+          widget_id :: String.t()
+        ) ::
+          invoke_result()
   @spec invoke_handler(
           module :: module(),
           event :: struct(),
           state :: map(),
           widget_id :: String.t(),
           window_id :: String.t() | nil
-        ) :: {{:emit, struct()} | :consumed | :ignored, map()}
+        ) :: invoke_result()
   def invoke_handler(module, event, state, widget_id \\ "", window_id \\ nil) do
     case module.handle_event(event, state) do
       {:emit, family, data} ->
@@ -101,11 +109,8 @@ defmodule Plushie.Widget.Handler do
         {:consumed, state}
 
       other ->
-        Logger.warning(
-          "widget #{inspect(module)} handle_event/2 returned unexpected value: #{inspect(other)}"
-        )
-
-        {:ignored, state}
+        raise ArgumentError,
+              "#{inspect(module)} handle_event/2 returned unexpected value: #{inspect(other)}"
     end
   end
 
@@ -184,7 +189,7 @@ defmodule Plushie.Widget.Handler do
     :scroll
   ]
 
-  @spec resolve_emit_identity(struct() | map(), String.t(), String.t() | nil) ::
+  @spec resolve_emit_identity(map(), String.t(), String.t() | nil) ::
           {String.t(), [String.t()], String.t() | nil}
   defp resolve_emit_identity(
          %{type: type, id: id, scope: scope, window_id: window_id},
@@ -282,10 +287,18 @@ defmodule Plushie.Widget.Handler do
           required_fields :: [atom()]
         ) :: map()
   defp validate_and_coerce_emit_data!(family, data, declared_fields, required_fields) do
+    declared_string_keys =
+      Map.new(declared_fields, fn {field_name, _type} ->
+        {Atom.to_string(field_name), field_name}
+      end)
+
     atom_data =
       Map.new(data, fn
-        {k, v} when is_atom(k) -> {k, v}
-        {k, v} when is_binary(k) -> {String.to_existing_atom(k), v}
+        {key, value} when is_atom(key) ->
+          {key, value}
+
+        {key, value} when is_binary(key) ->
+          {Map.get(declared_string_keys, key, key), value}
       end)
 
     missing = Enum.reject(required_fields, &Map.has_key?(atom_data, &1))

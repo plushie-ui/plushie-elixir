@@ -14,7 +14,7 @@ defmodule Plushie.WidgetHandlerDispatchTest do
   alias Plushie.Runtime.WidgetHandlers
   alias Plushie.Widget.Handler
 
-  # -- Minimal test widgets ----------------------------------------------------
+  # Minimal test widgets
 
   defmodule IgnoredWidget do
     @moduledoc false
@@ -73,6 +73,28 @@ defmodule Plushie.WidgetHandlerDispatchTest do
     end
   end
 
+  defmodule StringKeyEmitWidget do
+    @moduledoc false
+    use Plushie.Widget
+    widget(:string_key_emit_widget)
+    event(:activated, fields: [source: :string])
+
+    @impl true
+    def handle_event(%{type: :click}, state) do
+      {:emit, :activated, %{"source" => "string_key", "unknown_key" => "kept"}, state}
+    end
+
+    def handle_event(_event, _state), do: :ignored
+
+    @impl true
+    def view(id, _props, _state) do
+      import Plushie.UI
+
+      canvas id, width: 10, height: 10 do
+      end
+    end
+  end
+
   defmodule StateWidget do
     @moduledoc false
     use Plushie.Widget
@@ -95,7 +117,7 @@ defmodule Plushie.WidgetHandlerDispatchTest do
     end
   end
 
-  # -- invoke_handler (single widget) ------------------------------------------
+  # invoke_handler single widget
 
   describe "invoke_handler/4 with :ignored" do
     test "returns :ignored action and unchanged state" do
@@ -126,6 +148,20 @@ defmodule Plushie.WidgetHandlerDispatchTest do
       assert widget_event.value.source == "emit_widget"
       assert widget_event.id == "widget"
     end
+
+    test "coerces declared string keys without atomizing unknown keys" do
+      {{:emit, widget_event}, _state} =
+        Handler.invoke_handler(
+          StringKeyEmitWidget,
+          click_event("elem", ["widget"]),
+          %{},
+          "widget"
+        )
+
+      assert widget_event.type == {:string_key_emit_widget, :activated}
+      assert widget_event.value.source == "string_key"
+      assert widget_event.value["unknown_key"] == "kept"
+    end
   end
 
   describe "invoke_handler/4 with {:update_state, ...}" do
@@ -138,7 +174,7 @@ defmodule Plushie.WidgetHandlerDispatchTest do
     end
   end
 
-  # -- WidgetHandlers.dispatch_event (scope chain) ------------------------------
+  # WidgetHandlers.dispatch_event scope chain
 
   describe "scope chain dispatch with empty registry" do
     test "event passes through unchanged" do
@@ -207,7 +243,7 @@ defmodule Plushie.WidgetHandlerDispatchTest do
     end
   end
 
-  # -- Hierarchical dispatch ---------------------------------------------------
+  # Hierarchical dispatch
 
   describe "hierarchical scope chain" do
     test ":ignored bubbles to parent" do
@@ -269,7 +305,7 @@ defmodule Plushie.WidgetHandlerDispatchTest do
     end
   end
 
-  # -- derive_registry ---------------------------------------------------------
+  # derive_registry
 
   describe "derive_registry/1" do
     test "extracts widget entries from tree meta" do
@@ -339,7 +375,7 @@ defmodule Plushie.WidgetHandlerDispatchTest do
     end
   end
 
-  # -- Direct-target dispatch (canvas events) -----------------------------------
+  # Direct-target dispatch canvas events
 
   describe "direct-target dispatch (canvas press/move/release)" do
     test "canvas event with empty scope targets widget by full ID" do
@@ -435,7 +471,7 @@ defmodule Plushie.WidgetHandlerDispatchTest do
     end
   end
 
-  # -- Raising widget for error-handling tests ----------------------------------
+  # Raising widget for error handling tests
 
   defmodule RaisingWidget do
     @moduledoc false
@@ -458,7 +494,7 @@ defmodule Plushie.WidgetHandlerDispatchTest do
     end
   end
 
-  # -- Error handling in dispatch chain ----------------------------------------
+  # Error handling in dispatch chain
 
   describe "error handling in dispatch chain" do
     test "raising widget is treated as :ignored and chain continues" do
@@ -497,7 +533,7 @@ defmodule Plushie.WidgetHandlerDispatchTest do
       assert log =~ "kaboom from RaisingWidget"
     end
 
-    test "unexpected return value from handle_event is treated as :ignored" do
+    test "unexpected return value from handle_event is tracked as a routing error" do
       defmodule BadReturnWidget do
         @moduledoc false
         use Plushie.Widget
@@ -529,11 +565,36 @@ defmodule Plushie.WidgetHandlerDispatchTest do
           assert event.id == "elem"
         end)
 
+      assert log =~ "error in handle_event"
       assert log =~ "returned unexpected value"
+    end
+
+    test "direct invoke raises on unexpected return value" do
+      defmodule DirectBadReturnWidget do
+        @moduledoc false
+        use Plushie.Widget
+        widget(:direct_bad_return_widget)
+
+        @impl true
+        def handle_event(%{type: :click}, _state), do: {:bad_return}
+        def handle_event(_event, _state), do: :ignored
+
+        @impl true
+        def view(id, _props, _state) do
+          import Plushie.UI
+
+          canvas id, width: 10, height: 10 do
+          end
+        end
+      end
+
+      assert_raise ArgumentError, ~r/returned unexpected value/, fn ->
+        Handler.invoke_handler(DirectBadReturnWidget, click_event("elem"), %{}, "widget")
+      end
     end
   end
 
-  # -- Helpers -----------------------------------------------------------------
+  # Helpers
 
   defp click_event(id, scope \\ []) do
     %Plushie.Event.WidgetEvent{type: :click, id: id, scope: scope}

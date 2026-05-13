@@ -43,7 +43,7 @@ defmodule Plushie.Widget do
   - `type_names/0` - returns `[:gauge]` (from the `widget` declaration)
   - `native_crate/0` - returns the `rust_crate` path (native_widget only)
   - `rust_constructor/0` - returns the Rust expression (native_widget only)
-  - `new/2` - creates a `%Module{}` struct ()
+  - `new/2` - creates a `%Module{}` struct with the given ID and options
   - Setter functions per field for pipeline composition
   - `with_options/2` - applies keyword options via setters
   - `build/1` - converts the struct to a `ui_node()` map
@@ -77,7 +77,7 @@ defmodule Plushie.Widget do
         def view(id, props) do
           import Plushie.UI
           column id: id do
-            text(props.label)
+            text("label", props.label)
           end
         end
       end

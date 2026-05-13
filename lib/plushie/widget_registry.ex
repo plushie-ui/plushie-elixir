@@ -1,8 +1,8 @@
 defmodule Plushie.WidgetRegistry do
   @moduledoc """
-  Discovers widgets via `Plushie.Widget` protocol consolidation.
+  Discovers widgets via `Plushie.Tree.Node` protocol consolidation.
 
-  All modules implementing the `Plushie.Widget` protocol are widgets.
+  All modules implementing the `Plushie.Tree.Node` protocol are widgets.
   Native widgets (those with Rust crates) additionally export `native_crate/0`.
 
   Results are cached in `:persistent_term` after first access. Call
@@ -10,7 +10,7 @@ defmodule Plushie.WidgetRegistry do
   protocol reconsolidation).
   """
 
-  @doc "Returns all modules implementing the Plushie.Widget protocol."
+  @doc "Returns all modules implementing the Plushie.Tree.Node protocol."
   @spec all_widgets() :: [module()]
   def all_widgets do
     cached(:all, &protocol_impls/0)
@@ -35,9 +35,8 @@ defmodule Plushie.WidgetRegistry do
   # The :not_consolidated branch is needed for test mode where
   # consolidate_protocols is disabled. Dialyzer only sees the dev
   # build where the protocol is always consolidated.
-  @dialyzer {:no_match, protocol_impls: 0}
   defp protocol_impls do
-    case Plushie.Tree.Node.__protocol__(:impls) do
+    case apply(Plushie.Tree.Node, :__protocol__, [:impls]) do
       {:consolidated, impls} -> impls
       :not_consolidated -> Protocol.extract_impls(Plushie.Tree.Node, :code.get_path())
     end

@@ -577,7 +577,7 @@ defmodule Plushie.DSL.Fields do
           type_guard_ast(type, quote(do: value))
         end
 
-      _ ->
+      {:composite, _} ->
         type_guard_ast(type, quote(do: value))
     end
   end

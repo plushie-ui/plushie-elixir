@@ -715,6 +715,42 @@ no nil clause and nil is not a valid normal input.
 **Revisit when:** Generated setters move to a shape where each public
 input category has a separate documented function.
 
+## Generated setter specs rely on cast validators
+
+Generated setters for `Plushie.Type` modules without guard callbacks
+accept their argument at the function head and validate it through the
+shared `cast/1` encoder. The spec describes the intended accepted input
+shape for readers and Dialyzer, while the cast is the runtime boundary
+for user input.
+
+**Rules out:** Adding broad guards that duplicate every `cast/1`
+callback, or weakening specs solely because validation happens inside
+the generated function body.
+
+**Still in scope:** Clear `ArgumentError` messages from generated
+setters, accurate specs for the intended value shape, and explicit
+guards for types that do not provide `cast/1`.
+
+**Revisit when:** The unified type behaviour grows a generated guard
+for every type without duplicating cast logic.
+
+## Non-cast field modules validate through generated guards
+
+Field modules that do not export `cast/1` are expected to provide their
+validation through generated guards. The encoder for those modules is a
+passthrough because the function head already rejects invalid values for
+guarded setters.
+
+**Rules out:** Treating the passthrough encoder as a missing validation
+layer for modules whose validation is intentionally guard-based.
+
+**Still in scope:** Adding a guard to any field module that lacks both
+`cast/1` and a meaningful generated guard. Raising a compile-time error
+if a field declaration cannot produce either a cast validator or a guard.
+
+**Revisit when:** A field type without `cast/1` is found to generate no
+useful setter guard.
+
 ## Element nil IDs are auto-ID sentinels
 
 Canvas and table elements may carry `id: nil` until their parent
