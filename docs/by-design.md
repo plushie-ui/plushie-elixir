@@ -582,3 +582,162 @@ compiler ordering becomes an observed problem.
 
 **Revisit when:** Protocol versioning is generated from the renderer
 contract or the SDK needs multi-version negotiation.
+
+## Runtime sync is a caller-ordered barrier
+
+`Plushie.Runtime.sync/1` is a GenServer call used after the caller has
+sent work to the runtime, especially through `Runtime.dispatch/2`.
+Because BEAM message ordering is per sender, work sent by the same
+caller before `sync/1` is processed before the sync reply.
+
+**Rules out:** Replacing `sync/1` with a mailbox-draining loop that
+attempts to wait for unrelated senders or future messages.
+
+**Still in scope:** Fixing a path where a documented same-caller
+operation can race its following `sync/1`. Clarifying docs when the
+barrier wording overstates what GenServer can promise.
+
+**Revisit when:** Runtime gains a multi-producer transaction API that
+needs a cross-sender quiescence guarantee.
+
+## Runtime termination does not synthesize app events
+
+When the runtime process terminates, its model and in-flight state are
+going away with the process. The termination callback cancels timers and
+lets linked callers observe the process exit; it does not run app
+`update/2` to manufacture effect-result events during shutdown.
+
+**Rules out:** Dispatching synthetic `EffectEvent` values or calling
+`GenServer.reply/2` for every pending renderer request from
+`terminate/2` as if the process were continuing.
+
+**Still in scope:** Flushing pending effects and stub acknowledgements
+on renderer restart, where the runtime process remains alive and can
+preserve model semantics. Cancelling timers and releasing resources
+during termination.
+
+**Revisit when:** Runtime shutdown becomes stateful handoff to a new
+runtime process rather than ordinary process termination.
+
+## MapSet opaque suppressions stay narrow
+
+Dialyzer treats `MapSet.t()` as opaque and can flag structs that carry
+MapSet fields even when the implementation only uses the public MapSet
+API. The ignore file keeps those warnings narrow and documented.
+
+**Rules out:** Replacing MapSet with a less clear data structure solely
+to satisfy Dialyzer, or treating the existing narrow suppressions as
+evidence of a runtime bug.
+
+**Still in scope:** Removing a suppression when Dialyzer no longer
+needs it. Fixing any concrete MapSet misuse found by code review or a
+test.
+
+**Revisit when:** The warning can be eliminated without obscuring the
+window or registry state shape.
+
+## Runtime catch-all messages are warnings
+
+Unexpected messages delivered directly to `Plushie.Runtime` indicate
+that a caller bypassed the supported event path or that runtime message
+shape drifted. The runtime logs the message at warning level and keeps
+running.
+
+**Rules out:** Suppressing or downgrading the catch-all solely because a
+test sent an unsupported message. Tests that intentionally exercise the
+warning should capture logs.
+
+**Still in scope:** Adding explicit clauses for real runtime messages.
+Reclassifying a specific message once it becomes expected behavior.
+
+**Revisit when:** A legitimate runtime integration produces unavoidable
+out-of-band messages that are not programming errors.
+
+## View telemetry is model-scoped
+
+`view/1` is a pure function of the model. Runtime view telemetry records
+the app and view work, not the event that happened to precede the render.
+Some renders have no triggering event, such as startup, forced reload,
+dev overlay changes, or renderer resync.
+
+**Rules out:** Threading an optional triggering event through every
+render path solely to attach it to `[:plushie, :view]` telemetry.
+
+**Still in scope:** Adding telemetry around update or command execution,
+where the triggering event is the work under measurement. Adding a
+separate correlation mechanism if profiling shows it is needed.
+
+**Revisit when:** View performance investigations need event-model
+correlation that cannot be recovered from adjacent update telemetry.
+
+## Runtime plumbing tests may use the internal bridge
+
+Runtime state-machine tests that assert local runtime behavior and bridge
+casts may use `Plushie.Test.InternalMockBridge`. This stub is test
+infrastructure for the runtime itself, not an application test backend
+and not a replacement for the real renderer integration spine.
+
+**Rules out:** Rewriting runtime plumbing tests solely to avoid the
+internal bridge when the behavior under test is the runtime's own local
+state and outbound bridge calls.
+
+**Still in scope:** User-facing behavior tests, widget integration
+tests, automation tests, codec tests, and renderer lifecycle tests that
+can run through `Plushie.Test.Case` and the real binary. Moving a
+runtime test onto the integration spine when the current stub would hide
+the bug class under test.
+
+**Revisit when:** The internal bridge starts duplicating renderer
+behavior instead of only recording runtime calls.
+
+## Manual tree maps preserve unknown string prop keys
+
+Tree normalization accepts manually constructed maps in tests and low
+level APIs. Known string keys are converted to existing atoms so normal
+post-processing can run, while unknown string keys are preserved rather
+than interned as new atoms.
+
+**Rules out:** Creating atoms for arbitrary prop keys, or rejecting a
+manual tree solely because it carries an unknown string prop.
+
+**Still in scope:** Tightening user-facing DSL and widget builders so
+known properties are validated before normalization. Fixing any
+post-processing path that fails to handle the known string key it
+accepts.
+
+**Revisit when:** Manual tree maps become a documented public input
+surface with a closed prop schema.
+
+## Pending effect restart flush preserves event semantics
+
+When the renderer restarts while effects are pending, the runtime
+delivers one `EffectEvent` per pending effect through the ordinary
+`update/2` path. This preserves the same event semantics as successful,
+failed, cancelled, and timed-out effects.
+
+**Rules out:** Batching renderer-restarted effect results into a new
+event shape solely to reduce rerenders on a rare recovery path.
+
+**Still in scope:** Deferring renders while preserving per-event
+`update/2` semantics, if renderer restart with many pending effects
+becomes a measured cost. Clearing stale pending effects on restart.
+
+**Revisit when:** A real application produces enough pending effects
+during renderer restart for this path to show up in profiling.
+
+## Effect result decoding is not version negotiation
+
+The protocol decoder rejects unknown effect response statuses before
+they reach `Plushie.Effect.Result.decode/3`. The effect result fallback
+is a local robustness backstop for direct calls or internal drift, not
+the renderer version-mismatch signal.
+
+**Rules out:** Raising from `Effect.Result.decode/3` for unknown status
+values solely to detect future renderer versions.
+
+**Still in scope:** Keeping protocol decode strict for renderer-supplied
+statuses. Improving protocol-version mismatch diagnostics at the bridge
+handshake.
+
+**Revisit when:** The wire protocol intentionally allows extensible
+effect statuses and apps need a typed unknown-status result.

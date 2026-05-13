@@ -131,11 +131,12 @@ defmodule Plushie.Runtime do
              String.t() => %{
                module: module(),
                state: map(),
+               props: map(),
                window_id: String.t() | nil
              }
            },
            widget_events: %{
-             String.t() => %{widget_type: atom(), events: MapSet.t(atom())}
+             String.t() => %{widget_type: atom(), events: MapSet.t(atom()), event_specs: map()}
            },
            pending_interact:
              {GenServer.from(), String.t(), reference(), reference(), String.t(), map()} | nil,
@@ -195,14 +196,17 @@ defmodule Plushie.Runtime do
   end
 
   @doc """
-  Waits for the runtime to finish processing all pending messages.
+  Waits for the runtime to finish processing messages queued ahead of
+  this call.
 
-  Returns `:ok` once the runtime is idle, or `{:ok, :view_error}` if
-  the most recent view/1 call failed. In the view error case, the model
-  has been updated but the tree is stale (showing the last successful
-  render). Use this to synchronize after dispatching events or starting
-  the runtime, ensuring init/update cycles have completed before
-  inspecting state.
+  Returns `:ok` once the barrier has been processed, or
+  `{:ok, :view_error}` if the most recent view/1 call failed. In the
+  view error case, the model has been updated but the tree is stale
+  (showing the last successful render).
+
+  Use this after `dispatch/2` or startup before inspecting state. It is
+  a caller-ordered barrier: events sent by the same caller before
+  `sync/1` are processed before the sync reply.
   """
   @spec sync(runtime :: GenServer.server()) :: :ok | {:ok, :view_error}
   def sync(runtime) do
@@ -297,7 +301,7 @@ defmodule Plushie.Runtime do
     GenServer.call(runtime, {:find_node, id, window_id})
   end
 
-  @doc "Finds a node in the current tree using a predicate function."
+  @doc "Finds the first node in the current tree that matches a predicate function."
   @spec find_node_by(GenServer.server(), (map() -> boolean())) :: map() | nil
   def find_node_by(runtime, fun) do
     GenServer.call(runtime, {:find_node_by, fun})
@@ -612,6 +616,10 @@ defmodule Plushie.Runtime do
   def handle_info({:renderer_event, {:effect_stub_ack, kind}}, state) do
     case Map.pop(state.pending_stub_acks, kind) do
       {nil, _} ->
+        :telemetry.execute([:plushie, :runtime, :effect_stub_ack_missing], %{count: 1}, %{
+          kind: kind
+        })
+
         {:noreply, state}
 
       {from, remaining} ->
@@ -628,6 +636,11 @@ defmodule Plushie.Runtime do
         {:noreply, run_update(state, %EffectEvent{tag: tag, result: typed_result})}
 
       :missing ->
+        :telemetry.execute([:plushie, :runtime, :effect_response_missing], %{count: 1}, %{
+          wire_id: wire_id,
+          status: status
+        })
+
         {:noreply, state}
     end
   end
@@ -753,10 +766,15 @@ defmodule Plushie.Runtime do
   end
 
   @impl GenServer
-  def handle_info({:renderer_event, {:prop_validation, _id, _data}}, state) do
+  def handle_info({:renderer_event, {:prop_validation, id, data}}, state) do
     # prop_validation is a renderer-internal diagnostic (emitted when
     # validate_props is enabled in the Settings or debug binary). It is
     # never delivered to the app's update/2.
+    :telemetry.execute([:plushie, :runtime, :prop_validation], %{count: 1}, %{
+      id: id,
+      data: data
+    })
+
     {:noreply, state}
   end
 
@@ -775,7 +793,7 @@ defmodule Plushie.Runtime do
     # Events produced by `Command.dispatch/1` carry the chain depth so
     # a pathological update loop is capped by the guard in
     # `Plushie.Runtime.Commands`.
-    state = %{state | dispatch_depth: depth}
+    state = %{state | dispatch_depth: min(depth, Commands.dispatch_depth_limit())}
     state = flush_coalescables(state)
     state = run_update(state, event)
     {:noreply, state}
@@ -1077,9 +1095,7 @@ defmodule Plushie.Runtime do
         {:noreply, state}
 
       :not_a_task ->
-        Logger.warning(
-          "plushie runtime: linked process #{inspect(pid)} exited: #{inspect(reason)}"
-        )
+        Logger.debug("plushie runtime: linked process #{inspect(pid)} exited: #{inspect(reason)}")
 
         {:noreply, state}
     end
@@ -1124,7 +1140,8 @@ defmodule Plushie.Runtime do
                 {tree, nctx, ViewErrors.clear_view_errors(state)}
 
               :view_error ->
-                {state.tree, view_error_nctx(state), ViewErrors.track_view_error(state)}
+                tracked = ViewErrors.track_view_error(state)
+                {tracked.tree, view_error_nctx(tracked), tracked}
             end
 
           state = %{
@@ -1182,7 +1199,8 @@ defmodule Plushie.Runtime do
           {tree, nctx, ViewErrors.clear_view_errors(state)}
 
         :view_error ->
-          {state.tree, view_error_nctx(state), ViewErrors.track_view_error(state)}
+          tracked = ViewErrors.track_view_error(state)
+          {tracked.tree, view_error_nctx(tracked), tracked}
       end
 
     state = %{
@@ -1212,8 +1230,9 @@ defmodule Plushie.Runtime do
     end
   end
 
-  # Catch-all: ignore unrecognised messages. Use Plushie.Runtime.dispatch/2
-  # to formally send events from spawned processes.
+  # Catch-all: log and ignore unrecognised messages. Use
+  # Plushie.Runtime.dispatch/2 to formally send events from spawned
+  # processes.
   @impl GenServer
   def handle_info(msg, state) do
     Logger.warning("plushie runtime: unhandled message: #{inspect(msg)}")
@@ -1257,7 +1276,8 @@ defmodule Plushie.Runtime do
           {tree, nctx, ViewErrors.clear_view_errors(state)}
 
         :view_error ->
-          {state.tree, view_error_nctx(state), ViewErrors.track_view_error(state)}
+          tracked = ViewErrors.track_view_error(state)
+          {tracked.tree, view_error_nctx(tracked), tracked}
       end
 
     state = %{
@@ -1617,16 +1637,16 @@ defmodule Plushie.Runtime do
   # ---------------------------------------------------------------------------
 
   # Dispatch an event through the widget handler chain. Returns
-  # `{event_or_nil, updated_state}` where event_or_nil is the event
-  # to deliver to app.update/2 (nil if captured by a widget).
-  @spec route_through_widgets(state(), term()) :: {term() | nil, state()}
+  # `{event_or_nil, updated_state, errors}` where event_or_nil is the
+  # event to deliver to app.update/2 (nil if captured by a widget).
+  @spec route_through_widgets(state(), term()) :: {term() | nil, state(), list()}
   defp route_through_widgets(state, event) do
     event = Plushie.Runtime.WidgetHandlers.normalize_widget_event!(state.widget_events, event)
 
-    {result_event, new_registry} =
-      Plushie.Runtime.WidgetHandlers.dispatch_event(state.widget_handlers, event)
+    {result_event, new_registry, errors} =
+      Plushie.Runtime.WidgetHandlers.dispatch_event_with_errors(state.widget_handlers, event)
 
-    {result_event, %{state | widget_handlers: new_registry}}
+    {result_event, %{state | widget_handlers: new_registry}, errors}
   end
 
   # Full update cycle: intercept -> update -> commands -> view -> diff -> patch.
@@ -1646,27 +1666,64 @@ defmodule Plushie.Runtime do
       :passthrough ->
         try do
           handlers_before = state.widget_handlers
-          {resolved_event, state} = route_through_widgets(state, event)
+          {resolved_event, state, routing_errors} = route_through_widgets(state, event)
 
-          if is_nil(resolved_event) do
-            if state.widget_handlers != handlers_before do
-              rerender_after_widget_state_change(state, handlers_before)
+          state =
+            if is_nil(resolved_event) do
+              if state.widget_handlers != handlers_before do
+                rerender_after_widget_state_change(state, handlers_before)
+              else
+                state
+              end
             else
-              state
+              dispatch_update(state, resolved_event)
             end
-          else
-            dispatch_update(state, resolved_event)
-          end
+
+          track_widget_routing_errors(state, routing_errors)
         catch
           kind, reason ->
-            Logger.warning(
-              "plushie runtime: widget event routing #{kind}: " <>
-                Exception.format(kind, reason, __STACKTRACE__)
-            )
-
-            state
+            handle_widget_routing_error(state, event, kind, reason, __STACKTRACE__)
         end
     end
+  end
+
+  defp track_widget_routing_errors(state, errors) do
+    Enum.reduce(errors, state, fn {kind, reason, stacktrace, event}, acc ->
+      handle_widget_routing_error(acc, event, kind, reason, stacktrace)
+    end)
+  end
+
+  defp handle_widget_routing_error(state, event, kind, reason, stacktrace) do
+    :telemetry.execute([:plushie, :runtime, :widget_routing_error], %{count: 1}, %{
+      app: state.app,
+      event: event,
+      kind: kind,
+      reason: reason
+    })
+
+    count = state.consecutive_errors + 1
+    formatted = Exception.format(kind, reason, stacktrace)
+
+    cond do
+      count <= 10 ->
+        Logger.error("plushie runtime: widget event routing #{kind}: #{formatted}")
+
+      count <= 100 ->
+        Logger.debug("plushie runtime: widget event routing #{kind} (repeated): #{formatted}")
+
+      count == 101 ->
+        Logger.warning(
+          "plushie runtime: 100 consecutive widget routing errors; suppressing further logs"
+        )
+
+      rem(count, 1000) == 0 ->
+        Logger.warning("plushie runtime: #{count} consecutive widget routing errors")
+
+      true ->
+        :ok
+    end
+
+    %{state | consecutive_errors: count}
   end
 
   defp check_renderer_version(hello) do
@@ -1732,7 +1789,8 @@ defmodule Plushie.Runtime do
               {tree, nctx, ViewErrors.clear_view_errors(state)}
 
             :view_error ->
-              {state.tree, view_error_nctx(state), ViewErrors.track_view_error(state)}
+              tracked = ViewErrors.track_view_error(state)
+              {tracked.tree, view_error_nctx(tracked), tracked}
           end
 
         state = %{
@@ -1777,13 +1835,14 @@ defmodule Plushie.Runtime do
           {tree, nctx, ViewErrors.clear_view_errors(state)}
 
         :view_error ->
+          tracked = ViewErrors.track_view_error(state)
+
           fallback = %{
-            view_error_nctx(state)
+            view_error_nctx(tracked)
             | widget_handlers: handlers_before
           }
 
-          {state.tree, fallback,
-           %{ViewErrors.track_view_error(state) | widget_handlers: handlers_before}}
+          {tracked.tree, fallback, %{tracked | widget_handlers: handlers_before}}
       end
 
     state = %{

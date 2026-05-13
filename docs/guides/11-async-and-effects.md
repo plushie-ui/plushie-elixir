@@ -44,6 +44,8 @@ A few things to know about async:
 
 - **One task per tag.** Starting a new async with the same tag kills the
   previous one. This prevents stale results from a superseded request.
+  The kill signal is immediate and cannot be trapped, so put cleanup in
+  the model transition that cancels or replaces the task.
 - **Results are nonce-checked.** If a task is killed and its result arrives
   late, the runtime discards it silently.
 - **The function runs in a linked Task.** Exceptions in the function become
@@ -202,6 +204,11 @@ To cancel a running async or stream:
 ```elixir
 {model, Command.cancel(:csv_import)}
 ```
+
+Cancellation uses the same immediate kill signal as same-tag
+replacement. A task that needs graceful external cleanup should model
+that cleanup outside the async function before issuing the cancel
+command.
 
 For one-shot delayed events (not recurring like subscriptions):
 

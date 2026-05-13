@@ -117,8 +117,10 @@ defmodule Plushie.Command do
   `%Plushie.Event.AsyncEvent{tag: event_tag, result: result}` through `update/2`.
 
   Only one task per tag can be active. If a task with the same tag is
-  already running, it is killed and replaced. Use unique tags if you
-  need concurrent tasks.
+  already running, it is killed and replaced. The cancellation signal is
+  immediate and cannot be trapped by the task process, so cleanup should
+  live outside the async function. Use unique tags if you need concurrent
+  tasks.
   """
   @spec task(fun :: fun(), event_tag :: atom()) :: %__MODULE__{}
   def task(fun, event_tag) when is_function(fun) and is_atom(event_tag) do
@@ -414,8 +416,10 @@ defmodule Plushie.Command do
   return value is delivered as `%Plushie.Event.AsyncEvent{tag: event_tag, result: result}`.
 
   Only one task per tag can be active. If a task with the same tag is
-  already running, it is killed and replaced. Use unique tags if you
-  need concurrent streams.
+  already running, it is killed and replaced. The cancellation signal is
+  immediate and cannot be trapped by the stream process, so cleanup
+  should live outside the stream function. Use unique tags if you need
+  concurrent streams.
 
   This is sugar over spawning a process manually. You can achieve the same
   thing with bare `Task` and `send/2` if you prefer direct Elixir patterns.
@@ -438,7 +442,9 @@ defmodule Plushie.Command do
   Cancel a running async or stream command by its tag.
 
   If the task has already completed, this is a no-op. The runtime tracks
-  running tasks by their event tag and terminates the associated process.
+  running tasks by their event tag and terminates the associated process
+  with an immediate, untrappable kill signal. Put cleanup in the model
+  transition that decides to cancel, not in the async function.
 
   ## Example
 

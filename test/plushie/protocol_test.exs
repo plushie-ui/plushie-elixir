@@ -1093,6 +1093,14 @@ defmodule Plushie.ProtocolTest do
       assert {:error, {:unknown_message, _}} = Protocol.decode_message(json, :json)
     end
 
+    test "effect stub ack with malformed kind returns a protocol error" do
+      json = Jason.encode!(%{type: "effect_stub_register_ack", kind: 42})
+
+      assert {:error,
+              {:invalid_event_field, "effect_stub_register_ack", :kind, 42, :expected_binary, _}} =
+               Protocol.decode_message(json, :json)
+    end
+
     test "widget events without window_id produce nil window" do
       json = Jason.encode!(%{type: "event", family: "click", id: "save"})
 

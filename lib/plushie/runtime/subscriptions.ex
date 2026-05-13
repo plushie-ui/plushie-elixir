@@ -11,12 +11,17 @@ defmodule Plushie.Runtime.Subscriptions do
   require Logger
 
   @doc """
-  Synchronizes subscriptions with the app's current `subscribe/1` output.
+  Synchronizes subscriptions with the app's current `subscribe/1` output
+  plus runtime-supplied widget subscription specs.
 
   Stops subscriptions that are no longer in the spec list, starts new ones,
   and preserves unchanged ones. Returns the updated state.
   """
-  @spec sync_subscriptions(map(), term(), [Plushie.Subscription.t()]) :: map()
+  @spec sync_subscriptions(
+          state :: map(),
+          new_model :: term(),
+          extra_specs :: [Plushie.Subscription.t()]
+        ) :: map()
   def sync_subscriptions(state, new_model, extra_specs \\ []) do
     :telemetry.span([:plushie, :subscriptions, :sync], %{}, fn ->
       {do_sync_subscriptions(state, new_model, extra_specs), %{}}

@@ -21,6 +21,7 @@ defmodule Plushie.Runtime.Commands do
   bumps a depth counter per chained event and drops the command when
   the counter reaches this cap.
   """
+  @spec dispatch_depth_limit() :: pos_integer()
   def dispatch_depth_limit, do: 100
 
   @doc """

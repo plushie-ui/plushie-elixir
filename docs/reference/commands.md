@@ -235,8 +235,10 @@ Options: `:icon`, `:timeout` (auto-dismiss ms), `:urgency`
 ## Async mechanics
 
 - **One task per tag.** Starting `task/2` or `stream/2` with a tag
-  that is already in-flight kills the previous task. Use unique tags for
-  concurrent work.
+  that is already in-flight kills the previous task. The kill signal is
+  immediate and cannot be trapped by the task process, so cleanup belongs
+  in the model transition that cancels or replaces the task. Use unique
+  tags for concurrent work.
 
 - **Nonce-based stale rejection.** Each task gets a nonce at creation.
   Results from killed tasks carry a stale nonce and are silently

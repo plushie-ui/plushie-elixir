@@ -16,7 +16,9 @@ defmodule Plushie.Runtime.Coalescable do
         state
       end
 
-    # Prepend to avoid O(n) list append; reversed before flushing.
+    # GenServer processes messages in arrival order. Prepend to avoid
+    # O(n) list append, then reverse before flushing so coalesced keys
+    # are processed in their first-seen order.
     pending_coalesce_order =
       if Map.has_key?(state.pending_coalesce, key) do
         state.pending_coalesce_order

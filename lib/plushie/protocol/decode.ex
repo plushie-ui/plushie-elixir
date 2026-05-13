@@ -1415,8 +1415,17 @@ defmodule Plushie.Protocol.Decode do
   # -- Effect stub ack responses --
 
   defp dispatch(%{"type" => type, "kind" => kind})
-       when type in ["effect_stub_register_ack", "effect_stub_unregister_ack"] do
+       when type in ["effect_stub_register_ack", "effect_stub_unregister_ack"] and
+              is_binary(kind) do
     {:effect_stub_ack, kind}
+  end
+
+  defp dispatch(%{"type" => type, "kind" => kind} = msg)
+       when type in ["effect_stub_register_ack", "effect_stub_unregister_ack"] do
+    raise Error,
+      reason: {:invalid_event_field, type, :kind, kind, :expected_binary, msg},
+      format: :msgpack,
+      data: <<>>
   end
 
   defp dispatch(

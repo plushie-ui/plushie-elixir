@@ -469,6 +469,26 @@ defmodule Plushie.Runtime.WidgetHandlers do
   @spec dispatch_event(registry :: map(), event :: struct()) ::
           {struct() | nil, map()}
   def dispatch_event(registry, event) when is_map(event) do
+    {result_event, new_registry, _errors} = do_dispatch_event(registry, event, :log)
+    {result_event, new_registry}
+  end
+
+  # Non-map events (tuples, atoms) can't have scope; pass through.
+  def dispatch_event(registry, event), do: {event, registry}
+
+  # Runtime entry point. Preserves the handler-chain semantics of
+  # `dispatch_event/2`, but reports handler failures to the runtime so it
+  # can track them alongside update/view errors.
+  @doc false
+  @spec dispatch_event_with_errors(registry :: map(), event :: struct()) ::
+          {struct() | nil, map(), [{atom(), term(), list(), struct()}]}
+  def dispatch_event_with_errors(registry, event) when is_map(event) do
+    do_dispatch_event(registry, event, :return)
+  end
+
+  def dispatch_event_with_errors(registry, event), do: {event, registry, []}
+
+  defp do_dispatch_event(registry, event, error_mode) do
     scope = Map.get(event, :scope, [])
     id = Map.get(event, :id, "")
     window_id = Map.get(event, :window_id)
@@ -488,11 +508,8 @@ defmodule Plushie.Runtime.WidgetHandlers do
         {target_id, entry} -> [{target_id, entry} | chain]
       end
 
-    walk_chain(registry, event, chain)
+    walk_chain(registry, event, chain, error_mode, [])
   end
-
-  # Non-map events (tuples, atoms) can't have scope; pass through.
-  def dispatch_event(registry, event), do: {event, registry}
 
   # Build an ordered list of {canonical_id, registry_entry} for all
   # widget_handlers in the scope chain, from innermost to outermost.
@@ -542,45 +559,63 @@ defmodule Plushie.Runtime.WidgetHandlers do
 
   # Walk the handler chain, dispatching the event to each handler
   # until one captures it or the chain is exhausted.
-  @spec walk_chain(map(), struct(), [{String.t(), map()}]) :: {struct() | nil, map()}
-  defp walk_chain(registry, event, []) do
+  @spec walk_chain(
+          map(),
+          struct(),
+          [{String.t(), map()}],
+          :log | :return,
+          [{atom(), term(), list(), struct()}]
+        ) :: {struct() | nil, map(), [{atom(), term(), list(), struct()}]}
+  defp walk_chain(registry, event, [], _error_mode, errors) do
     # No handler captured; event reaches app.update/2.
-    {event, registry}
+    {event, registry, Enum.reverse(errors)}
   end
 
   defp walk_chain(
          registry,
          event,
-         [{scoped_id, %{module: module, state: widget_state, window_id: widget_window_id}} | rest]
+         [
+           {scoped_id, %{module: module, state: widget_state, window_id: widget_window_id}} | rest
+         ],
+         error_mode,
+         errors
        ) do
-    {action, new_state} =
+    handler_result =
       try do
-        Handler.invoke_handler(module, event, widget_state, scoped_id, widget_window_id)
-      rescue
-        error ->
-          Logger.warning(
-            "widget_handler #{inspect(module)} (#{scoped_id}) " <>
-              "raised in handle_event: #{Exception.message(error)}"
-          )
+        {:ok, Handler.invoke_handler(module, event, widget_state, scoped_id, widget_window_id)}
+      catch
+        kind, reason ->
+          if error_mode == :log do
+            Logger.warning(
+              "widget_handler #{inspect(module)} (#{scoped_id}) " <>
+                "#{kind} in handle_event: #{Exception.format_banner(kind, reason)}"
+            )
+          end
 
-          {:ignored, widget_state}
+          {:error, {kind, reason, __STACKTRACE__, event}}
       end
 
-    new_registry = put_in(registry, [scoped_id, :state], new_state)
+    case handler_result do
+      {:error, error} ->
+        walk_chain(registry, event, rest, error_mode, [error | errors])
 
-    case action do
-      {:emit, transformed} ->
-        # Captured with output. The transformed event continues
-        # through remaining handlers in the chain.
-        walk_chain(new_registry, transformed, rest)
+      {:ok, {action, new_state}} ->
+        new_registry = put_in(registry, [scoped_id, :state], new_state)
 
-      :consumed ->
-        # Captured, no output. Stop.
-        {nil, new_registry}
+        case action do
+          {:emit, transformed} ->
+            # Captured with output. The transformed event continues
+            # through remaining handlers in the chain.
+            walk_chain(new_registry, transformed, rest, error_mode, errors)
 
-      :ignored ->
-        # Not captured. Continue to next handler with original event.
-        walk_chain(new_registry, event, rest)
+          :consumed ->
+            # Captured, no output. Stop.
+            {nil, new_registry, Enum.reverse(errors)}
+
+          :ignored ->
+            # Not captured. Continue to next handler with original event.
+            walk_chain(new_registry, event, rest, error_mode, errors)
+        end
     end
   end
 end

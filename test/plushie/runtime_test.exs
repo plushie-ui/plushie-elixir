@@ -457,6 +457,48 @@ defmodule Plushie.RuntimeTest do
     end
   end
 
+  describe "runtime query APIs" do
+    test "find_node functions search the current tree" do
+      {runtime, _bridge} = start_runtime(SimpleApp)
+      await_initial_render(runtime)
+
+      assert %{type: "button", id: "main#inc"} = Plushie.Runtime.find_node(runtime, "main#inc")
+
+      assert %{type: "button", id: "main#inc"} =
+               Plushie.Runtime.find_node(runtime, "main#inc", "main")
+
+      assert %{type: "text", props: %{content: "Value: 0"}} =
+               Plushie.Runtime.find_node_by(runtime, &(&1.type == "text"))
+
+      assert Plushie.Runtime.find_node(runtime, "missing") == nil
+    end
+
+    test "get_focused tracks focused and blurred status transitions" do
+      {runtime, _bridge} = start_runtime(SimpleApp)
+      await_initial_render(runtime)
+
+      assert Plushie.Runtime.get_focused(runtime) == nil
+
+      send(
+        runtime,
+        {:renderer_event,
+         %WidgetEvent{type: :status, id: "inc", window_id: "main", value: "focused"}}
+      )
+
+      Plushie.Runtime.sync(runtime)
+      assert Plushie.Runtime.get_focused(runtime) == "inc"
+
+      send(
+        runtime,
+        {:renderer_event,
+         %WidgetEvent{type: :status, id: "inc", window_id: "main", value: "hovered"}}
+      )
+
+      Plushie.Runtime.sync(runtime)
+      assert Plushie.Runtime.get_focused(runtime) == nil
+    end
+  end
+
   describe "commands" do
     test "send_after delivers the event after the specified delay" do
       {runtime, _bridge} = start_runtime(CommandApp)
@@ -1128,6 +1170,81 @@ defmodule Plushie.RuntimeTest do
       dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "inc"})
       assert Plushie.Runtime.get_model(runtime).value == 1
     end
+
+    test "widget handler exception is tracked as a runtime error" do
+      defmodule CrashWidget do
+        use Plushie.Widget
+
+        widget(:crash_widget)
+        state(seen: false)
+
+        @impl true
+        def handle_event(%WidgetEvent{type: :click}, _state), do: raise("widget boom")
+        def handle_event(_event, state), do: {:update_state, state}
+
+        @impl true
+        def view(id, _props, _state) do
+          import Plushie.UI
+
+          container id do
+            text("crash widget")
+          end
+        end
+      end
+
+      defmodule CrashWidgetApp do
+        use Plushie.App
+
+        def init(_opts), do: %{events: []}
+        def update(model, event), do: %{model | events: [event | model.events]}
+
+        def view(_model) do
+          import Plushie.UI
+
+          window "main" do
+            column do
+              CrashWidget.new("boom")
+            end
+          end
+        end
+      end
+
+      test_pid = self()
+      ref = make_ref()
+
+      :telemetry.attach(
+        "widget-routing-error-#{inspect(ref)}",
+        [:plushie, :runtime, :widget_routing_error],
+        &Plushie.Test.TelemetryForwarder.handle/4,
+        %{pid: test_pid, tag: :routing_error}
+      )
+
+      try do
+        {runtime, _bridge} = start_runtime(CrashWidgetApp)
+        await_initial_render(runtime)
+
+        dispatch_and_wait(runtime, %WidgetEvent{
+          type: :click,
+          id: "boom",
+          window_id: "main"
+        })
+
+        assert Process.alive?(runtime)
+
+        assert [%WidgetEvent{id: "boom", type: :click}] =
+                 Plushie.Runtime.get_model(runtime).events
+
+        assert %{
+                 status: :healthy,
+                 consecutive_errors: 1,
+                 consecutive_view_errors: 0
+               } = Plushie.Runtime.get_health(runtime)
+
+        assert_receive {:routing_error, %{event: %WidgetEvent{id: "boom"}, kind: :error}}
+      after
+        :telemetry.detach("widget-routing-error-#{inspect(ref)}")
+      end
+    end
   end
 
   describe "effects" do
@@ -1313,18 +1430,34 @@ defmodule Plushie.RuntimeTest do
       {runtime, _bridge} = start_runtime(LateEffectApp)
       await_initial_render(runtime)
 
-      dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "trigger"})
-      effect_id = Plushie.Runtime.get_model(runtime).effect_id
+      test_pid = self()
+      ref = make_ref()
 
-      send(runtime, {:effect_timeout, effect_id})
-      Plushie.Runtime.sync(runtime)
+      :telemetry.attach(
+        "late-effect-response-#{inspect(ref)}",
+        [:plushie, :runtime, :effect_response_missing],
+        &Plushie.Test.TelemetryForwarder.handle/4,
+        %{pid: test_pid, tag: :missing_effect}
+      )
 
-      send(runtime, {:renderer_event, {:effect_response, effect_id, "ok", %{text: "late"}}})
-      Plushie.Runtime.sync(runtime)
+      try do
+        dispatch_and_wait(runtime, %WidgetEvent{type: :click, id: "trigger"})
+        effect_id = Plushie.Runtime.get_model(runtime).effect_id
 
-      model = Plushie.Runtime.get_model(runtime)
-      assert model.timeout_result == :read
-      assert model.success_result == nil
+        send(runtime, {:effect_timeout, effect_id})
+        Plushie.Runtime.sync(runtime)
+
+        send(runtime, {:renderer_event, {:effect_response, effect_id, "ok", %{text: "late"}}})
+        Plushie.Runtime.sync(runtime)
+
+        model = Plushie.Runtime.get_model(runtime)
+        assert model.timeout_result == :read
+        assert model.success_result == nil
+
+        assert_receive {:missing_effect, %{wire_id: ^effect_id, status: "ok"}}
+      after
+        :telemetry.detach("late-effect-response-#{inspect(ref)}")
+      end
     end
   end
 
@@ -2001,6 +2134,30 @@ defmodule Plushie.RuntimeTest do
       send(runtime, {:renderer_event, {:effect_stub_ack, "clipboard_read"}})
       assert Task.await(first, 1000) == :ok
     end
+
+    test "unexpected effect stub ack emits telemetry" do
+      test_pid = self()
+      ref = make_ref()
+
+      :telemetry.attach(
+        "missing-stub-ack-#{inspect(ref)}",
+        [:plushie, :runtime, :effect_stub_ack_missing],
+        &Plushie.Test.TelemetryForwarder.handle/4,
+        %{pid: test_pid, tag: :missing_stub_ack}
+      )
+
+      try do
+        {runtime, _bridge} = start_runtime(SimpleApp)
+        await_initial_render(runtime)
+
+        send(runtime, {:renderer_event, {:effect_stub_ack, "clipboard_read"}})
+        Plushie.Runtime.sync(runtime)
+
+        assert_receive {:missing_stub_ack, %{kind: "clipboard_read"}}
+      after
+        :telemetry.detach("missing-stub-ack-#{inspect(ref)}")
+      end
+    end
   end
 
   describe "concurrent await_async" do
@@ -2243,6 +2400,20 @@ defmodule Plushie.RuntimeTest do
       assert Process.alive?(runtime)
       # Model updates succeed even though view/1 fails.
       assert Plushie.Runtime.get_model(runtime).count == 6
+
+      assert Plushie.Runtime.sync(runtime) == {:ok, :view_error}
+
+      assert %{
+               status: :degraded,
+               consecutive_errors: 0,
+               consecutive_view_errors: 6
+             } = Plushie.Runtime.get_health(runtime)
+
+      assert %{props: %{content: "UI frozen: view/1 is failing repeatedly."}} =
+               Plushie.Runtime.find_node_by(
+                 runtime,
+                 &(Map.get(&1, :id) == "__plushie_dev__/status")
+               )
     end
   end
 
@@ -2369,6 +2540,36 @@ defmodule Plushie.RuntimeTest do
 
   describe "prop validation diagnostics" do
     @describetag capture_log: true
+
+    test "prop_validation events emit telemetry without reaching update" do
+      test_pid = self()
+      ref = make_ref()
+
+      :telemetry.attach(
+        "prop-validation-#{inspect(ref)}",
+        [:plushie, :runtime, :prop_validation],
+        &Plushie.Test.TelemetryForwarder.handle/4,
+        %{pid: test_pid, tag: :prop_validation}
+      )
+
+      try do
+        {runtime, _bridge} = start_runtime(SimpleApp)
+        await_initial_render(runtime)
+
+        send(
+          runtime,
+          {:renderer_event, {:prop_validation, "main#inc", %{"prop" => "unknown"}}}
+        )
+
+        Plushie.Runtime.sync(runtime)
+
+        assert_receive {:prop_validation, %{id: "main#inc", data: %{"prop" => "unknown"}}}
+
+        assert Plushie.Runtime.get_model(runtime).value == 0
+      after
+        :telemetry.detach("prop-validation-#{inspect(ref)}")
+      end
+    end
 
     test "diagnostic events emit telemetry" do
       test_pid = self()
