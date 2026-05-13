@@ -68,7 +68,21 @@ defmodule Plushie.Test.Backend.Runtime do
     GenServer.start_link(__MODULE__, {app, opts})
   end
 
-  def stop(pid), do: GenServer.stop(pid, :normal, 10_000)
+  def stop(pid) when is_pid(pid) do
+    if Process.alive?(pid) do
+      try do
+        GenServer.stop(pid, :normal, 10_000)
+      catch
+        :exit, reason when reason in [:normal, :shutdown] ->
+          :ok
+
+        :exit, {:noproc, {GenServer, :stop, [^pid, :normal, 10_000]}} ->
+          :ok
+      end
+    else
+      :ok
+    end
+  end
 
   def find(pid, selector, opts \\ []), do: GenServer.call(pid, {:find, selector, opts})
 

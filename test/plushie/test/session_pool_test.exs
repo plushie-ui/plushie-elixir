@@ -422,5 +422,20 @@ defmodule Plushie.Test.SessionPoolTest do
 
       Runtime.stop(pid)
     end
+
+    test "stop tolerates an already closed backend", %{pool: pool} do
+      previous_flag = Process.flag(:trap_exit, true)
+
+      try do
+        {:ok, pid} = Runtime.start(Counter, pool: pool)
+
+        Process.exit(pid, :shutdown)
+        assert_receive {:EXIT, ^pid, :shutdown}
+
+        assert Runtime.stop(pid) == :ok
+      after
+        Process.flag(:trap_exit, previous_flag)
+      end
+    end
   end
 end
