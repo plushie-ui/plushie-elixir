@@ -1381,10 +1381,12 @@ defmodule Plushie.Runtime do
         _ -> Map.delete(settings, :required_widgets)
       end
 
-    # Include token if one was provided (for --listen socket auth).
+    # Include token proof if one was provided for --listen socket auth.
     settings =
       if state.token do
-        Map.put(settings, :token, state.token)
+        settings
+        |> Map.drop([:token, "token"])
+        |> Map.put(:token_sha256, token_sha256(state.token))
       else
         settings
       end
@@ -1398,6 +1400,11 @@ defmodule Plushie.Runtime do
       end
 
     notify_bridge(state, &Plushie.Bridge.send_settings(&1, settings))
+  end
+
+  defp token_sha256(token) do
+    :crypto.hash(:sha256, token)
+    |> Base.encode16(case: :lower)
   end
 
   # Converts a raw renderer exit reason into a structured %RendererExitError{}.

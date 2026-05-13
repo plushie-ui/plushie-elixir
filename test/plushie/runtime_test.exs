@@ -1998,6 +1998,24 @@ defmodule Plushie.RuntimeTest do
     end
   end
 
+  describe "listen token in settings" do
+    test "settings includes token digest without plaintext token" do
+      {runtime, bridge} = start_runtime(SimpleApp, token: "listen-token")
+      await_initial_render(runtime)
+
+      settings = hd(Plushie.Test.InternalMockBridge.get_settings(bridge))
+
+      expected_digest =
+        :crypto.hash(:sha256, "listen-token")
+        |> Base.encode16(case: :lower)
+
+      assert settings[:token_sha256] == expected_digest
+
+      refute Map.has_key?(settings, :token)
+      refute Map.has_key?(settings, "token")
+    end
+  end
+
   describe "required_widgets in settings" do
     defmodule RequiredWidgetsApp do
       use Plushie.App
