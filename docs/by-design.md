@@ -343,6 +343,41 @@ field type.
 **Revisit when:** Renderer-side animation descriptors become specialized
 per target type in the public API.
 
+## Data sort does not infer numeric meaning across types
+
+`Plushie.Data` sorts values naturally when both records have the same
+basic type. Mixed-type values fall back to deterministic string
+comparison rather than guessing that a string should be parsed as a
+number, atom, date, or another domain type.
+
+**Rules out:** Coercing mixed number and string values into numeric
+comparison inside the generic query helper.
+
+**Still in scope:** Callers can normalize records before sorting, or
+provide consistently typed sort fields. A future custom comparator API
+could support domain-specific mixed-type ordering if a real use case
+needs it.
+
+**Revisit when:** `Plushie.Data` grows explicit typed schemas or custom
+sort comparators.
+
+## Undo coalescing uses a rolling activity window
+
+Undo coalescing compares each command to the current top entry and
+updates that entry's timestamp when commands merge. This makes the
+window an idle-gap threshold for continuous activity, which matches
+typing behavior: a long uninterrupted burst remains one undo entry until
+the user pauses beyond the window.
+
+**Rules out:** Freezing the coalescing timestamp at the first command in
+the burst solely to impose an absolute maximum burst duration.
+
+**Still in scope:** Adding a separate maximum coalesced duration if real
+editor usage shows long bursts should split even without an idle gap.
+
+**Revisit when:** Product behavior needs both an idle-gap threshold and
+an absolute burst cap.
+
 ## Binary architecture validation is best effort
 
 `Plushie.Binary.validate_architecture!/1` raises when it can detect a

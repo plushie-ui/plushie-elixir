@@ -120,6 +120,15 @@ defmodule Plushie.SelectionTest do
 
       assert Selection.selected(sel) == MapSet.new([:b])
     end
+
+    test "clears anchor when toggling off the anchor" do
+      sel =
+        Selection.new(mode: :multi)
+        |> Selection.select(:a)
+        |> Selection.toggle(:a)
+
+      assert sel.anchor == nil
+    end
   end
 
   describe "deselect/2" do
@@ -131,6 +140,26 @@ defmodule Plushie.SelectionTest do
         |> Selection.deselect(:a)
 
       assert Selection.selected(sel) == MapSet.new([:b])
+    end
+
+    test "clears anchor when deselecting the anchor" do
+      sel =
+        Selection.new(mode: :range, order: @order)
+        |> Selection.select(:b)
+        |> Selection.deselect(:b)
+
+      assert Selection.selected(sel) == MapSet.new()
+      assert sel.anchor == nil
+    end
+
+    test "preserves anchor when deselecting a different item" do
+      sel =
+        Selection.new(mode: :range, order: @order)
+        |> Selection.select(:b)
+        |> Selection.select(:d, extend: true)
+        |> Selection.deselect(:b)
+
+      assert sel.anchor == :d
     end
 
     test "no-op when item not selected" do
@@ -199,6 +228,23 @@ defmodule Plushie.SelectionTest do
 
       assert Selection.selected(sel) == MapSet.new([:z])
     end
+
+    test "anchor equal to target selects one item" do
+      sel =
+        Selection.new(mode: :range, order: @order)
+        |> Selection.select(:c)
+        |> Selection.range_select(:c)
+
+      assert Selection.selected(sel) == MapSet.new([:c])
+    end
+  end
+
+  describe "select_all/1" do
+    test "selects every item in order" do
+      sel = Selection.new(mode: :multi, order: @order) |> Selection.select_all()
+
+      assert Selection.selected(sel) == MapSet.new(@order)
+    end
   end
 
   describe "selected?/2" do
@@ -207,6 +253,17 @@ defmodule Plushie.SelectionTest do
 
       assert Selection.selected?(sel, :a)
       refute Selection.selected?(sel, :b)
+    end
+  end
+
+  describe "to_list/1" do
+    test "returns selected ids as a list" do
+      sel =
+        Selection.new(mode: :multi)
+        |> Selection.select(:a)
+        |> Selection.select(:b, extend: true)
+
+      assert MapSet.new(Selection.to_list(sel)) == MapSet.new([:a, :b])
     end
   end
 end

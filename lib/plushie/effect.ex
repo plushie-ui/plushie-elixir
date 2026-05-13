@@ -65,6 +65,8 @@ defmodule Plushie.Effect do
     notification
   )a
 
+  @valid_notification_urgencies ~w(low normal critical)a
+
   @typedoc "Valid effect kind atoms."
   @type kind ::
           :file_open
@@ -185,9 +187,10 @@ defmodule Plushie.Effect do
       if opts[:timeout], do: Keyword.put(payload, :timeout, opts[:timeout]), else: payload
 
     payload =
-      if opts[:urgency],
-        do: Keyword.put(payload, :urgency, Atom.to_string(opts[:urgency])),
-        else: payload
+      case Keyword.fetch(opts, :urgency) do
+        {:ok, urgency} -> Keyword.put(payload, :urgency, encode_urgency!(urgency))
+        :error -> payload
+      end
 
     payload =
       if opts[:sound], do: Keyword.put(payload, :sound, opts[:sound]), else: payload
@@ -226,5 +229,14 @@ defmodule Plushie.Effect do
   @doc false
   defp generate_id do
     "ef_" <> Integer.to_string(System.unique_integer([:positive, :monotonic]))
+  end
+
+  defp encode_urgency!(urgency) when urgency in @valid_notification_urgencies do
+    Atom.to_string(urgency)
+  end
+
+  defp encode_urgency!(urgency) do
+    raise ArgumentError,
+          "invalid notification urgency #{inspect(urgency)}. Valid urgencies: #{inspect(@valid_notification_urgencies)}"
   end
 end

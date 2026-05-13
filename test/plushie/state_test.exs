@@ -102,6 +102,27 @@ defmodule Plushie.StateTest do
     end
   end
 
+  describe "delete/2" do
+    test "removes nested values and increments revision" do
+      state =
+        State.new(@sample_data)
+        |> State.delete([:user, :prefs, :theme])
+
+      assert State.get(state, [:user, :prefs, :theme]) == nil
+      assert State.get(state, [:user, :prefs, :font_size]) == 14
+      assert state.revision == 1
+    end
+
+    test "increments revision when deleting a missing path" do
+      state =
+        State.new(@sample_data)
+        |> State.delete([:user, :prefs, :missing])
+
+      assert state.data == @sample_data
+      assert state.revision == 1
+    end
+  end
+
   describe "revision/1" do
     test "returns current revision" do
       state = State.new(@sample_data)

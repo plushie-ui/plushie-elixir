@@ -119,12 +119,19 @@ defmodule Plushie.Data do
     Enum.filter(records, fn record ->
       Enum.any?(fields, fn field ->
         record
-        |> Map.get(field, "")
+        |> search_field(field)
         |> to_string()
         |> String.downcase()
         |> String.contains?(q)
       end)
     end)
+  end
+
+  defp search_field(record, field) do
+    case Map.get(record, field) do
+      nil -> ""
+      value -> value
+    end
   end
 
   defp maybe_sort(records, nil), do: records

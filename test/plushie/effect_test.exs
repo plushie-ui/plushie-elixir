@@ -79,5 +79,26 @@ defmodule Plushie.EffectTest do
       assert cmd.payload.kind == "notification"
       assert cmd.payload.opts == %{title: "Alert", body: "Something happened"}
     end
+
+    test "notification validates urgency" do
+      cmd = Effect.notification(:notify, "Alert", "Body", urgency: :critical)
+      assert cmd.payload.opts.urgency == "critical"
+
+      assert_raise ArgumentError, ~r/invalid notification urgency :urgent/, fn ->
+        Effect.notification(:notify, "Alert", "Body", urgency: :urgent)
+      end
+    end
+  end
+
+  describe "default_timeout/1" do
+    test "returns configured timeouts for known kinds" do
+      assert Effect.default_timeout("file_open") == 120_000
+      assert Effect.default_timeout("clipboard_read") == 5_000
+      assert Effect.default_timeout("notification") == 5_000
+    end
+
+    test "returns nil for unknown kinds" do
+      assert Effect.default_timeout("not_real") == nil
+    end
   end
 end

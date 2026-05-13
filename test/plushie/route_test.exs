@@ -77,6 +77,26 @@ defmodule Plushie.RouteTest do
     end
   end
 
+  describe "replace_top/3" do
+    test "replaces the current route without changing history depth" do
+      route =
+        Route.new("/home")
+        |> Route.push("/settings")
+        |> Route.replace_top("/profile", %{id: 7})
+
+      assert Route.current(route) == "/profile"
+      assert Route.params(route) == %{id: 7}
+      assert Route.history(route) == ["/profile", "/home"]
+    end
+
+    test "replaces the root route" do
+      route = Route.new("/home") |> Route.replace_top("/welcome")
+
+      assert Route.current(route) == "/welcome"
+      assert Route.history(route) == ["/welcome"]
+    end
+  end
+
   describe "can_go_back?/1" do
     test "false for single-entry stack" do
       route = Route.new("/home")

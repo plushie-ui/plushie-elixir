@@ -119,6 +119,18 @@ defmodule Plushie.DataTest do
       assert result.total == 0
     end
 
+    test "missing and nil search fields do not match nil text" do
+      records = [
+        %{name: "present", note: nil},
+        %{name: "missing"},
+        %{name: "literal", note: "nil"}
+      ]
+
+      result = Data.query(records, search: {[:note], "nil"})
+
+      assert Enum.map(result.entries, & &1.name) == ["literal"]
+    end
+
     test "repeated searches compose as successive narrowing" do
       result =
         Data.query(@records,

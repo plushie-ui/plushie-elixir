@@ -207,34 +207,38 @@ defmodule Plushie.Effect.Result do
   # -- Per-kind decoders --------------------------------------------------
 
   defp decode_ok("file_open", result) do
-    %FileOpened{path: fetch_string(result, :path)}
+    with_string("file_open", result, :path, fn path -> %FileOpened{path: path} end)
   end
 
   defp decode_ok("file_open_multiple", result) do
-    %FilesOpened{paths: fetch_paths(result, :paths)}
+    with_paths("file_open_multiple", result, :paths, fn paths -> %FilesOpened{paths: paths} end)
   end
 
   defp decode_ok("file_save", result) do
-    %FileSaved{path: fetch_string(result, :path)}
+    with_string("file_save", result, :path, fn path -> %FileSaved{path: path} end)
   end
 
   defp decode_ok("directory_select", result) do
-    %DirectorySelected{path: fetch_string(result, :path)}
+    with_string("directory_select", result, :path, fn path -> %DirectorySelected{path: path} end)
   end
 
   defp decode_ok("directory_select_multiple", result) do
-    %DirectoriesSelected{paths: fetch_paths(result, :paths)}
+    with_paths("directory_select_multiple", result, :paths, fn paths ->
+      %DirectoriesSelected{paths: paths}
+    end)
   end
 
   defp decode_ok(kind, result) when kind in ["clipboard_read", "clipboard_read_primary"] do
-    %ClipboardText{text: fetch_string(result, :text)}
+    with_string(kind, result, :text, fn text -> %ClipboardText{text: text} end)
   end
 
   defp decode_ok("clipboard_read_html", result) do
-    %ClipboardHtml{
-      html: fetch_string(result, :html),
-      alt_text: fetch_optional_string(result, :alt_text)
-    }
+    with {:ok, html} <- fetch_string(result, :html),
+         {:ok, alt_text} <- fetch_optional_string(result, :alt_text) do
+      %ClipboardHtml{html: html, alt_text: alt_text}
+    else
+      :error -> malformed_result("clipboard_read_html")
+    end
   end
 
   defp decode_ok(kind, _result)
@@ -258,24 +262,54 @@ defmodule Plushie.Effect.Result do
   # Accept both atom and string keys. The decode pipeline
   # safe_atomize_keys may or may not have run; callers have been
   # seen to pass either shape.
+  defp with_string(kind, result, key, fun) do
+    case fetch_string(result, key) do
+      {:ok, value} -> fun.(value)
+      :error -> malformed_result(kind)
+    end
+  end
+
+  defp with_paths(kind, result, key, fun) do
+    case fetch_paths(result, key) do
+      {:ok, value} -> fun.(value)
+      :error -> malformed_result(kind)
+    end
+  end
+
+  defp malformed_result(kind) do
+    %Error{message: "malformed effect result for #{kind}"}
+  end
+
+  defp fetch_value(map, key) do
+    case Map.fetch(map, key) do
+      {:ok, value} -> {:ok, value}
+      :error -> Map.fetch(map, to_string(key))
+    end
+  end
+
   defp fetch_string(map, key) do
-    case Map.get(map, key) || Map.get(map, to_string(key)) do
-      v when is_binary(v) -> v
-      _ -> ""
+    case fetch_value(map, key) do
+      {:ok, v} when is_binary(v) -> {:ok, v}
+      _ -> :error
     end
   end
 
   defp fetch_optional_string(map, key) do
-    case Map.get(map, key) || Map.get(map, to_string(key)) do
-      v when is_binary(v) -> v
-      _ -> nil
+    case fetch_value(map, key) do
+      {:ok, nil} -> {:ok, nil}
+      {:ok, v} when is_binary(v) -> {:ok, v}
+      :error -> {:ok, nil}
+      _ -> :error
     end
   end
 
   defp fetch_paths(map, key) do
-    case Map.get(map, key) || Map.get(map, to_string(key)) do
-      paths when is_list(paths) -> Enum.filter(paths, &is_binary/1)
-      _ -> []
+    case fetch_value(map, key) do
+      {:ok, paths} when is_list(paths) ->
+        if Enum.all?(paths, &is_binary/1), do: {:ok, paths}, else: :error
+
+      _ ->
+        :error
     end
   end
 

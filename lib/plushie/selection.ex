@@ -84,7 +84,7 @@ defmodule Plushie.Selection do
 
   def toggle(%__MODULE__{} = sel, id) do
     if MapSet.member?(sel.selected, id) do
-      %{sel | selected: MapSet.delete(sel.selected, id)}
+      %{sel | selected: MapSet.delete(sel.selected, id), anchor: clear_anchor(sel, id)}
     else
       %{sel | selected: MapSet.put(sel.selected, id), anchor: id}
     end
@@ -93,7 +93,7 @@ defmodule Plushie.Selection do
   @doc "Removes `id` from the selection."
   @spec deselect(sel :: t(), id :: term()) :: t()
   def deselect(%__MODULE__{} = sel, id) do
-    %{sel | selected: MapSet.delete(sel.selected, id)}
+    %{sel | selected: MapSet.delete(sel.selected, id), anchor: clear_anchor(sel, id)}
   end
 
   @doc """
@@ -156,4 +156,7 @@ defmodule Plushie.Selection do
   def to_list(%__MODULE__{selected: selected}) do
     MapSet.to_list(selected)
   end
+
+  defp clear_anchor(%__MODULE__{anchor: id}, id), do: nil
+  defp clear_anchor(%__MODULE__{anchor: anchor}, _id), do: anchor
 end
