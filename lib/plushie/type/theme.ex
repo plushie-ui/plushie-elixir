@@ -118,7 +118,13 @@ defmodule Plushie.Type.Theme do
   @spec cast(term()) :: {:ok, t()} | :error
   def cast(:system), do: {:ok, :system}
   def cast(v) when v in @themes, do: {:ok, v}
-  def cast(%{name: _} = map), do: {:ok, map}
+
+  def cast(%{name: _} = map) do
+    {:ok, cast_custom_map!(map)}
+  rescue
+    ArgumentError -> :error
+  end
+
   def cast(_), do: :error
 
   @impl Plushie.Type
@@ -183,10 +189,10 @@ defmodule Plushie.Type.Theme do
     validate_custom_keys!(opts)
 
     result = %{name: name}
-    result = maybe_put(result, :base, encode_base(base))
+    result = maybe_put(result, :base, encode_base!(base))
 
     Enum.reduce(opts, result, fn {key, value}, acc ->
-      Map.put(acc, key, elem(Plushie.Type.Color.cast(value), 1))
+      Map.put(acc, key, cast_color!(key, value))
     end)
   end
 
@@ -256,7 +262,40 @@ defmodule Plushie.Type.Theme do
   defp maybe_put(map, _key, nil), do: map
   defp maybe_put(map, key, value), do: Map.put(map, key, value)
 
-  defp encode_base(nil), do: nil
-  defp encode_base(theme) when theme in @themes, do: Atom.to_string(theme)
-  defp encode_base(str) when is_binary(str), do: str
+  defp cast_custom_map!(%{name: name} = map) when is_binary(name) do
+    {base, color_map} = Map.pop(map, :base)
+    {name, color_map} = Map.pop(color_map, :name)
+
+    opts = Map.to_list(color_map)
+    validate_custom_keys!(opts)
+
+    result = %{name: name}
+    result = maybe_put(result, :base, encode_base!(base))
+
+    Enum.reduce(opts, result, fn {key, value}, acc ->
+      Map.put(acc, key, cast_color!(key, value))
+    end)
+  end
+
+  defp cast_custom_map!(%{name: name}) do
+    raise ArgumentError, "custom theme name must be a string, got: #{inspect(name)}"
+  end
+
+  defp encode_base!(nil), do: nil
+  defp encode_base!(theme) when theme in @themes, do: Atom.to_string(theme)
+  defp encode_base!(str) when is_binary(str), do: str
+
+  defp encode_base!(theme) do
+    raise ArgumentError, "invalid custom theme base: #{inspect(theme)}"
+  end
+
+  defp cast_color!(key, value) do
+    case Plushie.Type.Color.cast(value) do
+      {:ok, parsed} ->
+        parsed
+
+      :error ->
+        raise ArgumentError, "invalid custom theme #{key}: #{inspect(value)}"
+    end
+  end
 end

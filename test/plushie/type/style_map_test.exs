@@ -34,6 +34,12 @@ defmodule Plushie.Type.StyleMapTest do
       assert {:ok, style.background} == Color.cast(:red)
       assert style.background == "#ff0000"
     end
+
+    test "raises a validation error for invalid colors" do
+      assert_raise ArgumentError, ~r/invalid style background: :nope/, fn ->
+        StyleMap.new() |> StyleMap.background(:nope)
+      end
+    end
   end
 
   describe "text_color/2" do
@@ -45,6 +51,36 @@ defmodule Plushie.Type.StyleMapTest do
     test "casts named atom through Color.cast" do
       style = StyleMap.new() |> StyleMap.text_color(:blue)
       assert style.text_color == "#0000ff"
+    end
+
+    test "raises a validation error for invalid colors" do
+      assert_raise ArgumentError, ~r/invalid style text_color: :nope/, fn ->
+        StyleMap.new() |> StyleMap.text_color(:nope)
+      end
+    end
+  end
+
+  describe "cast/1" do
+    test "casts plain maps into style structs" do
+      assert {:ok,
+              %StyleMap{
+                background: "#ff0000",
+                text_color: "#ffffff",
+                border: %Border{width: 2},
+                hovered: %{background: "#0000ff"}
+              }} =
+               StyleMap.cast(%{
+                 background: :red,
+                 text_color: :white,
+                 border: %{width: 2},
+                 hovered: %{background: :blue}
+               })
+    end
+
+    test "rejects invalid map fields" do
+      assert StyleMap.cast(%{background: :nope}) == :error
+      assert StyleMap.cast(%{unknown: 1}) == :error
+      assert StyleMap.cast(%{hovered: %{unknown: 1}}) == :error
     end
   end
 
@@ -84,6 +120,12 @@ defmodule Plushie.Type.StyleMapTest do
 
       assert is_map(style.hovered)
       assert style.hovered == %{background: "#cccccc"}
+    end
+
+    test "raises for unknown override fields" do
+      assert_raise ArgumentError, ~r/unknown style override field :padding/, fn ->
+        StyleMap.new() |> StyleMap.hovered(padding: 4)
+      end
     end
   end
 

@@ -55,7 +55,7 @@ defmodule Plushie.Type.Border do
   @doc "Sets the border color. Accepts a hex string or named color atom."
   @spec color(border :: t(), color :: Plushie.Type.Color.input()) :: t()
   def color(%__MODULE__{} = border, color),
-    do: %{border | color: elem(Plushie.Type.Color.cast(color), 1)}
+    do: %{border | color: cast_color!(color)}
 
   @doc "Sets the border width in pixels."
   @spec width(border :: t(), width :: number()) :: t()
@@ -162,4 +162,14 @@ defmodule Plushie.Type.Border do
   end
 
   defp encode_radius(radius), do: radius
+
+  defp cast_color!(color) do
+    case Plushie.Type.Color.cast(color) do
+      {:ok, parsed} ->
+        parsed
+
+      :error ->
+        raise ArgumentError, "invalid border color: #{inspect(color)}"
+    end
+  end
 end

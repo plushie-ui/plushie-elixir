@@ -39,7 +39,7 @@ defmodule Plushie.Type.Shadow do
   @doc "Sets the shadow color. Accepts a hex string or named color atom."
   @spec color(shadow :: t(), color :: Plushie.Type.Color.input()) :: t()
   def color(%__MODULE__{} = shadow, color) do
-    %{shadow | color: elem(Plushie.Type.Color.cast(color), 1)}
+    %{shadow | color: cast_color!(color)}
   end
 
   @doc "Sets the shadow offset in pixels."
@@ -114,5 +114,15 @@ defmodule Plushie.Type.Shadow do
       offset: [shadow.offset_x, shadow.offset_y],
       blur_radius: shadow.blur_radius
     }
+  end
+
+  defp cast_color!(color) do
+    case Plushie.Type.Color.cast(color) do
+      {:ok, parsed} ->
+        parsed
+
+      :error ->
+        raise ArgumentError, "invalid shadow color: #{inspect(color)}"
+    end
   end
 end

@@ -63,6 +63,7 @@ defmodule Plushie.Type.StyleMap do
         }
 
   @known_keys ~w(base background text_color border shadow hovered pressed disabled focused)a
+  @override_keys ~w(background text_color border shadow)a
 
   defstruct [
     :base,
@@ -79,6 +80,13 @@ defmodule Plushie.Type.StyleMap do
   @doc "Validates and returns a StyleMap struct."
   @spec cast(term()) :: {:ok, t()} | :error
   def cast(%__MODULE__{} = v), do: {:ok, v}
+
+  def cast(map) when is_map(map) do
+    {:ok, from_opts(Enum.to_list(map))}
+  rescue
+    ArgumentError -> :error
+  end
+
   def cast(_), do: :error
 
   @doc "Creates an empty style map."
@@ -98,25 +106,25 @@ defmodule Plushie.Type.StyleMap do
   end
 
   def background(%__MODULE__{} = style_map, background) do
-    %{style_map | background: elem(Color.cast(background), 1)}
+    %{style_map | background: cast_background!(background)}
   end
 
   @doc "Sets the text color. Accepts a hex string or named color atom."
   @spec text_color(style_map :: t(), text_color :: Color.input()) :: t()
   def text_color(%__MODULE__{} = style_map, text_color) do
-    %{style_map | text_color: elem(Color.cast(text_color), 1)}
+    %{style_map | text_color: cast_color!(text_color, :text_color)}
   end
 
   @doc "Sets the border specification."
   @spec border(style_map :: t(), border :: Plushie.Type.Border.t()) :: t()
   def border(%__MODULE__{} = style_map, border) do
-    %{style_map | border: border}
+    %{style_map | border: cast_nested!(Plushie.Type.Border, border, :border)}
   end
 
   @doc "Sets the shadow specification."
   @spec shadow(style_map :: t(), shadow :: Plushie.Type.Shadow.t()) :: t()
   def shadow(%__MODULE__{} = style_map, shadow) do
-    %{style_map | shadow: shadow}
+    %{style_map | shadow: cast_nested!(Plushie.Type.Shadow, shadow, :shadow)}
   end
 
   @doc "Sets the hovered status override. Accepts a map or keyword list."
@@ -178,16 +186,30 @@ defmodule Plushie.Type.StyleMap do
     do: normalize_override(Map.new(override))
 
   defp normalize_override(override) when is_map(override) do
+    for {key, _} <- override, key not in @override_keys do
+      raise ArgumentError,
+            "unknown style override field #{inspect(key)}. Valid fields: #{inspect(@override_keys)}"
+    end
+
     override
     |> cast_color_field(:background)
     |> cast_color_field(:text_color)
+    |> cast_nested_field(:border, Plushie.Type.Border)
+    |> cast_nested_field(:shadow, Plushie.Type.Shadow)
   end
 
   defp cast_color_field(map, key) do
     case Map.get(map, key) do
       nil -> map
       %Gradient{} = gradient -> Map.put(map, key, gradient)
-      val -> Map.put(map, key, elem(Color.cast(val), 1))
+      val -> Map.put(map, key, cast_color!(val, key))
+    end
+  end
+
+  defp cast_nested_field(map, key, module) do
+    case Map.get(map, key) do
+      nil -> map
+      val -> Map.put(map, key, cast_nested!(module, val, key))
     end
   end
 
@@ -232,5 +254,29 @@ defmodule Plushie.Type.StyleMap do
     |> encode_put(:text_color, Map.get(override, :text_color))
     |> encode_put_nested(:border, Map.get(override, :border))
     |> encode_put_nested(:shadow, Map.get(override, :shadow))
+  end
+
+  defp cast_background!(%Gradient{} = gradient), do: gradient
+
+  defp cast_background!(background), do: cast_color!(background, :background)
+
+  defp cast_color!(color, key) do
+    case Color.cast(color) do
+      {:ok, parsed} ->
+        parsed
+
+      :error ->
+        raise ArgumentError, "invalid style #{key}: #{inspect(color)}"
+    end
+  end
+
+  defp cast_nested!(module, value, key) do
+    case module.cast(value) do
+      {:ok, parsed} ->
+        parsed
+
+      :error ->
+        raise ArgumentError, "invalid style #{key}: #{inspect(value)}"
+    end
   end
 end

@@ -70,17 +70,18 @@ defmodule Plushie.Type.Padding do
       iex> Plushie.Type.Padding.cast({4, 12})
       {:ok, {4, 12}}
 
-      iex> Plushie.Type.Padding.cast(%{top: 1, right: 2, bottom: 3, left: 4})
-      {:ok, %{top: 1, right: 2, bottom: 3, left: 4}}
+      iex> Plushie.Type.Padding.cast(%{top: 1, bottom: 3})
+      {:ok, %{top: 1, bottom: 3}}
   """
   use Plushie.Type
 
   @impl Plushie.Type
-  @spec cast(padding :: t()) :: {:ok, map()} | :error
+  @spec cast(padding :: t()) :: {:ok, t() | map()} | :error
 
-  def cast(n) when is_number(n), do: {:ok, n}
+  def cast(n) when is_number(n) and n >= 0, do: {:ok, n}
 
-  def cast({vertical, horizontal}) when is_number(vertical) and is_number(horizontal) do
+  def cast({vertical, horizontal})
+      when is_number(vertical) and vertical >= 0 and is_number(horizontal) and horizontal >= 0 do
     {:ok, {vertical, horizontal}}
   end
 
@@ -91,12 +92,16 @@ defmodule Plushie.Type.Padding do
       |> Enum.reject(fn {_, v} -> is_nil(v) end)
       |> Map.new()
 
-    {:ok, result}
+    validate_padding_map(result)
   end
 
-  def cast(%{top: t, right: r, bottom: b, left: l})
-      when is_number(t) and is_number(r) and is_number(b) and is_number(l) do
-    {:ok, %{top: t, right: r, bottom: b, left: l}}
+  def cast(map) when is_map(map) do
+    with true <- Enum.all?(Map.keys(map), &(&1 in @known_keys)),
+         {:ok, result} <- validate_padding_map(map) do
+      {:ok, result}
+    else
+      _ -> :error
+    end
   end
 
   def cast(_), do: :error
@@ -140,16 +145,33 @@ defmodule Plushie.Type.Padding do
       |> Enum.reject(fn {_, v} -> is_nil(v) end)
       |> Map.new()
 
-    reject_negative!(map)
+    validate_padding_map!(map)
     map
   end
 
-  def encode(%{top: _, right: _, bottom: _, left: _} = map) do
-    reject_negative!(map)
+  def encode(map) when is_map(map) do
+    validate_padding_map!(map)
     map
   end
 
-  defp reject_negative!(map) do
+  defp validate_padding_map(map) do
+    if Enum.all?(map, fn {_side, value} -> is_number(value) and value >= 0 end) do
+      {:ok, map}
+    else
+      :error
+    end
+  end
+
+  defp validate_padding_map!(map) do
+    for key <- Map.keys(map), key not in @known_keys do
+      raise ArgumentError,
+            "unknown padding field #{inspect(key)}. Valid fields: #{inspect(@known_keys)}"
+    end
+
+    for {side, value} <- map, not is_number(value) do
+      raise ArgumentError, "padding must be numeric, got: #{side}=#{inspect(value)}"
+    end
+
     for {side, value} <- map, is_number(value) and value < 0 do
       raise ArgumentError, "padding must be non-negative, got: #{side}=#{value}"
     end

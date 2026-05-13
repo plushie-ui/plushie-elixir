@@ -23,6 +23,24 @@ defmodule Plushie.Type.BorderTest do
       border = Border.new() |> Border.color("#ff0000") |> Border.color("#00ff00")
       assert border.color == "#00ff00"
     end
+
+    test "raises a validation error for invalid colors" do
+      assert_raise ArgumentError, ~r/invalid border color: :nope/, fn ->
+        Border.new() |> Border.color(:nope)
+      end
+    end
+  end
+
+  describe "cast/1" do
+    test "casts maps with border fields" do
+      assert {:ok, %Border{color: "#ffffff", width: 2, radius: 3}} =
+               Border.cast(%{color: :white, width: 2, rounded: 3})
+    end
+
+    test "rejects invalid map fields" do
+      assert :error = Border.cast(%{color: :nope})
+      assert :error = Border.cast(%{unknown: 1})
+    end
   end
 
   describe "width/2" do

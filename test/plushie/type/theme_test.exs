@@ -30,19 +30,37 @@ defmodule Plushie.Type.ThemeTest do
         Theme.custom("chrome", scrollbar_width: 12)
       end
     end
+
+    test "invalid colours raise validation errors" do
+      assert_raise ArgumentError, ~r/invalid custom theme primary: :nope/, fn ->
+        Theme.custom("bad", primary: :nope)
+      end
+    end
+
+    test "invalid base raises a validation error" do
+      assert_raise ArgumentError, ~r/invalid custom theme base: :bogus/, fn ->
+        Theme.custom("bad", base: :bogus)
+      end
+    end
   end
 
   describe "cast/1" do
-    test "preserves custom theme maps" do
-      theme = %{name: "custom", cursor_color: "#ffffff"}
+    test "casts custom theme maps" do
+      theme = %{name: "custom", base: :dark, cursor_color: :white}
 
-      assert Theme.cast(theme) == {:ok, theme}
+      assert Theme.cast(theme) == {:ok, %{name: "custom", base: "dark", cursor_color: "#ffffff"}}
     end
 
     test "preserves built-in theme casting" do
       assert Theme.cast(:dark) == {:ok, :dark}
       assert Theme.cast(:system) == {:ok, :system}
       assert Theme.cast(:bogus) == :error
+    end
+
+    test "rejects invalid custom theme maps" do
+      assert Theme.cast(%{name: "custom", unknown: "#ffffff"}) == :error
+      assert Theme.cast(%{name: "custom", primary: :nope}) == :error
+      assert Theme.cast(%{name: :custom}) == :error
     end
   end
 end

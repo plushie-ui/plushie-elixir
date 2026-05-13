@@ -162,6 +162,135 @@ surrounding invariant, not just a spec, makes them unreachable.
 **Revisit when:** A validation is proven unreachable from construction
 invariants rather than from typespec assumptions.
 
+## Type cast callbacks are boolean validators
+
+`Plushie.Type.cast/1` callbacks use the shared `{:ok, value} | :error`
+contract. They validate and normalize values for generated setters and
+type machinery. User-facing builder functions are the diagnostic
+boundary and should raise clear `ArgumentError`s for invalid fields.
+
+**Rules out:** Changing individual `cast/1` callbacks to raise detailed
+errors, or treating `:error` from a cast callback as lost diagnostics.
+
+**Still in scope:** Improving public builders so invalid user input
+raises useful messages. Fixing casts that accept values the renderer
+cannot handle, or casts that reject values the type explicitly supports.
+
+**Revisit when:** The unified type behaviour grows a diagnostic return
+shape across all SDKs.
+
+## Type casts reject unknown structured fields
+
+Structured type casts reject maps with unknown keys instead of dropping
+them. Dropping unknown keys hides typos and can make user-authored
+configuration appear to work while silently losing intent.
+
+**Rules out:** Making structured casts lenient about extra keys solely
+because the input came from a dynamic map.
+
+**Still in scope:** Accepting partial maps when the type supports
+partial values. Improving error messages on public builders. Adding a
+separate tolerant importer if a real external data source needs one.
+
+**Revisit when:** The SDK gains a deliberate external configuration
+loader where unknown-field tolerance is part of that loader's contract.
+
+## Decode mirrors wire shapes, not every cast shape
+
+The decode path is for renderer wire data. It accepts the shapes emitted
+by JSON and MessagePack, then applies type coercions needed for wire
+representations such as enum strings and tuple lists. `cast/1` may
+accept host-language conveniences that the wire never emits.
+
+**Rules out:** Teaching record-map decode to accept keyword lists, or
+list decode to accept tuples, solely to make decode as permissive as
+cast.
+
+**Still in scope:** Decoding all valid renderer wire shapes. Fixing
+decode when the renderer changes a wire representation. Keeping cast
+ergonomic for host-authored values.
+
+**Revisit when:** A public API starts using decode for non-wire input.
+
+## Composite enum decode uses error at the public boundary
+
+Composite enum decode returns `:error` for non-matching values. Union
+variant probing converts `:error` to an internal no-match sentinel while
+trying later variants, but the public composite decode boundary keeps
+the shared `{:ok, value} | :error` shape.
+
+**Rules out:** Returning `nil` from public composite enum decode for a
+non-match.
+
+**Still in scope:** Returning `nil` inside private union probing helpers
+where "try the next variant" is the local control-flow signal.
+
+**Revisit when:** The type behaviour changes its public failure shape.
+
+## Tiny tuple decode length checks stay explicit
+
+Composite tuple decode checks list length with `length/1`. Tuple specs
+are small fixed field groups, and the explicit length check keeps the
+decode clauses easy to read.
+
+**Rules out:** Rewriting tuple decode only to avoid an O(n) check for
+small tuple-shaped wire arrays.
+
+**Still in scope:** Reworking tuple decode if profiling shows tuple
+length checks as a measured decode cost, or if a clearer single-pass
+implementation falls out of another change.
+
+**Revisit when:** Real renderer traffic shows large tuple specs or
+decode profiling identifies this path as material.
+
+## Struct encoders encode the current struct contract
+
+Encoders for fixed structs encode the fields that exist on that struct
+today. Future fields should be added together with their encoding logic
+when the struct changes, not guarded by speculative unknown-field checks.
+
+**Rules out:** Adding future-proof unknown-field validation to fixed
+struct encoders solely in case the struct gains fields later.
+
+**Still in scope:** Updating encoders as part of the same change that
+adds a field. Rejecting unknown fields on map-shaped user inputs where
+typos are possible today.
+
+**Revisit when:** A type intentionally supports open-ended map inputs
+at encode time.
+
+## Color casts normalize invalid color input to error
+
+`Plushie.Type.Color.cast/1` converts invalid hex strings and unknown
+color names to `:error`. That is the intended validation shape for the
+type machinery. Builder functions that accept colors are responsible
+for turning that result into contextual `ArgumentError`s.
+
+**Rules out:** Letting invalid color parse exceptions escape from
+`Color.cast/1`.
+
+**Still in scope:** Tightening builder diagnostics when a bad color is
+provided through a public styling API.
+
+**Revisit when:** The type cast contract grows structured diagnostics.
+
+## MapSet dialyzer suppressions are documented limitations
+
+Dialyzer flags structs that contain `MapSet.t()` because `MapSet.t()` is
+opaque. The suppressions in `.dialyzer_ignore.exs` cover that known
+limitation for modules that store sets while only using the public
+`MapSet` API.
+
+**Rules out:** Treating each `:contract_with_opaque` suppression for a
+`MapSet` field as an unsound type contract.
+
+**Still in scope:** Removing suppressions when the struct no longer
+contains a `MapSet`, or when Dialyzer can verify the contract without
+ignoring it.
+
+**Revisit when:** The code starts inspecting `MapSet` internals or
+Dialyzer's opaque handling changes.
+
 ## Binary architecture validation is best effort
 
 `Plushie.Binary.validate_architecture!/1` raises when it can detect a

@@ -24,6 +24,24 @@ defmodule Plushie.Type.ShadowTest do
       shadow = Shadow.new() |> Shadow.color(:red)
       assert shadow.color == "#ff0000"
     end
+
+    test "raises a validation error for invalid colors" do
+      assert_raise ArgumentError, ~r/invalid shadow color: :nope/, fn ->
+        Shadow.new() |> Shadow.color(:nope)
+      end
+    end
+  end
+
+  describe "cast/1" do
+    test "casts maps with shadow fields" do
+      assert {:ok, %Shadow{color: "#ffffff", offset_x: 1, offset_y: 2, blur_radius: 3}} =
+               Shadow.cast(%{color: :white, offset: {1, 2}, blur_radius: 3})
+    end
+
+    test "rejects invalid map fields" do
+      assert :error = Shadow.cast(%{color: :nope})
+      assert :error = Shadow.cast(%{unknown: 1})
+    end
   end
 
   describe "offset/3" do
