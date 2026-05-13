@@ -1,6 +1,6 @@
 defmodule Plushie.Tree.NormalizeCtx do
   @moduledoc false
-  @enforce_keys [:scope, :window_id]
+
   defstruct scope: "",
             window_id: nil,
             widget_states: %{},

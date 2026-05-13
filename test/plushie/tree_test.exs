@@ -135,12 +135,120 @@ defmodule Plushie.TreeTest do
     end
 
     test "duplicate sibling ids raise" do
-      assert_raise ArgumentError, ~r/duplicate sibling IDs/, fn ->
+      error =
+        assert_raise ArgumentError, fn ->
+          Tree.normalize([
+            %{id: "a", type: "text", props: %{}, children: []},
+            %{id: "a", type: "button", props: %{}, children: []}
+          ])
+        end
+
+      assert Exception.message(error) =~ "duplicate sibling IDs"
+      assert Exception.message(error) =~ ~s(["a"])
+    end
+
+    test "duplicate sibling ids name each duplicate once" do
+      error =
+        assert_raise ArgumentError, fn ->
+          Tree.normalize([
+            %{id: "a", type: "text", props: %{}, children: []},
+            %{id: "b", type: "text", props: %{}, children: []},
+            %{id: "a", type: "button", props: %{}, children: []},
+            %{id: "b", type: "button", props: %{}, children: []},
+            %{id: "a", type: "button", props: %{}, children: []}
+          ])
+        end
+
+      assert Exception.message(error) =~ ~s(["a", "b"])
+    end
+
+    test "duplicate auto ids keep dynamic-list hint" do
+      error =
+        assert_raise ArgumentError, fn ->
+          Tree.normalize([
+            %{id: "auto:demo:1", type: "text", props: %{}, children: []},
+            %{id: "auto:demo:1", type: "button", props: %{}, children: []}
+          ])
+        end
+
+      assert Exception.message(error) =~ "Auto-generated IDs"
+    end
+  end
+
+  describe "normalize/1 -- duplicate nested ids" do
+    test "duplicate nested sibling ids raise with names" do
+      error =
+        assert_raise ArgumentError, fn ->
+          Tree.normalize(%{
+            id: "root",
+            type: "container",
+            props: %{},
+            children: [
+              %{
+                id: "group",
+                type: "column",
+                props: %{},
+                children: [
+                  %{id: "nested", type: "text", props: %{}, children: []},
+                  %{id: "nested", type: "button", props: %{}, children: []}
+                ]
+              }
+            ]
+          })
+        end
+
+      assert Exception.message(error) =~ ~s(["root/group/nested"])
+    end
+  end
+
+  describe "normalize/1 -- top-level duplicate ids" do
+    test "duplicate top-level ids raise with scoped names" do
+      error =
+        assert_raise ArgumentError, fn ->
+          Tree.normalize([
+            %{id: "top", type: "text", props: %{}, children: []},
+            %{id: "top", type: "button", props: %{}, children: []}
+          ])
+        end
+
+      assert Exception.message(error) =~ ~s(["top"])
+    end
+  end
+
+  describe "normalize/1 -- string-keyed duplicate ids" do
+    test "duplicate ids are detected after string-key normalization" do
+      error =
+        assert_raise ArgumentError, fn ->
+          Tree.normalize([
+            %{"id" => "a", "type" => "text", "props" => %{}, "children" => []},
+            %{"id" => "a", "type" => "button", "props" => %{}, "children" => []}
+          ])
+        end
+
+      assert Exception.message(error) =~ ~s(["a"])
+    end
+  end
+
+  describe "normalize/1 -- duplicate ids across separate parents" do
+    test "same local ids under different parents are allowed" do
+      result =
         Tree.normalize([
-          %{id: "a", type: "text", props: %{}, children: []},
-          %{id: "a", type: "button", props: %{}, children: []}
+          %{
+            id: "left",
+            type: "column",
+            props: %{},
+            children: [%{id: "shared", type: "text", props: %{}, children: []}]
+          },
+          %{
+            id: "right",
+            type: "column",
+            props: %{},
+            children: [%{id: "shared", type: "text", props: %{}, children: []}]
+          }
         ])
-      end
+
+      assert Tree.find(result, "left/shared")
+      assert Tree.find(result, "right/shared")
     end
   end
 
@@ -363,6 +471,27 @@ defmodule Plushie.TreeTest do
 
       assert %{id: "prefs#panel/save", props: %{label: "Prefs"}} =
                Tree.find(tree, "prefs#panel/save")
+    end
+
+    test "find/3 handles string-keyed window maps" do
+      tree = %{
+        "id" => "root",
+        "type" => "container",
+        "props" => %{},
+        "children" => [
+          %{
+            "id" => "main",
+            "type" => "window",
+            "props" => %{},
+            "children" => [
+              %{"id" => "main#save", "type" => "button", "props" => %{}, "children" => []}
+            ]
+          }
+        ]
+      }
+
+      assert %{"id" => "main#save"} = Tree.find(tree, "main#save", "main")
+      assert %{"id" => "main#save"} = Tree.find_local(tree, "save", "main")
     end
 
     test "auto-ID containers inside windows are transparent to scoping" do

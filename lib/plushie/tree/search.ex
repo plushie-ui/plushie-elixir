@@ -75,7 +75,7 @@ defmodule Plushie.Tree.Search do
   end
 
   @doc false
-  @spec exists?(tree :: map() | nil, id :: String.t()) :: boolean()
+  @spec exists?(tree :: tree_node() | nil, id :: String.t()) :: boolean()
   def exists?(nil, _id), do: false
 
   def exists?(tree, id) do
@@ -83,7 +83,7 @@ defmodule Plushie.Tree.Search do
   end
 
   @doc false
-  @spec ids(tree :: map() | nil) :: [String.t()]
+  @spec ids(tree :: tree_node() | nil) :: [String.t()]
   def ids(nil), do: []
 
   def ids(%{id: id, children: children}) do
@@ -215,6 +215,12 @@ defmodule Plushie.Tree.Search do
   defp find_window(%{type: "window", id: id} = node, id), do: node
 
   defp find_window(%{children: children}, window_id) when is_list(children) do
+    Enum.find_value(children, &find_window(&1, window_id))
+  end
+
+  defp find_window(%{"type" => "window", "id" => id} = node, id), do: node
+
+  defp find_window(%{"children" => children}, window_id) when is_list(children) do
     Enum.find_value(children, &find_window(&1, window_id))
   end
 

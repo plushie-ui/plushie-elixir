@@ -278,6 +278,28 @@ handling unsolicited high-volume streams.
 **Revisit when:** Socket transports become a primary production path
 with measured mailbox pressure.
 
+## Tree hot-path clarity bounds micro-optimization
+
+Tree normalization and diffing avoid clearly redundant work when the
+replacement stays readable. They keep small explicit passes or pipelines
+when consolidation would mix separate semantics or make the hot path
+harder to audit.
+
+**Rules out:** Rewriting a11y defaulting into a dense single-pass map
+builder solely to reduce intermediate maps. Replacing safe
+`String.to_existing_atom/1` conversion with an atom cache or other
+global lookup table solely to avoid rescue on manually authored unknown
+string keys. Reworking memo dependency canonicalization without a
+measured memo-key cost.
+
+**Still in scope:** Local consolidations that preserve intent, such as
+sharing a set already built on the diff path, avoiding repeated tuple
+conversion, or combining tree collection passes that gather independent
+facts without changing semantics.
+
+**Revisit when:** Profiling shows a specific tree hot path where the
+clear implementation is a measured bottleneck.
+
 ## GenServer late replies are safe
 
 `GenServer.reply/2` may be called after the original caller exits or

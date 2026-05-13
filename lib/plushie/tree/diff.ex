@@ -2,6 +2,16 @@ defmodule Plushie.Tree.Diff do
   @moduledoc false
 
   @type tree_node :: Plushie.Tree.tree_node()
+  @type path :: [non_neg_integer()]
+  @type patch_op ::
+          %{required(:op) => String.t(), required(:path) => path(), optional(:node) => map()}
+          | %{required(:op) => String.t(), required(:path) => path(), optional(:props) => map()}
+          | %{
+              required(:op) => String.t(),
+              required(:path) => path(),
+              optional(:index) => non_neg_integer(),
+              optional(:node) => map()
+            }
 
   @empty_container %{
     id: "root",
@@ -11,7 +21,7 @@ defmodule Plushie.Tree.Diff do
   }
 
   @doc false
-  @spec diff(old_tree :: map() | nil, new_tree :: map() | nil) :: [map()]
+  @spec diff(old_tree :: map() | nil, new_tree :: map() | nil) :: [patch_op()]
   def diff(nil, nil), do: []
   def diff(nil, new_tree), do: [%{op: "replace_node", path: [], node: new_tree}]
   def diff(_old_tree, nil), do: [%{op: "replace_node", path: [], node: @empty_container}]
@@ -153,17 +163,17 @@ defmodule Plushie.Tree.Diff do
   end
 
   defp duplicate_ids(ids) do
-    {_seen, dupes} =
-      Enum.reduce(ids, {MapSet.new(), []}, fn id, {seen, dupes} ->
+    {_seen, _dupe_set, dupes} =
+      Enum.reduce(ids, {MapSet.new(), MapSet.new(), []}, fn id, {seen, dupe_set, dupes} ->
         cond do
-          MapSet.member?(seen, id) and id not in dupes ->
-            {seen, [id | dupes]}
+          MapSet.member?(seen, id) and not MapSet.member?(dupe_set, id) ->
+            {seen, MapSet.put(dupe_set, id), [id | dupes]}
 
           MapSet.member?(seen, id) ->
-            {seen, dupes}
+            {seen, dupe_set, dupes}
 
           true ->
-            {MapSet.put(seen, id), dupes}
+            {MapSet.put(seen, id), dupe_set, dupes}
         end
       end)
 
@@ -172,12 +182,14 @@ defmodule Plushie.Tree.Diff do
 
   # Fast path: old and new have identical ID lists. Diff props per child.
   defp diff_children_same_order(old_children, new_children, path) do
-    old_children
-    |> Enum.zip(new_children)
-    |> Enum.with_index()
-    |> Enum.flat_map(fn {{old_child, new_child}, idx} ->
-      diff_node(old_child, new_child, path ++ [idx])
-    end)
+    {_idx, chunks} =
+      Enum.zip_reduce(old_children, new_children, {0, []}, fn old_child, new_child, {idx, acc} ->
+        {idx + 1, [diff_node(old_child, new_child, path ++ [idx]) | acc]}
+      end)
+
+    chunks
+    |> Enum.reverse()
+    |> List.flatten()
   end
 
   # Medium path: common IDs maintain relative order. Pure inserts and
@@ -194,22 +206,27 @@ defmodule Plushie.Tree.Diff do
       |> Enum.reverse()
       |> Enum.map(fn idx -> %{op: "remove_child", path: path, index: idx} end)
 
+    removed_tuple = List.to_tuple(removed_indices)
+
     # Walk new children for updates and inserts
-    {update_ops, insert_ops} =
+    {update_chunks, insert_ops} =
       new_children
       |> Enum.with_index()
       |> Enum.reduce({[], []}, fn {child, idx}, {updates, inserts} ->
         case Map.fetch(old_by_id, child.id) do
           {:ok, {old_child, old_idx}} ->
-            child_path = path ++ [index_after_removals(old_idx, removed_indices)]
+            child_path = path ++ [index_after_removals(old_idx, removed_tuple)]
             ops = diff_node(old_child, child, child_path)
-            {updates ++ ops, inserts}
+            {[ops | updates], inserts}
 
           :error ->
             insert = %{op: "insert_child", path: path, index: idx, node: child}
-            {updates, inserts ++ [insert]}
+            {updates, [insert | inserts]}
         end
       end)
+
+    update_ops = update_chunks |> Enum.reverse() |> List.flatten()
+    insert_ops = Enum.reverse(insert_ops)
 
     remove_ops ++ update_ops ++ insert_ops
   end
@@ -235,6 +252,7 @@ defmodule Plushie.Tree.Diff do
     # Find LIS positions (indices into common_new that form the LIS)
     lis_positions = longest_increasing_subsequence(old_indices_of_common)
     lis_set = MapSet.new(lis_positions)
+    common_new_set = MapSet.new(common_new)
 
     # IDs that stay in place (in the LIS)
     lis_ids =
@@ -245,10 +263,7 @@ defmodule Plushie.Tree.Diff do
       |> MapSet.new()
 
     # IDs that need to move: common but not in LIS
-    moved_ids =
-      common_new
-      |> MapSet.new()
-      |> MapSet.difference(lis_ids)
+    moved_ids = MapSet.difference(common_new_set, lis_ids)
 
     # All indices to remove: old-only IDs + moved IDs (removed from old position)
     all_remove_ids = MapSet.union(old_only, moved_ids)
@@ -263,6 +278,8 @@ defmodule Plushie.Tree.Diff do
       |> Enum.reverse()
       |> Enum.map(fn idx -> %{op: "remove_child", path: path, index: idx} end)
 
+    removed_tuple = List.to_tuple(removed_indices)
+
     # Build new child lookup for O(1) access
     new_child_by_id = Map.new(new_children, fn c -> {c.id, c} end)
 
@@ -272,7 +289,7 @@ defmodule Plushie.Tree.Diff do
       |> Enum.flat_map(fn id ->
         {old_child, old_idx} = Map.fetch!(old_by_id, id)
         new_child = Map.fetch!(new_child_by_id, id)
-        child_path = path ++ [index_after_removals(old_idx, removed_indices)]
+        child_path = path ++ [index_after_removals(old_idx, removed_tuple)]
         diff_node(old_child, new_child, child_path)
       end)
 
@@ -295,10 +312,9 @@ defmodule Plushie.Tree.Diff do
 
   # Returns the adjusted index of an element after removals, using binary
   # search on a sorted tuple of removed indices. O(log r) per call.
-  @spec index_after_removals(non_neg_integer(), [non_neg_integer()]) :: non_neg_integer()
-  defp index_after_removals(old_idx, sorted_removed) do
-    tup = List.to_tuple(sorted_removed)
-    old_idx - bsearch_count_lt(tup, old_idx, 0, tuple_size(tup))
+  @spec index_after_removals(non_neg_integer(), tuple()) :: non_neg_integer()
+  defp index_after_removals(old_idx, removed_tuple) do
+    old_idx - bsearch_count_lt(removed_tuple, old_idx, 0, tuple_size(removed_tuple))
   end
 
   # Binary search: count elements in a sorted tuple that are strictly less

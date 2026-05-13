@@ -20,12 +20,17 @@ defmodule Plushie.Tree do
   silently repaired.
   """
 
-  @type tree_node :: %{
-          required(:id) => String.t(),
-          required(:type) => String.t(),
-          required(:props) => %{atom() => term()},
-          required(:children) => [tree_node()]
-        }
+  @type prop_key :: atom() | String.t()
+  @type tree_props :: %{optional(prop_key()) => term()}
+  @type tree_node ::
+          %{
+            required(:id) => String.t(),
+            required(:type) => String.t(),
+            required(:props) => tree_props(),
+            required(:children) => [tree_node()],
+            optional(String.t()) => term()
+          }
+          | %{required(String.t()) => term()}
 
   @typep normalize_ctx :: Plushie.Tree.NormalizeCtx.t()
 
@@ -145,8 +150,7 @@ defmodule Plushie.Tree do
   #     widgets that carry no accessible name.
   @spec post_normalize(tree_node()) :: tree_node()
   defp post_normalize(tree) do
-    declared = collect_ids(tree)
-    radio_groups = collect_radio_groups(tree)
+    {declared, radio_groups} = collect_post_normalize_info(tree)
     rewritten = rewrite_a11y(tree, "", declared, radio_groups)
     check_missing_accessible_name(rewritten)
     rewritten
@@ -255,7 +259,7 @@ defmodule Plushie.Tree do
 
         delta_handlers = Map.drop(ctx.widget_handlers, Map.keys(pre_handlers))
         delta_events = Map.drop(ctx.widget_events, Map.keys(pre_events))
-        delta_windows = ctx.window_ids -- pre_windows
+        delta_windows = list_difference(ctx.window_ids, pre_windows)
 
         ctx = %{
           ctx
@@ -555,51 +559,49 @@ defmodule Plushie.Tree do
   # Runs after the first normalize pass has produced a fully scoped tree.
   # Validates and extends a11y metadata without altering widget IDs.
 
-  # Collect every declared scoped ID in the finalized tree. Auto-IDs
-  # (children that didn't get an explicit ID) are excluded since they
+  # Collect every declared scoped ID and radio-group membership in the
+  # finalized tree. Auto-IDs are excluded from declared IDs since they
   # can't be the target of a cross-widget reference.
-  @spec collect_ids(tree_node()) :: MapSet.t()
-  defp collect_ids(node) do
-    walk_collect_ids(node, MapSet.new())
+  @spec collect_post_normalize_info(tree_node()) ::
+          {MapSet.t(), %{{String.t(), String.t()} => [String.t()]}}
+  defp collect_post_normalize_info(node) do
+    {declared, radio_groups} = walk_post_normalize_info(node, "", MapSet.new(), %{})
+
+    radio_groups =
+      Map.new(radio_groups, fn {key, ids} ->
+        {key, Enum.reverse(ids)}
+      end)
+
+    {declared, radio_groups}
   end
 
-  defp walk_collect_ids(%{id: id, children: children}, acc) do
-    acc =
-      if is_binary(id) and id != "" and not auto_id?(id) do
-        MapSet.put(acc, id)
-      else
-        acc
-      end
-
-    Enum.reduce(children, acc, fn child, inner -> walk_collect_ids(child, inner) end)
-  end
-
-  # Collect radio groups keyed by {scope, group_name} within the
-  # finalized tree. Used to populate implicit a11y.radio_group lists.
-  @spec collect_radio_groups(tree_node()) :: %{{String.t(), String.t()} => [String.t()]}
-  defp collect_radio_groups(root) do
-    walk_collect_radio_groups(root, "", %{})
-  end
-
-  defp walk_collect_radio_groups(
+  defp walk_post_normalize_info(
          %{type: type, id: id, props: props, children: children},
          scope,
-         acc
+         declared,
+         radio_groups
        ) do
-    acc =
+    declared =
+      if is_binary(id) and id != "" and not auto_id?(id) do
+        MapSet.put(declared, id)
+      else
+        declared
+      end
+
+    radio_groups =
       if type == "radio" do
         case fetch_group_prop(props) do
-          nil -> acc
-          group -> Map.update(acc, {scope, group}, [id], fn ids -> ids ++ [id] end)
+          nil -> radio_groups
+          group -> Map.update(radio_groups, {scope, group}, [id], &[id | &1])
         end
       else
-        acc
+        radio_groups
       end
 
     child_scope = child_scope_of(id, type, scope)
 
-    Enum.reduce(children, acc, fn child, inner ->
-      walk_collect_radio_groups(child, child_scope, inner)
+    Enum.reduce(children, {declared, radio_groups}, fn child, {inner_declared, inner_groups} ->
+      walk_post_normalize_info(child, child_scope, inner_declared, inner_groups)
     end)
   end
 
@@ -669,7 +671,11 @@ defmodule Plushie.Tree do
         tooltip_parent_id
       )
 
-    %{node | props: props, children: children}
+    if props == node.props and children == node.children do
+      node
+    else
+      %{node | props: props, children: children}
+    end
   end
 
   defp apply_a11y_rewrites(
@@ -1300,11 +1306,12 @@ defmodule Plushie.Tree do
   end
 
   defp check_duplicate_ids(children) do
-    ids = Enum.map(children, & &1.id)
+    dupes =
+      children
+      |> Enum.map(& &1.id)
+      |> duplicate_ids()
 
-    if length(ids) != length(Enum.uniq(ids)) do
-      dupes = Enum.uniq(ids -- Enum.uniq(ids))
-
+    if dupes != [] do
       message = "duplicate sibling IDs detected during normalize: #{inspect(dupes)}"
 
       message =
@@ -1318,6 +1325,24 @@ defmodule Plushie.Tree do
 
       raise ArgumentError, message
     end
+  end
+
+  defp duplicate_ids(ids) do
+    {_seen, _dupe_set, dupes} =
+      Enum.reduce(ids, {MapSet.new(), MapSet.new(), []}, fn id, {seen, dupe_set, dupes} ->
+        cond do
+          MapSet.member?(seen, id) and not MapSet.member?(dupe_set, id) ->
+            {seen, MapSet.put(dupe_set, id), [id | dupes]}
+
+          MapSet.member?(seen, id) ->
+            {seen, dupe_set, dupes}
+
+          true ->
+            {MapSet.put(seen, id), dupe_set, dupes}
+        end
+      end)
+
+    Enum.reverse(dupes)
   end
 
   # Scans normalized children for radio widgets sharing a group prop and
@@ -1492,7 +1517,7 @@ defmodule Plushie.Tree do
 
       delta_handlers = Map.drop(ctx.widget_handlers, Map.keys(pre_handlers))
       delta_events = Map.drop(ctx.widget_events, Map.keys(pre_events))
-      delta_windows = ctx.window_ids -- pre_windows
+      delta_windows = list_difference(ctx.window_ids, pre_windows)
 
       %{
         ctx
@@ -1510,6 +1535,11 @@ defmodule Plushie.Tree do
 
   defp widget_view_cache_key(module, scoped_id, props, state) do
     {module, scoped_id, module.__cache_key__(props, state), state}
+  end
+
+  defp list_difference(items, removed) do
+    removed = MapSet.new(removed)
+    Enum.reject(items, &MapSet.member?(removed, &1))
   end
 
   # Evaluate the memo body function and normalize the result. If the body
