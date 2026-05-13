@@ -244,6 +244,40 @@ diagnostic volume becomes a measured test-infra problem.
 **Revisit when:** The collector is used for a high-volume telemetry
 stream rather than sparse diagnostics from error and validation paths.
 
+## Port transport handles framing, not bridge JSON state
+
+`Plushie.Transport.Port` returns transport data and closure events. The
+bridge owns JSON buffering and the `discard_next_eol` flag because that
+state is shared across port, stdio, and iostream delivery paths.
+
+**Rules out:** Adding bridge JSON-buffer fields to the port transport
+state or treating port closure handlers as responsible for resetting
+bridge-owned buffering flags.
+
+**Still in scope:** Resetting bridge buffer state in bridge restart and
+shutdown paths. Fixing any port handler that leaves its own transport
+state inconsistent.
+
+**Revisit when:** JSON line buffering moves from the bridge into the
+transport behaviour.
+
+## Socket adapter active mode matches the transport shape
+
+`Plushie.SocketAdapter` uses active sockets so it can translate TCP or
+Unix socket messages into the same iostream protocol that the bridge
+already consumes. The renderer normally sends data in response to host
+requests, and the adapter enforces frame size caps before forwarding.
+
+**Rules out:** Replacing active sockets with a demand-driven receive
+loop solely for speculative mailbox backpressure concerns.
+
+**Still in scope:** Moving to active-once or explicit receive if real
+usage shows adapter mailbox growth, or if the socket adapter starts
+handling unsolicited high-volume streams.
+
+**Revisit when:** Socket transports become a primary production path
+with measured mailbox pressure.
+
 ## GenServer late replies are safe
 
 `GenServer.reply/2` may be called after the original caller exits or

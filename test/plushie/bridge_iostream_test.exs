@@ -266,7 +266,8 @@ defmodule Plushie.BridgeIostreamTest do
           Plushie.Bridge.start_link(
             transport: {:iostream, self()},
             format: :msgpack,
-            runtime: self()
+            runtime: self(),
+            session_id: "pool_1"
           )
 
         assert_receive {:iostream_bridge, ^bridge}
@@ -286,6 +287,7 @@ defmodule Plushie.BridgeIostreamTest do
 
           assert_receive {:renderer_event,
                           %Plushie.Event.DiagnosticMessage{
+                            session: "pool_1",
                             level: :error,
                             diagnostic: %Plushie.Event.Diagnostic.BufferOverflow{
                               size: ^expected_size,
@@ -569,6 +571,19 @@ defmodule Plushie.BridgeIostreamTest do
       # Wait past the original window but before the reset window.
       Process.sleep(1_700)
       assert Process.alive?(bridge)
+
+      GenServer.stop(bridge)
+    end
+
+    test "resync completion cancels an armed heartbeat timer" do
+      bridge = start_bridge_with_heartbeat(50)
+      send_hello(bridge)
+
+      Plushie.Bridge.send_resync_complete(bridge)
+      Process.sleep(120)
+
+      assert Process.alive?(bridge)
+      refute_receive {:renderer_exit, :heartbeat_timeout}
 
       GenServer.stop(bridge)
     end

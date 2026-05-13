@@ -541,7 +541,11 @@ defmodule Plushie.Bridge do
 
   @impl GenServer
   def handle_cast(:resync_complete, state) do
-    {:noreply, flush_queued_messages(%{state | awaiting_resync: false, restart_count: 0})}
+    state = cancel_heartbeat_timer(state)
+    state = %{state | awaiting_resync: false, restart_count: 0}
+    state = flush_queued_messages(state)
+
+    {:noreply, state}
   end
 
   # Intentional restart (e.g. after Rust rebuild in dev mode).
@@ -623,13 +627,16 @@ defmodule Plushie.Bridge do
   end
 
   @impl GenServer
-  def handle_info(:heartbeat_timeout, %{awaiting_resync: true} = state) do
+  def handle_info(
+        {:heartbeat_timeout, ref},
+        %{awaiting_resync: true, heartbeat_timer: {ref, _timer}} = state
+      ) do
     # Renderer is already restarting; ignore stale timer.
-    {:noreply, state}
+    {:noreply, %{state | heartbeat_timer: nil}}
   end
 
   @impl GenServer
-  def handle_info(:heartbeat_timeout, state) do
+  def handle_info({:heartbeat_timeout, ref}, %{heartbeat_timer: {ref, _timer}} = state) do
     Logger.warning(
       "plushie bridge: renderer unresponsive " <>
         "(no message in #{state.heartbeat_interval}ms), triggering restart"
@@ -637,6 +644,16 @@ defmodule Plushie.Bridge do
 
     state = %{state | heartbeat_timer: nil}
     handle_transport_closed(state, :heartbeat_timeout)
+  end
+
+  @impl GenServer
+  def handle_info({:heartbeat_timeout, _stale_ref}, state) do
+    {:noreply, state}
+  end
+
+  @impl GenServer
+  def handle_info(:heartbeat_timeout, state) do
+    {:noreply, state}
   end
 
   # Delegate all other messages to the transport module.
@@ -658,13 +675,10 @@ defmodule Plushie.Bridge do
   end
 
   @impl GenServer
-  def terminate(_reason, %{heartbeat_timer: ref} = state) when is_reference(ref) do
-    Process.cancel_timer(ref)
+  def terminate(_reason, state) do
+    state = cancel_heartbeat_timer(state)
     state.transport_mod.close(state.transport_state)
   end
-
-  @impl GenServer
-  def terminate(_reason, state), do: state.transport_mod.close(state.transport_state)
 
   # ---------------------------------------------------------------------------
   # Private helpers
@@ -691,9 +705,11 @@ defmodule Plushie.Bridge do
   end
 
   defp encode_and_send_result(state, kind, encode_fn) do
-    # Multiplexed mode: encode with the default empty session first,
-    # then decode, inject session_id, and re-encode. This is only used
-    # by the test pool adapter where the overhead is negligible.
+    # Multiplexed test-pool mode: host-to-renderer messages use string
+    # keys and plain wire scalar/container values. Encode with the
+    # default empty session first, decode, inject session_id, and
+    # re-encode. This is only used by the test pool adapter where the
+    # overhead is negligible.
     data = encode_fn.(state.format)
 
     binary = IO.iodata_to_binary(data)
@@ -751,7 +767,7 @@ defmodule Plushie.Bridge do
       state.runtime,
       {:renderer_event,
        %Plushie.Event.DiagnosticMessage{
-         session: "",
+         session: state.session_id,
          level: :error,
          diagnostic: diag
        }}
@@ -1054,14 +1070,20 @@ defmodule Plushie.Bridge do
 
   defp reset_heartbeat_timer(state) do
     state = cancel_heartbeat_timer(state)
-    ref = Process.send_after(self(), :heartbeat_timeout, state.heartbeat_interval)
-    %{state | heartbeat_timer: ref}
+    ref = make_ref()
+    timer = Process.send_after(self(), {:heartbeat_timeout, ref}, state.heartbeat_interval)
+    %{state | heartbeat_timer: {ref, timer}}
   end
 
   defp cancel_heartbeat_timer(%{heartbeat_timer: nil} = state), do: state
 
-  defp cancel_heartbeat_timer(%{heartbeat_timer: ref} = state) do
-    Process.cancel_timer(ref)
+  defp cancel_heartbeat_timer(%{heartbeat_timer: {_ref, timer}} = state) do
+    Process.cancel_timer(timer)
+    %{state | heartbeat_timer: nil}
+  end
+
+  defp cancel_heartbeat_timer(%{heartbeat_timer: timer} = state) when is_reference(timer) do
+    Process.cancel_timer(timer)
     %{state | heartbeat_timer: nil}
   end
 end

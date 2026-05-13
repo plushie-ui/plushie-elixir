@@ -39,7 +39,8 @@ defmodule Plushie.Transport do
   Returns:
   - `{:data, binary, state}` when the message contains renderer data
   - `{:closed, reason, state}` when the transport has closed
-  - `:ignore` when the message is not relevant to this transport
+  - `:ignore` when the message is not relevant to this transport.
+    The bridge logs ignored messages at debug level.
   """
   @callback handle_info(message :: term(), state :: t()) ::
               {:data, binary(), t()} | {:closed, term(), t()} | :ignore

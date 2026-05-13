@@ -137,6 +137,12 @@ defmodule Plushie.Transport.Framing do
   """
   @spec decode_lines(buffer :: binary()) :: {[binary()], binary()}
   def decode_lines(buffer) do
+    if byte_size(buffer) > @max_message_size do
+      raise Plushie.Transport.BufferOverflowError,
+        size: byte_size(buffer),
+        limit: @max_message_size
+    end
+
     {lines, remaining} =
       case :binary.split(buffer, "\n", [:global]) do
         [^buffer] ->

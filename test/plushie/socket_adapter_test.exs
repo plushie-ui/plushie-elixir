@@ -116,6 +116,44 @@ defmodule Plushie.SocketAdapterTest do
       assert {:error, _} = SocketAdapter.start_link("/tmp/nonexistent.sock", :msgpack)
     end
 
+    test "returns a descriptive error for invalid TCP ports" do
+      Process.flag(:trap_exit, true)
+
+      assert {:error, {:connect_failed, {:invalid_tcp_port, "abc"}}} =
+               SocketAdapter.start_link("127.0.0.1:abc", :msgpack)
+    end
+
+    @tag capture_log: true
+    test "reports unexpected messages" do
+      {listener, path} = create_listener()
+
+      {:ok, adapter} = SocketAdapter.start_link(path, :msgpack)
+      {:ok, renderer_socket} = :gen_tcp.accept(listener, 5_000)
+      :gen_tcp.close(listener)
+
+      handler_id = "socket-adapter-unhandled-#{inspect(self())}"
+
+      :telemetry.attach(
+        handler_id,
+        [:plushie, :socket_adapter, :unhandled_message],
+        fn _event, _measurements, metadata, pid ->
+          send(pid, {:socket_adapter_unhandled, metadata.message})
+        end,
+        self()
+      )
+
+      try do
+        send(adapter, :unexpected)
+
+        assert_receive {:socket_adapter_unhandled, :unexpected}
+
+        :gen_tcp.close(renderer_socket)
+        cleanup(path)
+      after
+        :telemetry.detach(handler_id)
+      end
+    end
+
     test "surfaces the typed BufferOverflowError when a json line exceeds the cap" do
       Process.flag(:trap_exit, true)
       {listener, path} = create_listener(:json)

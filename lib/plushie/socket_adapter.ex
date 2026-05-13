@@ -18,6 +18,8 @@ defmodule Plushie.SocketAdapter do
 
   alias Plushie.Transport.Framing
 
+  require Logger
+
   @doc """
   Connects to the renderer's socket and returns the adapter pid.
 
@@ -49,27 +51,44 @@ defmodule Plushie.SocketAdapter do
 
   defp connect(addr, opts) do
     case parse_addr(addr) do
-      {:unix, path} ->
+      {:ok, {:unix, path}} ->
         :gen_tcp.connect({:local, String.to_charlist(path)}, 0, opts)
 
-      {:tcp, host, port} ->
+      {:ok, {:tcp, host, port}} ->
         :gen_tcp.connect(String.to_charlist(host), port, opts)
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
   defp parse_addr(":" <> port_str) do
-    {:tcp, "127.0.0.1", String.to_integer(port_str)}
+    with {:ok, port} <- parse_port(port_str) do
+      {:ok, {:tcp, "127.0.0.1", port}}
+    end
   end
 
-  defp parse_addr("/" <> _ = path), do: {:unix, path}
+  defp parse_addr("/" <> _ = path), do: {:ok, {:unix, path}}
 
   defp parse_addr(addr) do
     case String.split(addr, ":", parts: 2) do
       [host, port_str] when host != "" ->
-        {:tcp, host, String.to_integer(port_str)}
+        with {:ok, port} <- parse_port(port_str) do
+          {:ok, {:tcp, host, port}}
+        end
 
       _ ->
-        {:unix, addr}
+        {:ok, {:unix, addr}}
+    end
+  end
+
+  defp parse_port(port_str) do
+    case Integer.parse(port_str) do
+      {port, ""} when port in 1..65_535 ->
+        {:ok, port}
+
+      _ ->
+        {:error, {:invalid_tcp_port, port_str}}
     end
   end
 
@@ -102,15 +121,14 @@ defmodule Plushie.SocketAdapter do
     cap = Framing.max_message_size()
 
     if new_size > cap do
-      # Detect overflow before concatenating to avoid O(n²) binary
-      # copies when an unterminated line grows past the cap in small
-      # chunks.  Raise immediately without materializing the buffer.
+      # The iolist byte count is exact, so the adapter can enforce the
+      # cap before materializing an oversized unterminated line.
       err = Plushie.Transport.BufferOverflowError.exception(size: new_size, limit: cap)
       if state.bridge, do: send(state.bridge, {:iostream_closed, {:buffer_overflow, err}})
       {:stop, {:buffer_overflow, err}, %{state | buffer: [], buffer_size: 0}}
     else
-      # Append chunk to iolist (O(1) per chunk).  Only materialize
-      # the binary when we know there are complete lines to decode.
+      # Append chunk to iolist. Only materialize the binary when there
+      # are complete lines to decode.
       chunks = [state.buffer, data]
 
       if :binary.match(data, "\n") == :nomatch do
@@ -147,5 +165,12 @@ defmodule Plushie.SocketAdapter do
     {:stop, {:tcp_error, reason}, state}
   end
 
-  def handle_info(_msg, state), do: {:noreply, state}
+  def handle_info(msg, state) do
+    :telemetry.execute([:plushie, :socket_adapter, :unhandled_message], %{count: 1}, %{
+      message: msg
+    })
+
+    Logger.warning("plushie socket adapter: unhandled message: #{inspect(msg)}")
+    {:noreply, state}
+  end
 end

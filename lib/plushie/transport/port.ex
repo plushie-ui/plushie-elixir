@@ -46,17 +46,21 @@ defmodule Plushie.Transport.Port do
   def send_data(%{port: nil}, _data), do: {:error, :port_closed}
 
   def send_data(%{port: port} = state, data) when is_port(port) do
-    Port.command(port, data)
+    byte_size = IO.iodata_length(data)
 
-    :telemetry.execute([:plushie, :bridge, :send], %{byte_size: IO.iodata_length(data)}, %{
-      bridge: self()
-    })
+    try do
+      Port.command(port, data)
 
-    {:ok, state}
-  rescue
-    ArgumentError ->
-      Logger.warning("plushie bridge: port closed during send")
-      {:error, :port_closed}
+      :telemetry.execute([:plushie, :bridge, :send], %{byte_size: byte_size}, %{
+        bridge: self()
+      })
+
+      {:ok, state}
+    rescue
+      ArgumentError ->
+        Logger.warning("plushie bridge: port closed during send")
+        {:error, :port_closed}
+    end
   end
 
   @impl Plushie.Transport
@@ -70,8 +74,7 @@ defmodule Plushie.Transport.Port do
   def close(_state), do: :ok
 
   @impl Plushie.Transport
-  def handle_info({port, {:data, binary}}, %{port: port, format: :msgpack} = state)
-      when is_binary(binary) do
+  def handle_info({port, {:data, binary}}, %{port: port, format: :msgpack} = state) do
     {:data, binary, state}
   end
 

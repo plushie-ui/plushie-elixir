@@ -35,17 +35,21 @@ defmodule Plushie.Transport.IOStream do
 
   @impl Plushie.Transport
   def send_data(%{io_pid: io_pid} = state, data) do
-    send(io_pid, {:iostream_send, data})
+    byte_size = IO.iodata_length(data)
 
-    :telemetry.execute([:plushie, :bridge, :send], %{byte_size: IO.iodata_length(data)}, %{
-      bridge: self()
-    })
+    try do
+      send(io_pid, {:iostream_send, data})
 
-    {:ok, state}
-  rescue
-    ArgumentError ->
-      Logger.warning("plushie bridge: iostream process unreachable during send")
-      {:error, :unreachable}
+      :telemetry.execute([:plushie, :bridge, :send], %{byte_size: byte_size}, %{
+        bridge: self()
+      })
+
+      {:ok, state}
+    rescue
+      ArgumentError ->
+        Logger.warning("plushie bridge: iostream process unreachable during send")
+        {:error, :unreachable}
+    end
   end
 
   @impl Plushie.Transport
