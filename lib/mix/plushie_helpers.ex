@@ -112,6 +112,9 @@ defmodule Mix.PlushieHelpers do
     args = Enum.uniq(args ++ ["--return-errors"])
 
     case Mix.Task.run("compile", args) do
+      :noop ->
+        :ok
+
       {:error, _diagnostics} ->
         Mix.raise("Compilation failed")
 
