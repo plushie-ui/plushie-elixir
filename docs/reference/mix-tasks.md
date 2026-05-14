@@ -8,6 +8,7 @@ and debugging Plushie applications and renderer binaries.
 | [`plushie.gui`](#plushiegui) | Run a Plushie app |
 | [`plushie.build`](#plushiebuild) | Build the renderer binary from source |
 | [`plushie.download`](#plushiedownload) | Download a precompiled renderer binary |
+| [`plushie.package`](#plushiepackage) | Build a standalone package payload |
 | [`plushie.inspect`](#plushieinspect) | Print the UI tree as JSON |
 | [`plushie.connect`](#plushieconnect) | Connect to a remote renderer |
 | [`plushie.script`](#plushiescript) | Run automation scripts headlessly |
@@ -307,6 +308,49 @@ Use `mix plushie.build` instead.
 Pure Elixir widgets (those with `view/2` or `view/3` callbacks but no
 `native_crate/0`) work fine with precompiled binaries. They compose
 existing renderer widgets and do not require a custom build.
+
+## plushie.package
+
+Builds an Elixir release payload and `plushie-package.toml` manifest
+for the shared Rust launcher.
+
+```bash
+MIX_ENV=prod mix plushie.package MyApp --app-id dev.example.my_app
+cargo plushie package --manifest dist/plushie-package.toml --release
+```
+
+This task owns the Elixir-specific part of standalone packaging:
+
+- Builds the Mix release.
+- Copies the release into `dist/payload/`.
+- Places the selected renderer in the payload.
+- Writes `bin/connect`, which starts the release and calls
+  `Plushie.Connect.run/2`.
+- Archives the payload as `dist/payload.tar.zst`.
+- Writes `dist/plushie-package.toml` for `cargo plushie package`.
+
+The shared Rust package command remains language-agnostic. It consumes
+the manifest and embedded payload archive produced here.
+
+### Flags
+
+| Flag | Description |
+|---|---|
+| `--app-id ID` | Package app identifier. Required |
+| `--release NAME` | Mix release name. Defaults to the current Mix app |
+| `--output DIR` | Output directory. Defaults to `dist` |
+| `--renderer auto|stock|custom` | Renderer selection. Defaults to `auto` |
+| `--renderer-bin PATH` | Use an existing renderer binary |
+| `--load MODULE` | Load a module before native widget discovery |
+
+`--renderer auto` uses a stock renderer when no native widgets are
+discovered and builds a custom renderer when native widgets are present.
+Requesting `--renderer stock` for an app with native widgets fails
+fast, because a stock renderer cannot include those widget crates.
+
+Use `--load MODULE` when a native widget module is not otherwise loaded
+before protocol consolidation. The package task loads these modules
+before native widget discovery.
 
 ## plushie.inspect
 
