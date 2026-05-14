@@ -27,6 +27,7 @@ defmodule Mix.PlushiePackageTest do
   test "writes package manifest with SDK and protocol metadata" do
     manifest = %{
       app_id: "dev.plushie.test",
+      app_name: "Test App",
       app_version: "0.1.0",
       target: "linux-x86_64",
       host_sdk_version: "0.7.2",
@@ -50,6 +51,7 @@ defmodule Mix.PlushiePackageTest do
     toml = Mix.PlushiePackage.manifest_toml(manifest)
 
     assert toml =~ ~s(host_sdk = "elixir")
+    assert toml =~ ~s(app_name = "Test App")
     assert toml =~ ~s(host_sdk_version = "0.7.2")
     assert toml =~ ~s(plushie_rust_version = "0.7.0")
     assert toml =~ ~s(protocol_version = 1)

@@ -316,6 +316,7 @@ for the shared Rust launcher.
 
 ```bash
 MIX_ENV=prod mix plushie.package MyApp --app-id dev.example.my_app
+MIX_ENV=prod mix plushie.package MyApp --app-id dev.example.my_app --app-name "My App"
 MIX_ENV=prod mix plushie.package MyApp --app-id dev.example.my_app --icon priv/app-icon.png
 cargo plushie package --manifest dist/plushie-package.toml --release
 ```
@@ -339,6 +340,7 @@ the manifest and embedded payload archive produced here.
 | Flag | Description |
 |---|---|
 | `--app-id ID` | Package app identifier. Required |
+| `--app-name NAME` | Display app name |
 | `--release NAME` | Mix release name. Defaults to the current Mix app |
 | `--output DIR` | Output directory. Defaults to `dist` |
 | `--renderer auto|stock|custom` | Renderer selection. Defaults to `auto` |

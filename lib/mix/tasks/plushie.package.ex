@@ -10,12 +10,14 @@ defmodule Mix.Tasks.Plushie.Package do
   ## Usage
 
       MIX_ENV=prod mix plushie.package MyApp --app-id dev.example.my_app
+      MIX_ENV=prod mix plushie.package MyApp --app-id dev.example.my_app --app-name "My App"
       MIX_ENV=prod mix plushie.package MyApp --app-id dev.example.my_app --renderer custom
       MIX_ENV=prod mix plushie.package MyApp --app-id dev.example.my_app --icon priv/app-icon.png
 
   ## Options
 
   - `--app-id ID`: Package app identifier. Required.
+  - `--app-name NAME`: Display app name.
   - `--release NAME`: Mix release name. Defaults to the current Mix app.
   - `--output DIR`: Output directory. Defaults to `dist`.
   - `--renderer stock|custom|auto`: Renderer selection. Defaults to `auto`.
@@ -28,6 +30,7 @@ defmodule Mix.Tasks.Plushie.Package do
 
   @switches [
     app_id: :string,
+    app_name: :string,
     release: :string,
     output: :string,
     renderer: :string,
@@ -100,6 +103,7 @@ defmodule Mix.Tasks.Plushie.Package do
 
     manifest = %{
       app_id: app_id,
+      app_name: opts[:app_name],
       app_version: Mix.Project.config()[:version],
       target: Mix.PlushiePackage.package_target(),
       host_sdk_version: Plushie.version(),

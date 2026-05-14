@@ -14,6 +14,7 @@ defmodule Mix.PlushiePackage do
 
   @type manifest :: %{
           app_id: String.t(),
+          app_name: String.t() | nil,
           app_version: String.t(),
           target: String.t(),
           host_sdk_version: String.t(),
@@ -187,7 +188,7 @@ defmodule Mix.PlushiePackage do
     """
     schema_version = 1
     app_id = #{toml_string(manifest.app_id)}
-    app_version = #{toml_string(manifest.app_version)}
+    #{app_name_toml(manifest.app_name)}app_version = #{toml_string(manifest.app_version)}
     target = #{toml_string(manifest.target)}
     host_sdk = "elixir"
     host_sdk_version = #{toml_string(manifest.host_sdk_version)}
@@ -211,6 +212,9 @@ defmodule Mix.PlushiePackage do
     size = #{manifest.payload_size}
     """
   end
+
+  defp app_name_toml(nil), do: ""
+  defp app_name_toml(app_name), do: "app_name = #{toml_string(app_name)}\n"
 
   defp validate_payload_archive_inputs!(payload_dir) do
     payload_dir
