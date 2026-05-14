@@ -316,6 +316,7 @@ for the shared Rust launcher.
 
 ```bash
 MIX_ENV=prod mix plushie.package MyApp --app-id dev.example.my_app
+MIX_ENV=prod mix plushie.package MyApp --app-id dev.example.my_app --icon priv/app-icon.png
 cargo plushie package --manifest dist/plushie-package.toml --release
 ```
 
@@ -324,6 +325,7 @@ This task owns the Elixir-specific part of standalone packaging:
 - Builds the Mix release.
 - Copies the release into `dist/payload/`.
 - Places the selected renderer in the payload.
+- Places package icon assets in the payload.
 - Writes `bin/connect`, which starts the release and calls
   `Plushie.Connect.run/2`.
 - Archives the payload as `dist/payload.tar.zst`.
@@ -341,6 +343,7 @@ the manifest and embedded payload archive produced here.
 | `--output DIR` | Output directory. Defaults to `dist` |
 | `--renderer auto|stock|custom` | Renderer selection. Defaults to `auto` |
 | `--renderer-bin PATH` | Use an existing renderer binary |
+| `--icon PATH` | Use an app icon instead of the default Plushie icon |
 | `--load MODULE` | Load a module before native widget discovery |
 
 `--renderer auto` uses a stock renderer when no native widgets are
@@ -351,6 +354,13 @@ fast, because a stock renderer cannot include those widget crates.
 Use `--load MODULE` when a native widget module is not otherwise loaded
 before protocol consolidation. The package task loads these modules
 before native widget discovery.
+
+When `--icon` is omitted, the task asks cargo-plushie to materialize
+the default Plushie icon set under `dist/payload/assets/` and writes
+`[platform].icon` in `dist/plushie-package.toml` as
+`assets/plushie-checkbox-512x512.png`. When `--icon` is present, that
+file is copied into the same payload assets directory and the manifest
+points at the copied payload-relative path.
 
 ## plushie.inspect
 

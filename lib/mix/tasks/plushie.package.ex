@@ -11,6 +11,7 @@ defmodule Mix.Tasks.Plushie.Package do
 
       MIX_ENV=prod mix plushie.package MyApp --app-id dev.example.my_app
       MIX_ENV=prod mix plushie.package MyApp --app-id dev.example.my_app --renderer custom
+      MIX_ENV=prod mix plushie.package MyApp --app-id dev.example.my_app --icon priv/app-icon.png
 
   ## Options
 
@@ -19,6 +20,7 @@ defmodule Mix.Tasks.Plushie.Package do
   - `--output DIR`: Output directory. Defaults to `dist`.
   - `--renderer stock|custom|auto`: Renderer selection. Defaults to `auto`.
   - `--renderer-bin PATH`: Use an existing renderer binary.
+  - `--icon PATH`: Use an app icon instead of the default Plushie icon.
   - `--load MODULE`: Ensure a module is loaded before native widget discovery.
   """
 
@@ -30,6 +32,7 @@ defmodule Mix.Tasks.Plushie.Package do
     output: :string,
     renderer: :string,
     renderer_bin: :string,
+    icon: :string,
     load: :string
   ]
 
@@ -89,6 +92,8 @@ defmodule Mix.Tasks.Plushie.Package do
       app_module
     )
 
+    platform_icon = prepare_package_icon!(opts, payload_dir)
+
     Mix.shell().info("Writing archive...")
     archive_path = Path.join(output_dir, "payload.tar.zst")
     Mix.PlushiePackage.archive_payload!(payload_dir, archive_path)
@@ -101,6 +106,7 @@ defmodule Mix.Tasks.Plushie.Package do
       plushie_rust_version: plushie_rust_version(),
       protocol_version: Plushie.Protocol.protocol_version(),
       renderer: renderer,
+      platform: %{icon: platform_icon},
       host_command: ["bin/connect"],
       payload_archive: "payload.tar.zst",
       payload_hash: Mix.PlushiePackage.payload_hash!(archive_path),
@@ -128,6 +134,18 @@ defmodule Mix.Tasks.Plushie.Package do
       module = Module.concat([module_string])
       Code.ensure_loaded!(module)
     end)
+  end
+
+  defp prepare_package_icon!(opts, payload_dir) do
+    payload_assets_dir = Path.join(payload_dir, "assets")
+
+    case opts[:icon] do
+      nil ->
+        Mix.PlushiePackage.materialize_default_icons!(payload_assets_dir)
+
+      icon_path ->
+        Mix.PlushiePackage.copy_app_icon!(icon_path, payload_assets_dir)
+    end
   end
 
   defp resolve_renderer!(mode, opts) do

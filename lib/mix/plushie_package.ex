@@ -8,6 +8,10 @@ defmodule Mix.PlushiePackage do
           payload_path: String.t()
         }
 
+  @type platform :: %{
+          icon: String.t()
+        }
+
   @type manifest :: %{
           app_id: String.t(),
           app_version: String.t(),
@@ -16,11 +20,17 @@ defmodule Mix.PlushiePackage do
           plushie_rust_version: String.t(),
           protocol_version: non_neg_integer(),
           renderer: renderer(),
+          platform: platform(),
           host_command: [String.t()],
           payload_archive: String.t(),
           payload_hash: String.t(),
           payload_size: non_neg_integer()
         }
+
+  @default_icon_payload_path "assets/plushie-checkbox-512x512.png"
+
+  @spec default_icon_payload_path() :: String.t()
+  def default_icon_payload_path, do: @default_icon_payload_path
 
   @spec package_target() :: String.t()
   def package_target do
@@ -70,6 +80,54 @@ defmodule Mix.PlushiePackage do
 
     File.write!(path, content)
     File.chmod!(path, 0o755)
+  end
+
+  @spec materialize_default_icons!(payload_assets_dir :: String.t()) :: String.t()
+  def materialize_default_icons!(payload_assets_dir) do
+    materialize_default_icons!(payload_assets_dir, Mix.PlushieHelpers.resolve_cargo_plushie())
+  end
+
+  @doc false
+  @spec materialize_default_icons!(
+          payload_assets_dir :: String.t(),
+          cargo_plushie :: {String.t(), [String.t()]}
+        ) :: String.t()
+  def materialize_default_icons!(payload_assets_dir, {cmd, prefix}) do
+    File.mkdir_p!(payload_assets_dir)
+
+    args = prefix ++ ["default-icons", "--out", payload_assets_dir]
+
+    case System.cmd(cmd, args, stderr_to_stdout: true) do
+      {_output, 0} ->
+        icon_path = Path.join(payload_assets_dir, Path.basename(@default_icon_payload_path))
+
+        unless File.exists?(icon_path) do
+          Mix.raise("cargo plushie default-icons did not write #{icon_path}")
+        end
+
+        @default_icon_payload_path
+
+      {output, status} ->
+        Mix.shell().error(output)
+        Mix.raise("cargo plushie default-icons failed with exit status #{status}")
+    end
+  end
+
+  @spec copy_app_icon!(
+          source_path :: String.t(),
+          payload_assets_dir :: String.t()
+        ) :: String.t()
+  def copy_app_icon!(source_path, payload_assets_dir) do
+    unless File.regular?(source_path) do
+      Mix.raise("App icon was not found at #{source_path}")
+    end
+
+    File.mkdir_p!(payload_assets_dir)
+
+    basename = Path.basename(source_path)
+    payload_path = "assets/" <> basename
+    File.cp!(source_path, Path.join(payload_assets_dir, basename))
+    payload_path
   end
 
   @spec connect_expression(module()) :: String.t()
@@ -139,6 +197,9 @@ defmodule Mix.PlushiePackage do
     host_command = #{toml_array(manifest.host_command)}
     working_dir = "."
     exec_env = []
+
+    [platform]
+    icon = #{toml_string(manifest.platform.icon)}
 
     [renderer]
     kind = #{toml_string(Atom.to_string(manifest.renderer.kind))}
