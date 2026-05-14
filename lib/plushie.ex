@@ -1,4 +1,6 @@
 defmodule Plushie do
+  @version Mix.Project.config()[:version]
+
   @moduledoc """
   Native desktop GUIs from Elixir, powered by iced.
 
@@ -117,6 +119,10 @@ defmodule Plushie do
   - `[:plushie, :bridge, :max_restarts_reached]` - renderer exceeded
     the maximum restart limit. Metadata: `%{reason: term(), max_restarts: integer()}`.
   """
+
+  @doc "Returns the Plushie Elixir SDK version."
+  @spec version() :: String.t()
+  def version, do: @version
 
   use Supervisor
 
