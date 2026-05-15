@@ -31,6 +31,7 @@ defmodule Mix.PlushiePackage do
         }
 
   @default_icon_payload_path "assets/plushie-checkbox-512x512.png"
+  @package_config_file "plushie-package.config.toml"
   @default_forward_env [
     "PATH",
     "HOME",
@@ -46,6 +47,61 @@ defmodule Mix.PlushiePackage do
 
   @spec default_forward_env() :: [String.t()]
   def default_forward_env, do: @default_forward_env
+
+  @spec package_config_file() :: String.t()
+  def package_config_file, do: @package_config_file
+
+  @spec default_start_config(release_name :: String.t()) :: map()
+  def default_start_config(_release_name) do
+    %{
+      working_dir: ".",
+      start_command: ["bin/connect"],
+      forward_env: default_forward_env()
+    }
+  end
+
+  @spec read_package_config!(path :: String.t()) :: map()
+  def read_package_config!(path) do
+    unless File.regular?(path) do
+      Mix.raise("Package config was not found at #{path}")
+    end
+
+    path
+    |> File.read!()
+    |> parse_package_config!()
+  end
+
+  @spec read_default_package_config!(path :: String.t()) :: map() | nil
+  def read_default_package_config!(path) do
+    if File.regular?(path), do: read_package_config!(path), else: nil
+  end
+
+  @spec write_package_config!(path :: String.t(), config :: map()) :: :ok
+  def write_package_config!(path, config) do
+    validate_start_config!(config)
+    File.write!(path, package_config_toml(config))
+  end
+
+  @spec package_config_toml(config :: map()) :: String.t()
+  def package_config_toml(config) do
+    """
+    # Plushie standalone package config.
+    # Commit this file and edit it when the packaged app needs a
+    # different entry point, working directory, or forwarded environment.
+
+    config_version = 1
+
+    [start]
+    # Relative to the extracted app package.
+    working_dir = #{toml_string(config.working_dir)}
+    # Structured argv. The first item is the packaged host executable.
+    command = #{toml_array(config.start_command)}
+    # Environment variable names copied from the parent process.
+    forward_env = [
+    #{Enum.map_join(config.forward_env, "\n", &("  " <> toml_string(&1) <> ","))}
+    ]
+    """
+  end
 
   @spec package_target() :: String.t()
   def package_target do
@@ -231,6 +287,157 @@ defmodule Mix.PlushiePackage do
 
   defp app_name_toml(nil), do: ""
   defp app_name_toml(app_name), do: "app_name = #{toml_string(app_name)}\n"
+
+  defp parse_package_config!(text) do
+    config_version =
+      case Regex.run(~r/^\s*config_version\s*=\s*(\d+)\s*$/m, text) do
+        [_, "1"] -> 1
+        [_, version] -> Mix.raise("Unsupported package config config_version #{version}")
+        nil -> Mix.raise("Package config must include config_version = 1")
+      end
+
+    start = section!(text, "start")
+
+    config = %{
+      config_version: config_version,
+      working_dir: string_field!(start, "working_dir"),
+      start_command: array_field!(start, "command"),
+      forward_env: array_field!(start, "forward_env")
+    }
+
+    validate_start_config!(config)
+    Map.drop(config, [:config_version])
+  end
+
+  defp section!(text, name) do
+    case Regex.run(~r/^\s*\[#{Regex.escape(name)}\]\s*$(.*?)(?=^\s*\[|\z)/ms, text) do
+      [_, body] -> body
+      nil -> Mix.raise("Package config must include [#{name}]")
+    end
+  end
+
+  defp string_field!(section, name) do
+    section
+    |> field!(name)
+    |> Jason.decode!()
+    |> case do
+      value when is_binary(value) -> value
+      _ -> Mix.raise("Package config #{name} must be a string")
+    end
+  rescue
+    Jason.DecodeError -> Mix.raise("Package config #{name} must be a TOML basic string")
+  end
+
+  defp array_field!(section, name) do
+    value = field!(section, name)
+
+    unless String.starts_with?(value, "[") and String.ends_with?(value, "]") do
+      Mix.raise("Package config #{name} must be an array of strings")
+    end
+
+    value
+    |> then(&Regex.scan(~r/"(?:\\.|[^"\\])*"/, &1))
+    |> Enum.map(fn [literal] -> Jason.decode!(literal) end)
+  rescue
+    Jason.DecodeError -> Mix.raise("Package config #{name} must be an array of strings")
+  end
+
+  defp field!(section, name) do
+    lines = section |> String.split("\n") |> Enum.map(&String.trim/1)
+    prefix = name <> " ="
+
+    case collect_field(lines, prefix, []) do
+      nil -> Mix.raise("Package config [start] must include #{name}")
+      value -> value
+    end
+  end
+
+  defp collect_field([], _prefix, _seen), do: nil
+
+  defp collect_field([line | rest], prefix, _seen) do
+    cond do
+      line == "" or comment?(line) ->
+        collect_field(rest, prefix, [])
+
+      String.starts_with?(line, prefix) ->
+        value = line |> String.replace_prefix(prefix, "") |> String.trim()
+
+        if String.starts_with?(value, "[") and not String.contains?(value, "]") do
+          collect_array_field(rest, [value])
+        else
+          value
+        end
+
+      true ->
+        collect_field(rest, prefix, [])
+    end
+  end
+
+  defp collect_array_field([], _parts), do: Mix.raise("Package config array is unterminated")
+
+  defp collect_array_field([line | rest], parts) do
+    trimmed = line |> strip_comment() |> String.trim()
+    parts = [trimmed | parts]
+
+    if String.contains?(trimmed, "]") do
+      parts |> Enum.reverse() |> Enum.join("\n")
+    else
+      collect_array_field(rest, parts)
+    end
+  end
+
+  defp strip_comment(line) do
+    line
+    |> String.split("#", parts: 2)
+    |> hd()
+  end
+
+  defp comment?(line), do: line |> String.trim() |> String.starts_with?("#")
+
+  defp validate_start_config!(config) do
+    validate_payload_path!("start.working_dir", config.working_dir)
+
+    case config.start_command do
+      [program | _] when is_binary(program) and program != "" ->
+        validate_payload_path!("start.command[0]", program)
+
+      _ ->
+        Mix.raise("Package config start.command must contain a non-empty argv")
+    end
+
+    if Enum.any?(config.start_command, &(&1 == "")) do
+      Mix.raise("Package config start.command must contain a non-empty argv")
+    end
+
+    Enum.each(config.forward_env, fn name ->
+      cond do
+        String.trim(name) == "" or String.contains?(name, [",", "="]) ->
+          Mix.raise("Package config start.forward_env contains invalid environment name")
+
+        name in ["PLUSHIE_BINARY_PATH", "PLUSHIE_PACKAGE_DIR"] ->
+          Mix.raise("Package config start.forward_env must not include launcher-owned variables")
+
+        true ->
+          :ok
+      end
+    end)
+  end
+
+  defp validate_payload_path!(name, path) do
+    cond do
+      path == "" ->
+        Mix.raise("Package config #{name} must not be empty")
+
+      Path.type(path) == :absolute ->
+        Mix.raise("Package config #{name} must be relative to the package")
+
+      ".." in Path.split(path) ->
+        Mix.raise("Package config #{name} must not contain parent traversal")
+
+      true ->
+        :ok
+    end
+  end
 
   defp validate_payload_archive_inputs!(payload_dir) do
     payload_dir

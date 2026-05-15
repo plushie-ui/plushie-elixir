@@ -13,6 +13,7 @@ defmodule Mix.Tasks.Plushie.Package do
       MIX_ENV=prod mix plushie.package MyApp --app-id dev.example.my_app --app-name "My App"
       MIX_ENV=prod mix plushie.package MyApp --app-id dev.example.my_app --renderer custom
       MIX_ENV=prod mix plushie.package MyApp --app-id dev.example.my_app --icon priv/app-icon.png
+      mix plushie.package MyApp --write-package-config
 
   ## Options
 
@@ -23,6 +24,8 @@ defmodule Mix.Tasks.Plushie.Package do
   - `--renderer stock|custom|auto`: Renderer selection. Defaults to `auto`.
   - `--renderer-bin PATH`: Use an existing renderer binary.
   - `--icon PATH`: Use an app icon instead of the default Plushie icon.
+  - `--package-config PATH`: Read or write a package config.
+  - `--write-package-config`: Write a package config template and exit.
   - `--load MODULE`: Ensure a module is loaded before native widget discovery.
   """
 
@@ -36,6 +39,8 @@ defmodule Mix.Tasks.Plushie.Package do
     renderer: :string,
     renderer_bin: :string,
     icon: :string,
+    package_config: :string,
+    write_package_config: :boolean,
     load: :string
   ]
 
@@ -49,85 +54,104 @@ defmodule Mix.Tasks.Plushie.Package do
         _ -> Mix.raise("Usage: mix plushie.package MyApp --app-id APP_ID")
       end
 
-    app_id = opts[:app_id] || Mix.raise("--app-id is required")
-    renderer_mode = parse_renderer_mode(opts[:renderer] || "auto")
+    release_name = opts[:release] || Atom.to_string(Mix.Project.config()[:app])
+    package_config_path = opts[:package_config] || Mix.PlushiePackage.package_config_file()
 
-    Mix.env() == :prod ||
-      Mix.shell().info(
-        "Packaging with MIX_ENV=#{Mix.env()}. Use MIX_ENV=prod for release builds."
+    if opts[:write_package_config] do
+      Mix.PlushiePackage.write_package_config!(
+        package_config_path,
+        Mix.PlushiePackage.default_start_config(release_name)
       )
 
-    Mix.Task.run("app.config")
-    Mix.PlushieHelpers.compile_project!()
-    Mix.PlushieHelpers.validate_module!(app_module)
-    load_modules!(Keyword.get_values(opts, :load))
-    Plushie.WidgetRegistry.invalidate()
+      Mix.shell().info("Wrote #{package_config_path}")
+    else
+      app_id = opts[:app_id] || Mix.raise("--app-id is required")
+      renderer_mode = parse_renderer_mode(opts[:renderer] || "auto")
 
-    release_name = opts[:release] || Atom.to_string(Mix.Project.config()[:app])
-    output_dir = opts[:output] || "dist"
-    payload_dir = Path.join(output_dir, "payload")
+      Mix.env() == :prod ||
+        Mix.shell().info(
+          "Packaging with MIX_ENV=#{Mix.env()}. Use MIX_ENV=prod for release builds."
+        )
 
-    renderer = resolve_renderer!(renderer_mode, opts)
+      Mix.Task.run("app.config")
+      Mix.PlushieHelpers.compile_project!()
+      Mix.PlushieHelpers.validate_module!(app_module)
+      load_modules!(Keyword.get_values(opts, :load))
+      Plushie.WidgetRegistry.invalidate()
 
-    Mix.shell().info("Building host release...")
-    Mix.Task.rerun("release", [release_name, "--overwrite"])
+      output_dir = opts[:output] || "dist"
+      payload_dir = Path.join(output_dir, "payload")
 
-    release_dir = Path.join([Mix.Project.build_path(), "rel", release_name])
+      start_config =
+        if opts[:package_config] do
+          Mix.PlushiePackage.read_package_config!(package_config_path)
+        else
+          Mix.PlushiePackage.read_default_package_config!(package_config_path) ||
+            Mix.PlushiePackage.default_start_config(release_name)
+        end
 
-    unless File.dir?(release_dir) do
-      Mix.raise("Release was not found at #{release_dir}")
+      renderer = resolve_renderer!(renderer_mode, opts)
+
+      Mix.shell().info("Building host release...")
+      Mix.Task.rerun("release", [release_name, "--overwrite"])
+
+      release_dir = Path.join([Mix.Project.build_path(), "rel", release_name])
+
+      unless File.dir?(release_dir) do
+        Mix.raise("Release was not found at #{release_dir}")
+      end
+
+      Mix.shell().info("Preparing payload...")
+      File.rm_rf!(output_dir)
+      File.mkdir_p!(Path.join(payload_dir, "bin"))
+      File.mkdir_p!(Path.join(payload_dir, "rel"))
+      File.cp_r!(release_dir, Path.join([payload_dir, "rel", release_name]))
+
+      renderer_dest = Path.join(payload_dir, renderer.payload_path)
+      File.mkdir_p!(Path.dirname(renderer_dest))
+      File.cp!(renderer.source_path, renderer_dest)
+      File.chmod!(renderer_dest, 0o755)
+
+      Mix.PlushiePackage.write_connect_wrapper!(
+        Path.join(payload_dir, "bin/connect"),
+        release_name,
+        app_module
+      )
+
+      platform_icon = prepare_package_icon!(opts, payload_dir)
+
+      Mix.shell().info("Writing archive...")
+      archive_path = Path.join(output_dir, "payload.tar.zst")
+      Mix.PlushiePackage.archive_payload!(payload_dir, archive_path)
+
+      manifest = %{
+        app_id: app_id,
+        app_name: opts[:app_name],
+        app_version: Mix.Project.config()[:version],
+        target: Mix.PlushiePackage.package_target(),
+        host_sdk_version: Plushie.version(),
+        plushie_rust_version: plushie_rust_version(),
+        protocol_version: Plushie.Protocol.protocol_version(),
+        renderer: renderer,
+        platform: %{icon: platform_icon},
+        start_command: start_config.start_command,
+        working_dir: start_config.working_dir,
+        forward_env: start_config.forward_env,
+        payload_archive: "payload.tar.zst",
+        payload_hash: Mix.PlushiePackage.payload_hash!(archive_path),
+        payload_size: Mix.PlushiePackage.payload_size!(archive_path)
+      }
+
+      Mix.PlushiePackage.write_manifest!(Path.join(output_dir, "plushie-package.toml"), manifest)
+
+      Mix.shell().info("Wrote #{archive_path}")
+      Mix.shell().info("Wrote #{Path.join(output_dir, "plushie-package.toml")}")
+      Mix.shell().info("Build launcher with:")
+
+      Mix.shell().info(
+        "  cargo plushie package --manifest #{Path.join(output_dir, "plushie-package.toml")} --release"
+      )
     end
-
-    Mix.shell().info("Preparing payload...")
-    File.rm_rf!(output_dir)
-    File.mkdir_p!(Path.join(payload_dir, "bin"))
-    File.mkdir_p!(Path.join(payload_dir, "rel"))
-    File.cp_r!(release_dir, Path.join([payload_dir, "rel", release_name]))
-
-    renderer_dest = Path.join(payload_dir, renderer.payload_path)
-    File.mkdir_p!(Path.dirname(renderer_dest))
-    File.cp!(renderer.source_path, renderer_dest)
-    File.chmod!(renderer_dest, 0o755)
-
-    Mix.PlushiePackage.write_connect_wrapper!(
-      Path.join(payload_dir, "bin/connect"),
-      release_name,
-      app_module
-    )
-
-    platform_icon = prepare_package_icon!(opts, payload_dir)
-
-    Mix.shell().info("Writing archive...")
-    archive_path = Path.join(output_dir, "payload.tar.zst")
-    Mix.PlushiePackage.archive_payload!(payload_dir, archive_path)
-
-    manifest = %{
-      app_id: app_id,
-      app_name: opts[:app_name],
-      app_version: Mix.Project.config()[:version],
-      target: Mix.PlushiePackage.package_target(),
-      host_sdk_version: Plushie.version(),
-      plushie_rust_version: plushie_rust_version(),
-      protocol_version: Plushie.Protocol.protocol_version(),
-      renderer: renderer,
-      platform: %{icon: platform_icon},
-      start_command: ["bin/connect"],
-      working_dir: ".",
-      forward_env: Mix.PlushiePackage.default_forward_env(),
-      payload_archive: "payload.tar.zst",
-      payload_hash: Mix.PlushiePackage.payload_hash!(archive_path),
-      payload_size: Mix.PlushiePackage.payload_size!(archive_path)
-    }
-
-    Mix.PlushiePackage.write_manifest!(Path.join(output_dir, "plushie-package.toml"), manifest)
-
-    Mix.shell().info("Wrote #{archive_path}")
-    Mix.shell().info("Wrote #{Path.join(output_dir, "plushie-package.toml")}")
-    Mix.shell().info("Build launcher with:")
-
-    Mix.shell().info(
-      "  cargo plushie package --manifest #{Path.join(output_dir, "plushie-package.toml")} --release"
-    )
   end
 
   defp parse_renderer_mode("auto"), do: :auto

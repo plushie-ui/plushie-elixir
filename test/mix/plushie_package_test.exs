@@ -67,6 +67,83 @@ defmodule Mix.PlushiePackageTest do
     assert toml =~ ~s(hash = "sha256:#{String.duplicate("a", 64)}")
   end
 
+  test "reads package config with start settings" do
+    dir = tmp_dir()
+    path = Path.join(dir, "plushie-package.config.toml")
+
+    File.write!(path, """
+    config_version = 1
+
+    [start]
+    working_dir = "app"
+    command = ["app/bin/connect", "--profile", "release"]
+    forward_env = [
+      "PATH",
+      "HOME",
+    ]
+    """)
+
+    assert Mix.PlushiePackage.read_package_config!(path) == %{
+             working_dir: "app",
+             start_command: ["app/bin/connect", "--profile", "release"],
+             forward_env: ["PATH", "HOME"]
+           }
+  end
+
+  test "writes package config template with real start values" do
+    config = Mix.PlushiePackage.default_start_config("notes")
+    toml = Mix.PlushiePackage.package_config_toml(config)
+
+    assert toml =~ "config_version = 1"
+    assert toml =~ "[start]"
+    assert toml =~ ~s(working_dir = ".")
+    assert toml =~ ~s(command = ["bin/connect"])
+    assert toml =~ ~s("WAYLAND_DISPLAY")
+  end
+
+  test "rejects unsafe package config start settings" do
+    dir = tmp_dir()
+    path = Path.join(dir, "plushie-package.config.toml")
+
+    for contents <- [
+          """
+          config_version = 2
+
+          [start]
+          working_dir = "."
+          command = ["bin/connect"]
+          forward_env = []
+          """,
+          """
+          config_version = 1
+
+          [start]
+          working_dir = "../app"
+          command = ["bin/connect"]
+          forward_env = []
+          """,
+          """
+          config_version = 1
+
+          [start]
+          working_dir = "."
+          command = ["/usr/bin/connect"]
+          forward_env = []
+          """,
+          """
+          config_version = 1
+
+          [start]
+          working_dir = "."
+          command = ["bin/connect"]
+          forward_env = ["PLUSHIE_PACKAGE_DIR"]
+          """
+        ] do
+      File.write!(path, contents)
+      assert_raise Mix.Error, fn -> Mix.PlushiePackage.read_package_config!(path) end
+    end
+  end
+
   test "materializes default icons through cargo-plushie" do
     dir = tmp_dir()
     assets_dir = Path.join(dir, "assets")
