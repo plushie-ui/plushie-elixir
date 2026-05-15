@@ -31,7 +31,7 @@ defmodule Mix.Tasks.Plushie.Download do
 
   use Mix.Task
 
-  @base_url "https://github.com/plushie-ui/plushie-renderer/releases/download"
+  @base_url "https://github.com/plushie-ui/plushie-rust/releases/download"
   @wasm_archive "plushie-renderer-wasm.tar.gz"
 
   @switches [
@@ -93,13 +93,13 @@ defmodule Mix.Tasks.Plushie.Download do
   end
 
   defp sync_renderer_with_tool(force?) do
-    tool_path = download_tool(force?)
+    {tool_path, prefix_args} = resolve_tool(force?)
     args = ["tools", "sync", "--required-version", Plushie.Binary.plushie_rust_version()]
     args = if force?, do: args ++ ["--force"], else: args
 
     Mix.shell().info("Syncing renderer through #{tool_path}...")
 
-    case System.cmd(tool_path, args, stderr_to_stdout: true) do
+    case System.cmd(tool_path, prefix_args ++ args, stderr_to_stdout: true) do
       {output, 0} ->
         if output != "", do: Mix.shell().info(String.trim_trailing(output))
 
@@ -112,6 +112,36 @@ defmodule Mix.Tasks.Plushie.Download do
         Renderer sync failed with status #{status}:
         #{output}
         """)
+    end
+  end
+
+  defp resolve_tool(force?) do
+    case Mix.PlushieHelpers.source_path() do
+      nil ->
+        {download_tool(force?), []}
+
+      source_path ->
+        manifest = Path.join(source_path, "Cargo.toml")
+
+        unless File.exists?(manifest) do
+          Mix.raise(
+            "PLUSHIE_RUST_SOURCE_PATH points to #{inspect(source_path)} but no Cargo.toml at #{manifest}"
+          )
+        end
+
+        {"cargo",
+         [
+           "run",
+           "--manifest-path",
+           manifest,
+           "-p",
+           "cargo-plushie",
+           "--bin",
+           "plushie",
+           "--release",
+           "--quiet",
+           "--"
+         ]}
     end
   end
 
