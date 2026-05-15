@@ -153,7 +153,7 @@ defmodule Mix.Tasks.Plushie.Package do
       Mix.shell().info("Build launcher with:")
 
       Mix.shell().info(
-        "  cargo plushie package portable --manifest #{Path.join(output_dir, "plushie-package.toml")} --release"
+        "  bin/plushie package portable --manifest #{Path.join(output_dir, "plushie-package.toml")}"
       )
     end
   end

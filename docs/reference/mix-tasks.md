@@ -331,7 +331,7 @@ for the shared Rust launcher.
 MIX_ENV=prod mix plushie.package MyApp --app-id dev.example.my_app
 MIX_ENV=prod mix plushie.package MyApp --app-id dev.example.my_app --app-name "My App"
 MIX_ENV=prod mix plushie.package MyApp --app-id dev.example.my_app --icon priv/app-icon.png
-cargo plushie package portable --manifest dist/plushie-package.toml --release
+bin/plushie package portable --manifest dist/plushie-package.toml
 ```
 
 This task owns the Elixir-specific part of standalone packaging:
