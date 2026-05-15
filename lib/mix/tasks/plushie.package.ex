@@ -203,23 +203,23 @@ defmodule Mix.Tasks.Plushie.Package do
   end
 
   defp resolve_stock_renderer!(opts) do
-    source_path =
+    {source_path, source} =
       cond do
-        opts[:renderer_bin] ->
-          opts[:renderer_bin]
+        bin = opts[:renderer_bin] ->
+          {bin, "local-path"}
 
         Mix.PlushieHelpers.source_path() ->
-          build_stock_renderer_from_source!()
+          {build_stock_renderer_from_source!(), "local-build"}
 
         true ->
-          Plushie.Binary.path!()
+          {Plushie.Binary.path!(), "local-resolve"}
       end
 
     validate_renderer!(source_path)
 
     %{
       kind: :stock,
-      source: if(opts[:renderer_bin], do: "local-path", else: "local-resolve"),
+      source: source,
       source_path: source_path,
       payload_path: Path.join("bin", renderer_executable_name("plushie-renderer"))
     }
