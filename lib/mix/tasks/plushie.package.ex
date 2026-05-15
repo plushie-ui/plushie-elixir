@@ -256,15 +256,17 @@ defmodule Mix.Tasks.Plushie.Package do
     end
 
     Mix.shell().info("Building stock plushie renderer from #{source_path}...")
+    target_dir = Path.join(Mix.Project.build_path(), "plushie-package-renderer-target")
 
-    case System.cmd("cargo", ["build", "--release", "-p", "plushie-renderer"],
+    case System.cmd(
+           "cargo",
+           ["build", "--release", "-p", "plushie-renderer", "--target-dir", target_dir],
            cd: source_path,
            stderr_to_stdout: true
          ) do
       {_output, 0} ->
         Path.join([
-          source_path,
-          "target",
+          target_dir,
           "release",
           renderer_executable_name("plushie-renderer")
         ])
