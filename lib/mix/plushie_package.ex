@@ -51,6 +51,31 @@ defmodule Mix.PlushiePackage do
   @spec package_config_file() :: String.t()
   def package_config_file, do: @package_config_file
 
+  @spec launcher_name() :: String.t()
+  def launcher_name do
+    if :os.type() |> elem(0) == :win32, do: "plushie-launcher.exe", else: "plushie-launcher"
+  end
+
+  @spec ensure_package_tools_available!() :: :ok
+  def ensure_package_tools_available! do
+    missing =
+      [
+        Path.join(Plushie.Binary.download_dir(), Plushie.Binary.tool_name()),
+        Path.join(Plushie.Binary.download_dir(), launcher_name())
+      ]
+      |> Enum.reject(&File.regular?/1)
+
+    if missing != [] do
+      Mix.raise("""
+      Portable packaging requires the managed Plushie tool set.
+      Missing: #{Enum.join(missing, ", ")}
+      Run `mix plushie.download`.
+      """)
+    end
+
+    :ok
+  end
+
   @spec default_start_config(release_name :: String.t()) :: map()
   def default_start_config(_release_name) do
     %{

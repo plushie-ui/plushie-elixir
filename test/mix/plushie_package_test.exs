@@ -101,6 +101,22 @@ defmodule Mix.PlushiePackageTest do
     assert toml =~ ~s("WAYLAND_DISPLAY")
   end
 
+  test "requires managed package tools for renderer override packaging" do
+    dir = tmp_dir()
+
+    File.cd!(dir, fn ->
+      assert_raise Mix.Error, ~r/managed Plushie tool set/, fn ->
+        Mix.PlushiePackage.ensure_package_tools_available!()
+      end
+
+      File.mkdir_p!("bin")
+      File.write!(Path.join("bin", Plushie.Binary.tool_name()), "tool")
+      File.write!(Path.join("bin", Mix.PlushiePackage.launcher_name()), "launcher")
+
+      assert :ok = Mix.PlushiePackage.ensure_package_tools_available!()
+    end)
+  end
+
   test "rejects unsafe package config start settings" do
     dir = tmp_dir()
     path = Path.join(dir, "plushie-package.config.toml")

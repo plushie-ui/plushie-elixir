@@ -206,10 +206,13 @@ defmodule Mix.Tasks.Plushie.Package do
     {source_path, source} =
       cond do
         bin = opts[:renderer_bin] ->
+          Mix.PlushiePackage.ensure_package_tools_available!()
           {bin, "local-path"}
 
         Mix.PlushieHelpers.source_path() ->
-          {build_stock_renderer_from_source!(), "local-build"}
+          renderer = build_stock_renderer_from_source!()
+          Mix.PlushiePackage.ensure_package_tools_available!()
+          {renderer, "local-build"}
 
         true ->
           Mix.Task.rerun("plushie.download", [])
@@ -238,6 +241,7 @@ defmodule Mix.Tasks.Plushie.Package do
       Mix.Task.rerun("plushie.build", ["--release", "--bin-file", source_path])
     end
 
+    Mix.PlushiePackage.ensure_package_tools_available!()
     validate_renderer!(source_path)
 
     %{
