@@ -410,8 +410,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - **`docs/dsl-internals.md`** - maintainer guide for the DSL
   architecture, Buildable behaviour, and scope walkers.
 - **`--wasm` flag** for `mix plushie.download` and `mix plushie.build`.
-- **`bin/plushie` symlink** created by `mix plushie.download` for
-  stable path references without the platform-specific name.
+- **Stable renderer install path**: `mix plushie.download` writes the
+  native renderer to `bin/plushie-renderer` (or `.exe` on Windows).
 - **`mix plushie.connect`** replaces `mix plushie.stdio`. Connects to
   the renderer via Unix socket or TCP instead of stdin/stdout. Token
   auth via Settings message.
@@ -420,7 +420,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
-- **Downloaded binaries moved** from `priv/bin/` to `_build/plushie/bin/`.
+- **Downloaded binaries moved** from `priv/bin/` to `bin/`.
   Build artifacts belong in `_build/` where `mix clean` removes them.
 - **`mix plushie.stdio` renamed** to `mix plushie.connect`. The old
   stdin/stdout transport is still available as a fallback when

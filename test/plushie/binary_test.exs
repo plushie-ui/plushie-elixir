@@ -8,12 +8,18 @@ defmodule Plushie.BinaryTest do
       assert is_binary(Binary.download_name())
     end
 
+    test "uses the stable renderer name" do
+      assert Binary.download_name() in ["plushie-renderer", "plushie-renderer.exe"]
+    end
+  end
+
+  describe "release_name/0" do
     test "starts with 'plushie-'" do
-      assert String.starts_with?(Binary.download_name(), "plushie-")
+      assert String.starts_with?(Binary.release_name(), "plushie-")
     end
 
     test "includes an OS component" do
-      name = Binary.download_name()
+      name = Binary.release_name()
       # On this linux test host, the OS segment should be "linux"
       assert String.contains?(name, "linux") or
                String.contains?(name, "darwin") or
@@ -21,7 +27,7 @@ defmodule Plushie.BinaryTest do
     end
 
     test "includes an architecture component" do
-      name = Binary.download_name()
+      name = Binary.release_name()
 
       assert String.contains?(name, "x86_64") or
                String.contains?(name, "aarch64") or
@@ -29,7 +35,7 @@ defmodule Plushie.BinaryTest do
     end
 
     test "does not end with .exe on non-windows" do
-      refute String.ends_with?(Binary.download_name(), ".exe")
+      refute String.ends_with?(Binary.release_name(), ".exe")
     end
   end
 

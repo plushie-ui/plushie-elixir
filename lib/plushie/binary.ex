@@ -8,7 +8,7 @@ defmodule Plushie.Binary do
   2. Application config `:binary_path`
   3. Custom widget build under
      `_build/<env>/plushie-renderer-spec/target/plushie-renderer/target/`
-  4. Downloaded binary in `_build/plushie/bin/`
+  4. Downloaded binary in `bin/`
 
   Steps 1 and 2 are explicit configuration. If set but pointing to a
   missing file, they raise immediately rather than falling through. Steps
@@ -69,13 +69,13 @@ defmodule Plushie.Binary do
   @doc """
   Returns the directory where downloaded binaries are stored.
 
-  This is `_build/plushie/bin/` relative to the project root, shared
-  across Mix environments (the binary is platform-specific, not
-  env-specific).
+  This is `bin/` relative to the project root, shared across Mix
+  environments. The local filename is stable so scripts can refer to
+  `bin/plushie-renderer`.
   """
   @spec download_dir() :: String.t()
   def download_dir do
-    Path.join(["_build", "plushie", "bin"])
+    "bin"
   end
 
   @doc """
@@ -116,12 +116,21 @@ defmodule Plushie.Binary do
   end
 
   @doc """
-  Returns the platform-specific binary name for downloads.
-
-  Format: `plushie-renderer-{os}-{arch}` (e.g. `plushie-renderer-linux-x86_64`).
+  Returns the stable project-local binary name.
   """
   @spec download_name() :: String.t()
   def download_name do
+    ext = if os_name() == "windows", do: ".exe", else: ""
+    "plushie-renderer#{ext}"
+  end
+
+  @doc """
+  Returns the platform-specific release artifact name.
+
+  Format: `plushie-renderer-{os}-{arch}` (e.g. `plushie-renderer-linux-x86_64`).
+  """
+  @spec release_name() :: String.t()
+  def release_name do
     os = os_name()
     arch = arch_name()
     ext = if os == "windows", do: ".exe", else: ""

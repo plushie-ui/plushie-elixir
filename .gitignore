@@ -1,5 +1,6 @@
 /_build/
 /bin/plushie-renderer
+/bin/plushie-renderer.exe
 /deps/
 /doc/
 /.fetch

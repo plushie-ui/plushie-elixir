@@ -162,7 +162,7 @@ cargo-plushie produces the real renderer workspace and binary:
 - `_build/<env>/plushie-renderer-spec/target/plushie-renderer/` - the
   generated Cargo workspace (Cargo.toml + main.rs + Cargo.lock).
 - `_build/<env>/plushie-renderer-spec/target/plushie-renderer/target/<profile>/<bin>` -
-  the compiled binary, copied to `_build/plushie/bin/` after a successful
+  the compiled binary, copied to `bin/` after a successful
   build.
 
 Using `PLUSHIE_RUST_SOURCE_PATH`, cargo-plushie emits `[patch.crates-io]`
@@ -318,7 +318,7 @@ for the shared Rust launcher.
 MIX_ENV=prod mix plushie.package MyApp --app-id dev.example.my_app
 MIX_ENV=prod mix plushie.package MyApp --app-id dev.example.my_app --app-name "My App"
 MIX_ENV=prod mix plushie.package MyApp --app-id dev.example.my_app --icon priv/app-icon.png
-cargo plushie package --manifest dist/plushie-package.toml --release
+cargo plushie package portable --manifest dist/plushie-package.toml --release
 ```
 
 This task owns the Elixir-specific part of standalone packaging:
@@ -545,7 +545,7 @@ resolves it in priority order:
 3. Custom widget build under
    `_build/<env>/plushie-renderer-spec/target/plushie-renderer/target/` -
    auto-detected after `mix plushie.build`
-4. Downloaded binary in `_build/plushie/bin/` - auto-detected after
+4. Downloaded binary in `bin/` - auto-detected after
    `mix plushie.download`
 
 Steps 1 and 2 are explicit: if set but pointing to a missing file, they

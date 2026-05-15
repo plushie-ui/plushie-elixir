@@ -815,15 +815,15 @@ by supported Elixir control flow.
 
 **Revisit when:** Elixir adds `else:` support to `case`.
 
-## Download symlink is best effort
+## Download install path is stable
 
-`mix plushie.download` installs the renderer at the platform-specific
-download path resolved by `Plushie.Binary.path!/0`. The
-`bin/plushie-renderer` symlink is a convenience for scripts on
-filesystems that support it, not the authoritative installation record.
+`mix plushie.download` selects a platform-specific release artifact, but
+installs it into the project as `bin/plushie-renderer` (or
+`bin/plushie-renderer.exe` on Windows). The local filename is the
+authoritative path used by the SDK and by package scripts.
 
-**Rules out:** Failing an otherwise verified and executable download
-solely because a convenience symlink cannot be created.
+**Rules out:** Creating symlinks only to hide platform-specific release
+artifact names from project-local tooling.
 
 **Still in scope:** Raising on failed download, checksum mismatch,
 unusable configured binary paths, or any failure that prevents
