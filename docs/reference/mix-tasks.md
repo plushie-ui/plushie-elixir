@@ -382,6 +382,23 @@ the default Plushie icon set under `dist/payload/assets/` and writes
 file is copied into the same payload assets directory and the manifest
 points at the copied payload-relative path.
 
+### ERTS runtime
+
+`mix plushie.package` delegates ERTS bundling to the Mix release it
+copies into the payload. Configure this in your release config with
+`include_erts`. Runtime roots are OS and architecture specific, so
+release builds should run on matching target runners until cross-target
+runtime downloads are proven.
+
+Common provider shapes:
+
+- Local provider: `include_erts: true` copies the ERTS from the Erlang
+  runtime that builds the release.
+- Path provider: `include_erts: "/path/to/erlang/root"` copies an
+  explicit extracted Erlang runtime root.
+- mise provider: run `mise install` in CI, get the runtime root with
+  `mise where erlang@VERSION`, and pass that path to `include_erts`.
+
 ## plushie.inspect
 
 Prints a Plushie app's initial UI tree as pretty-printed JSON, without
