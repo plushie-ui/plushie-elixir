@@ -133,11 +133,14 @@ defmodule Mix.Tasks.Plushie.Package do
       archive_path = Path.join(output_dir, "payload.tar.zst")
       Mix.PlushiePackage.archive_payload!(payload_dir, archive_path)
 
+      package_target =
+        Mix.PlushiePackage.package_target() |> Mix.PlushiePackage.validate_package_target!()
+
       manifest = %{
         app_id: app_id,
         app_name: opts[:app_name],
         app_version: Mix.Project.config()[:version],
-        target: Mix.PlushiePackage.package_target(),
+        target: package_target,
         host_sdk_version: Plushie.version(),
         plushie_rust_version: plushie_rust_version(),
         protocol_version: Plushie.Protocol.protocol_version(),

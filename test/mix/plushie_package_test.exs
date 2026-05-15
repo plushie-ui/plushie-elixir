@@ -12,6 +12,12 @@ defmodule Mix.PlushiePackageTest do
              "windows-x86_64"
   end
 
+  test "rejects Windows package targets until a Windows wrapper exists" do
+    assert_raise Mix.Error, ~r/Windows standalone packaging is not supported/, fn ->
+      Mix.PlushiePackage.validate_package_target!("windows-x86_64")
+    end
+  end
+
   test "writes connect wrapper through Plushie.Connect.run" do
     dir = tmp_dir()
     path = Path.join(dir, "connect")

@@ -180,6 +180,17 @@ defmodule Mix.PlushiePackage do
     normalize_package_target(:os.type(), :erlang.system_info(:system_architecture))
   end
 
+  @spec validate_package_target!(target :: String.t()) :: String.t()
+  def validate_package_target!("windows-" <> _ = target) do
+    Mix.raise("""
+    Windows standalone packaging is not supported by the Elixir SDK yet.
+    The current package flow writes a Unix bin/connect wrapper. Add a
+    Windows-specific host command before producing #{target} packages.
+    """)
+  end
+
+  def validate_package_target!(target), do: target
+
   @spec normalize_package_target({atom(), atom()}, charlist() | String.t()) :: String.t()
   def normalize_package_target(os_type, system_architecture) do
     os =
