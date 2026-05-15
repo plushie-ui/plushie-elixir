@@ -268,16 +268,18 @@ WASM renderer has no pre-built bundle to fetch.
 
 ## plushie.download
 
-Downloads a precompiled renderer binary from GitHub releases.
+Downloads the precompiled native tool set from GitHub releases.
 
 ```bash
 mix plushie.download               # native binary
 mix plushie.download --wasm        # WASM renderer
 ```
 
-This is the fastest way to get a working renderer. The binary is
-platform-specific (OS + architecture) and version-matched to the SDK
-via the `PLUSHIE_RUST_VERSION` file.
+This is the fastest way to get a working renderer. The release assets
+are platform-specific (OS + architecture) and version-matched to the SDK
+via the `PLUSHIE_RUST_VERSION` file. The default native path installs
+`bin/plushie`, then uses it to sync `bin/plushie-renderer` and
+`bin/plushie-launcher`.
 
 ### Flags
 

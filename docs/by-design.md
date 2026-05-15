@@ -817,10 +817,11 @@ by supported Elixir control flow.
 
 ## Download install path is stable
 
-`mix plushie.download` selects a platform-specific release artifact, but
-installs it into the project as `bin/plushie-renderer` (or
-`bin/plushie-renderer.exe` on Windows). The local filename is the
-authoritative path used by the SDK and by package scripts.
+`mix plushie.download` bootstraps the managed native tool set under
+`bin/`: `plushie`, `plushie-renderer`, and `plushie-launcher` (with
+`.exe` on Windows). Release artifacts keep platform-specific names, but
+local projects use stable filenames. `bin/plushie` owns sync and
+version checks for the renderer and launcher.
 
 **Rules out:** Creating symlinks only to hide platform-specific release
 artifact names from project-local tooling.
