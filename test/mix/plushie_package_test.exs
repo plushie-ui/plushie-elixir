@@ -117,6 +117,50 @@ defmodule Mix.PlushiePackageTest do
     end)
   end
 
+  test "builds portable package command arguments" do
+    assert Mix.PlushiePackage.portable_package_args("dist/plushie-package.toml", nil) == [
+             "package",
+             "portable",
+             "--manifest",
+             "dist/plushie-package.toml"
+           ]
+
+    assert Mix.PlushiePackage.portable_package_args(
+             "dist/plushie-package.toml",
+             "dist/app"
+           ) == [
+             "package",
+             "portable",
+             "--manifest",
+             "dist/plushie-package.toml",
+             "--out",
+             "dist/app"
+           ]
+  end
+
+  test "runs portable package command with structured arguments" do
+    dir = tmp_dir()
+    command = Path.join(dir, "plushie")
+    args_log = Path.join(dir, "args.log")
+
+    File.write!(command, """
+    #!/bin/sh
+    printf '%s\\n' "$@" > #{shell_quote(args_log)}
+    """)
+
+    File.chmod!(command, 0o755)
+
+    assert :ok =
+             Mix.PlushiePackage.run_portable_package!(
+               "dist/plushie-package.toml",
+               "dist/app",
+               command
+             )
+
+    assert File.read!(args_log) ==
+             "package\nportable\n--manifest\ndist/plushie-package.toml\n--out\ndist/app\n"
+  end
+
   test "rejects unsafe package config start settings" do
     dir = tmp_dir()
     path = Path.join(dir, "plushie-package.config.toml")

@@ -76,6 +76,42 @@ defmodule Mix.PlushiePackage do
     :ok
   end
 
+  @spec portable_package_args(manifest_path :: String.t(), out_path :: String.t() | nil) :: [
+          String.t()
+        ]
+  def portable_package_args(manifest_path, out_path \\ nil) do
+    args = ["package", "portable", "--manifest", manifest_path]
+
+    if out_path do
+      args ++ ["--out", out_path]
+    else
+      args
+    end
+  end
+
+  @spec run_portable_package!(
+          manifest_path :: String.t(),
+          out_path :: String.t() | nil,
+          command :: String.t()
+        ) :: :ok
+  def run_portable_package!(
+        manifest_path,
+        out_path \\ nil,
+        command \\ Path.join(Plushie.Binary.download_dir(), Plushie.Binary.tool_name())
+      ) do
+    args = portable_package_args(manifest_path, out_path)
+
+    case System.cmd(command, args, stderr_to_stdout: true) do
+      {output, 0} ->
+        output != "" && Mix.shell().info(String.trim_trailing(output))
+        :ok
+
+      {output, status} ->
+        output != "" && Mix.shell().error(String.trim_trailing(output))
+        Mix.raise("#{command} #{Enum.join(args, " ")} failed with exit status #{status}")
+    end
+  end
+
   @spec default_start_config(release_name :: String.t()) :: map()
   def default_start_config(_release_name) do
     %{

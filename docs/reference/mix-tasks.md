@@ -366,6 +366,10 @@ reserved for explicit embedding and debugging flows that provide
 | `--renderer auto|stock|custom` | Renderer selection. Defaults to `auto` |
 | `--renderer-bin PATH` | Use an existing renderer binary |
 | `--icon PATH` | Use an app icon instead of the default Plushie icon |
+| `--package-config PATH` | Read or write a package start config |
+| `--write-package-config` | Write a package start config template and exit |
+| `--portable` | Run `bin/plushie package portable --manifest <manifest>` after writing the manifest |
+| `--portable-out PATH` | Pass `--out PATH` to the portable package command when `--portable` is set |
 | `--load MODULE` | Load a module before native widget discovery |
 
 `--renderer auto` uses a stock renderer when no native widgets are
@@ -383,6 +387,10 @@ the default Plushie icon set under `dist/payload/assets/` and writes
 `assets/plushie-checkbox-512x512.png`. When `--icon` is present, that
 file is copied into the same payload assets directory and the manifest
 points at the copied payload-relative path.
+
+By default the task prints the final portable-package handoff. Pass
+`--portable` to run that final step immediately after the manifest is
+written.
 
 ### ERTS runtime
 

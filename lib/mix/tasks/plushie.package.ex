@@ -4,7 +4,7 @@ defmodule Mix.Tasks.Plushie.Package do
   Builds a release payload archive and `plushie-package.toml` manifest
   for a Plushie Elixir app.
 
-  The output is intended for `cargo plushie package`, while all
+  The output is intended for `bin/plushie package portable`, while all
   Elixir-specific release and renderer selection work stays in the SDK.
   The shared package launcher uses host-first startup: it runs the
   manifest's `[start].command`, and `Plushie.Connect.run/2` starts the
@@ -30,6 +30,8 @@ defmodule Mix.Tasks.Plushie.Package do
   - `--icon PATH`: Use an app icon instead of the default Plushie icon.
   - `--package-config PATH`: Read or write a package config.
   - `--write-package-config`: Write a package config template and exit.
+  - `--portable`: Build the final portable executable after writing the manifest.
+  - `--portable-out PATH`: Output path for `bin/plushie package portable`.
   - `--load MODULE`: Ensure a module is loaded before native widget discovery.
   """
 
@@ -45,6 +47,8 @@ defmodule Mix.Tasks.Plushie.Package do
     icon: :string,
     package_config: :string,
     write_package_config: :boolean,
+    portable: :boolean,
+    portable_out: :string,
     load: :string
   ]
 
@@ -146,16 +150,24 @@ defmodule Mix.Tasks.Plushie.Package do
         payload_size: Mix.PlushiePackage.payload_size!(archive_path)
       }
 
-      Mix.PlushiePackage.write_manifest!(Path.join(output_dir, "plushie-package.toml"), manifest)
+      manifest_path = Path.join(output_dir, "plushie-package.toml")
+      Mix.PlushiePackage.write_manifest!(manifest_path, manifest)
 
       Mix.shell().info("Wrote #{archive_path}")
-      Mix.shell().info("Wrote #{Path.join(output_dir, "plushie-package.toml")}")
-      Mix.shell().info("Build launcher with:")
+      Mix.shell().info("Wrote #{manifest_path}")
 
-      Mix.shell().info(
-        "  bin/plushie package portable --manifest #{Path.join(output_dir, "plushie-package.toml")}"
-      )
+      if opts[:portable] do
+        Mix.PlushiePackage.run_portable_package!(manifest_path, opts[:portable_out])
+      else
+        Mix.shell().info("Build launcher with:")
+        Mix.shell().info("  #{portable_command_text(manifest_path, opts[:portable_out])}")
+      end
     end
+  end
+
+  defp portable_command_text(manifest_path, out_path) do
+    args = Mix.PlushiePackage.portable_package_args(manifest_path, out_path)
+    Enum.join([Path.join("bin", Plushie.Binary.tool_name()) | args], " ")
   end
 
   defp parse_renderer_mode("auto"), do: :auto
