@@ -6,6 +6,10 @@ defmodule Mix.Tasks.Plushie.Package do
 
   The output is intended for `cargo plushie package`, while all
   Elixir-specific release and renderer selection work stays in the SDK.
+  The shared package launcher uses host-first startup: it runs the
+  manifest's `[start].command`, and `Plushie.Connect.run/2` starts the
+  payload-local renderer unless an explicit embedding flow provides
+  `PLUSHIE_SOCKET`.
 
   ## Usage
 

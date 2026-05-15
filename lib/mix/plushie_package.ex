@@ -228,9 +228,14 @@ defmodule Mix.PlushiePackage do
         run!(tar, tar_args ++ ["--zstd", "-cf", archive_path, "."])
 
       System.find_executable("zstd") ->
-        {tar_output, 0} = System.cmd(tar, tar_args ++ ["-cf", "-", "."], stderr_to_stdout: true)
-        {_, 0} = System.cmd("zstd", ["-q", "-o", archive_path], input: tar_output)
-        :ok
+        tmp_tar = archive_path <> ".tar"
+
+        try do
+          run!(tar, tar_args ++ ["-cf", tmp_tar, "."])
+          run!("zstd", ["-q", "-f", "-o", archive_path, tmp_tar])
+        after
+          File.rm(tmp_tar)
+        end
 
       true ->
         raise "missing required command: zstd"
@@ -336,10 +341,45 @@ defmodule Mix.PlushiePackage do
     end
 
     value
-    |> then(&Regex.scan(~r/"(?:\\.|[^"\\])*"/, &1))
-    |> Enum.map(fn [literal] -> Jason.decode!(literal) end)
+    |> String.trim()
+    |> String.trim_leading("[")
+    |> String.trim_trailing("]")
+    |> parse_string_array_items!(name, [], true)
   rescue
     Jason.DecodeError -> Mix.raise("Package config #{name} must be an array of strings")
+  end
+
+  defp parse_string_array_items!(text, name, values, expecting_value) do
+    text = String.trim_leading(text)
+
+    cond do
+      text == "" ->
+        Enum.reverse(values)
+
+      String.starts_with?(text, ",") ->
+        if expecting_value do
+          Mix.raise("Package config #{name} must be an array of strings")
+        end
+
+        text
+        |> String.trim_leading(",")
+        |> parse_string_array_items!(name, values, true)
+
+      expecting_value and String.starts_with?(text, "\"") ->
+        {literal, rest} = take_toml_basic_string!(text, name)
+        value = Jason.decode!(literal)
+        parse_string_array_items!(rest, name, [value | values], false)
+
+      true ->
+        Mix.raise("Package config #{name} must be an array of strings")
+    end
+  end
+
+  defp take_toml_basic_string!(text, name) do
+    case Regex.run(~r/^"(?:\\.|[^"\\])*"/, text) do
+      [literal] -> {literal, String.replace_prefix(text, literal, "")}
+      nil -> Mix.raise("Package config #{name} must be an array of strings")
+    end
   end
 
   defp field!(section, name) do

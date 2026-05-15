@@ -144,6 +144,33 @@ defmodule Mix.PlushiePackageTest do
     end
   end
 
+  test "rejects non-string package config arrays" do
+    dir = tmp_dir()
+    path = Path.join(dir, "plushie-package.config.toml")
+
+    for contents <- [
+          """
+          config_version = 1
+
+          [start]
+          working_dir = "."
+          command = ["bin/connect", 1]
+          forward_env = []
+          """,
+          """
+          config_version = 1
+
+          [start]
+          working_dir = "."
+          command = ["bin/connect"]
+          forward_env = ["PATH", 1]
+          """
+        ] do
+      File.write!(path, contents)
+      assert_raise Mix.Error, fn -> Mix.PlushiePackage.read_package_config!(path) end
+    end
+  end
+
   test "materializes default icons through cargo-plushie" do
     dir = tmp_dir()
     assets_dir = Path.join(dir, "assets")

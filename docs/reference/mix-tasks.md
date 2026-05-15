@@ -335,6 +335,13 @@ This task owns the Elixir-specific part of standalone packaging:
 The shared Rust package command remains language-agnostic. It consumes
 the manifest and embedded payload archive produced here.
 
+The shared package default is host-first. The launcher extracts the
+payload and runs the manifest's `[start].command`, usually
+`bin/connect`. `Plushie.Connect.run/2` then starts the payload-local
+renderer through normal binary resolution. Renderer-parent startup is
+reserved for explicit embedding and debugging flows that provide
+`PLUSHIE_SOCKET`.
+
 ### Flags
 
 | Flag | Description |
