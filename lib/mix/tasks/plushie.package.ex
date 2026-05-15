@@ -212,6 +212,7 @@ defmodule Mix.Tasks.Plushie.Package do
           {build_stock_renderer_from_source!(), "local-build"}
 
         true ->
+          Mix.Task.rerun("plushie.download", [])
           {Plushie.Binary.path!(), "local-resolve"}
       end
 
