@@ -32,6 +32,7 @@ defmodule Mix.Tasks.Plushie.Download do
   use Mix.Task
 
   @base_url "https://github.com/plushie-ui/plushie-rust/releases/download"
+  @base_url_env "PLUSHIE_RELEASE_BASE_URL"
   @wasm_archive "plushie-renderer-wasm.tar.gz"
 
   @switches [
@@ -261,8 +262,22 @@ defmodule Mix.Tasks.Plushie.Download do
 
   # -- Shared helpers ---------------------------------------------------------
 
-  defp release_url(artifact) do
-    "#{@base_url}/v#{Plushie.Binary.plushie_rust_version()}/#{artifact}"
+  @doc false
+  @spec release_base_url() :: String.t()
+  def release_base_url do
+    base_url =
+      @base_url_env
+      |> System.get_env(@base_url)
+      |> String.trim()
+      |> String.trim_trailing("/")
+
+    validate_release_base_url!(base_url)
+  end
+
+  @doc false
+  @spec release_url(artifact :: String.t()) :: String.t()
+  def release_url(artifact) do
+    "#{release_base_url()}/v#{Plushie.Binary.plushie_rust_version()}/#{artifact}"
   end
 
   defp download_to_file(url, dest_path) do
@@ -290,6 +305,14 @@ defmodule Mix.Tasks.Plushie.Download do
     "server returned HTTP #{status} redirect without a Location header"
   end
 
+  def format_download_error_reason({:file_read, path, reason}) do
+    "could not read file URL #{path}: #{:file.format_error(reason)}"
+  end
+
+  def format_download_error_reason({:unsupported_file_url, url}) do
+    "unsupported file URL: #{url}"
+  end
+
   def format_download_error_reason(reason)
       when reason in [:nxdomain, :timeout, :econnrefused, :closed] do
     format_transport_reason(reason)
@@ -315,6 +338,20 @@ defmodule Mix.Tasks.Plushie.Download do
   defp fetch(url, redirects_left \\ @max_redirects)
 
   defp fetch(_url, 0), do: {:error, :too_many_redirects}
+
+  defp fetch("file://" <> _ = url, _redirects_left) do
+    case URI.parse(url) do
+      %URI{scheme: "file", host: host, path: path}
+      when host in [nil, "", "localhost"] and is_binary(path) and path != "" ->
+        case File.read(path) do
+          {:ok, body} -> {:ok, body}
+          {:error, reason} -> {:error, {:file_read, path, reason}}
+        end
+
+      _ ->
+        {:error, {:unsupported_file_url, url}}
+    end
+  end
 
   defp fetch(url, redirects_left) do
     Application.ensure_all_started(:inets)
@@ -363,6 +400,27 @@ defmodule Mix.Tasks.Plushie.Download do
         match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
       ]
     ]
+  end
+
+  defp validate_release_base_url!(base_url) do
+    uri = URI.parse(base_url)
+
+    cond do
+      base_url == "" ->
+        Mix.raise("#{@base_url_env} must not be empty")
+
+      uri.scheme == "https" ->
+        base_url
+
+      uri.scheme == "file" ->
+        base_url
+
+      uri.scheme == "http" and uri.host in ["localhost", "127.0.0.1", "::1"] ->
+        base_url
+
+      true ->
+        Mix.raise("#{@base_url_env} must use https://, file://, or loopback http://")
+    end
   end
 
   defp verify_checksum!(file_path, checksum_url, build_command) do

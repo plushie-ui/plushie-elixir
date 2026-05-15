@@ -1,7 +1,26 @@
 defmodule Mix.Tasks.Plushie.DownloadTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias Mix.Tasks.Plushie.Download
+
+  describe "release_url/1" do
+    test "uses the configured release base URL" do
+      previous = System.get_env("PLUSHIE_RELEASE_BASE_URL")
+
+      try do
+        System.put_env("PLUSHIE_RELEASE_BASE_URL", "file:///tmp/plushie-releases/")
+
+        assert Download.release_url("plushie-renderer-linux-x86_64") ==
+                 "file:///tmp/plushie-releases/v#{Plushie.Binary.plushie_rust_version()}/plushie-renderer-linux-x86_64"
+      after
+        if previous do
+          System.put_env("PLUSHIE_RELEASE_BASE_URL", previous)
+        else
+          System.delete_env("PLUSHIE_RELEASE_BASE_URL")
+        end
+      end
+    end
+  end
 
   describe "format_download_error_reason/1" do
     test "formats HTTP status errors" do
@@ -15,6 +34,14 @@ defmodule Mix.Tasks.Plushie.DownloadTest do
 
       assert Download.format_download_error_reason({:redirect_without_location, 302}) ==
                "server returned HTTP 302 redirect without a Location header"
+    end
+
+    test "formats file URL errors" do
+      assert Download.format_download_error_reason({:file_read, "/tmp/missing", :enoent}) ==
+               "could not read file URL /tmp/missing: no such file or directory"
+
+      assert Download.format_download_error_reason({:unsupported_file_url, "file://host/path"}) ==
+               "unsupported file URL: file://host/path"
     end
 
     test "formats common transport errors" do
