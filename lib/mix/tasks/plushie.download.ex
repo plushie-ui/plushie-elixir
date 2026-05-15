@@ -82,9 +82,73 @@ defmodule Mix.Tasks.Plushie.Download do
   # -- Native binary ----------------------------------------------------------
 
   defp download_bin(opts, force?) do
+    dest_path = Mix.PlushieHelpers.resolve_bin_file(opts)
+    default_path = Path.join(Plushie.Binary.download_dir(), Plushie.Binary.download_name())
+
+    if dest_path == default_path do
+      sync_renderer_with_tool(force?)
+    else
+      download_renderer_direct(dest_path, force?)
+    end
+  end
+
+  defp sync_renderer_with_tool(force?) do
+    tool_path = download_tool(force?)
+    args = ["download", "--required-version", Plushie.Binary.plushie_rust_version()]
+    args = if force?, do: args ++ ["--force"], else: args
+
+    Mix.shell().info("Syncing renderer through #{tool_path}...")
+
+    case System.cmd(tool_path, args, stderr_to_stdout: true) do
+      {output, 0} ->
+        if output != "", do: Mix.shell().info(String.trim_trailing(output))
+
+        Mix.shell().info(
+          "Installed native binary to #{Path.join(Plushie.Binary.download_dir(), Plushie.Binary.download_name())}"
+        )
+
+      {output, status} ->
+        Mix.raise("""
+        Renderer sync failed with status #{status}:
+        #{output}
+        """)
+    end
+  end
+
+  defp download_tool(force?) do
+    name = Plushie.Binary.tool_release_name()
+    url = release_url(name)
+    dest_path = Path.join(Plushie.Binary.download_dir(), Plushie.Binary.tool_name())
+
+    if File.exists?(dest_path) and not force? do
+      dest_path
+    else
+      File.mkdir_p!(Path.dirname(dest_path))
+      Mix.shell().info("Downloading #{name}...")
+
+      case download_to_file(url, dest_path) do
+        :ok ->
+          File.chmod!(dest_path, 0o755)
+          verify_checksum!(dest_path, url <> ".sha256", "mix plushie.download --force")
+          Mix.shell().info("Installed plushie tool to #{dest_path}")
+          dest_path
+
+        {:error, reason} ->
+          error = format_download_error_reason(reason)
+
+          Mix.raise("""
+          Plushie tool download failed: #{error}
+
+          To build from source instead:
+            mix plushie.build
+          """)
+      end
+    end
+  end
+
+  defp download_renderer_direct(dest_path, force?) do
     name = Plushie.Binary.release_name()
     url = release_url(name)
-    dest_path = Mix.PlushieHelpers.resolve_bin_file(opts)
 
     if File.exists?(dest_path) and not force? do
       Mix.shell().info("Binary already exists at #{dest_path}. Use --force to re-download.")

@@ -138,6 +138,26 @@ defmodule Plushie.Binary do
   end
 
   @doc """
+  Returns the stable project-local plushie tool name.
+  """
+  @spec tool_name() :: String.t()
+  def tool_name do
+    ext = if os_name() == "windows", do: ".exe", else: ""
+    "plushie#{ext}"
+  end
+
+  @doc """
+  Returns the platform-specific plushie tool release artifact name.
+  """
+  @spec tool_release_name() :: String.t()
+  def tool_release_name do
+    os = os_name()
+    arch = arch_name()
+    ext = if os == "windows", do: ".exe", else: ""
+    "plushie-#{os}-#{arch}#{ext}"
+  end
+
+  @doc """
   Returns the binary name for custom widget builds.
 
   Derived from the Mix project app name by default, overridable via config:

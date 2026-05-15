@@ -39,6 +39,19 @@ defmodule Plushie.BinaryTest do
     end
   end
 
+  describe "tool_name/0" do
+    test "uses the stable plushie tool name" do
+      assert Binary.tool_name() in ["plushie", "plushie.exe"]
+    end
+  end
+
+  describe "tool_release_name/0" do
+    test "starts with the plushie tool prefix" do
+      assert String.starts_with?(Binary.tool_release_name(), "plushie-")
+      refute String.starts_with?(Binary.tool_release_name(), "plushie-renderer-")
+    end
+  end
+
   describe "path!/0 with PLUSHIE_BINARY_PATH set" do
     setup do
       tmp_dir = System.tmp_dir!()
