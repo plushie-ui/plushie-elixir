@@ -343,7 +343,8 @@ This task owns the Elixir-specific part of standalone packaging:
 - Writes `bin/connect`, which starts the release and calls
   `Plushie.Connect.run/2`.
 - Archives the payload as `dist/payload.tar.zst`.
-- Writes `dist/plushie-package.toml` for `cargo plushie package`.
+- Writes `dist/plushie-package.toml` for `bin/plushie package portable`
+  or `bin/plushie package bundle`.
 
 The shared Rust package command remains language-agnostic. It consumes
 the manifest and embedded payload archive produced here.
