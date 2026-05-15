@@ -454,7 +454,7 @@ defmodule Mix.PlushiePackage do
         String.trim(name) == "" or String.contains?(name, [",", "="]) ->
           Mix.raise("Package config start.forward_env contains invalid environment name")
 
-        name in ["PLUSHIE_BINARY_PATH", "PLUSHIE_PACKAGE_DIR"] ->
+        name in ["PLUSHIE_BINARY_PATH", "PLUSHIE_PACKAGE_DIR", "PLUSHIE_PACKAGE_READY_FILE"] ->
           Mix.raise("Package config start.forward_env must not include launcher-owned variables")
 
         true ->

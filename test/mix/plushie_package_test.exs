@@ -137,6 +137,14 @@ defmodule Mix.PlushiePackageTest do
           working_dir = "."
           command = ["bin/connect"]
           forward_env = ["PLUSHIE_PACKAGE_DIR"]
+          """,
+          """
+          config_version = 1
+
+          [start]
+          working_dir = "."
+          command = ["bin/connect"]
+          forward_env = ["PLUSHIE_PACKAGE_READY_FILE"]
           """
         ] do
       File.write!(path, contents)

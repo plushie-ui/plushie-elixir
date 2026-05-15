@@ -654,6 +654,8 @@ defmodule Plushie.Runtime do
       "plushie runtime: renderer connected: #{hello.name} v#{hello.version} (#{hello.mode}, #{hello.backend}, #{hello.transport})"
     )
 
+    maybe_write_package_ready_file()
+
     {:noreply, state}
   end
 
@@ -1741,6 +1743,32 @@ defmodule Plushie.Runtime do
           "The renderer binary may be stale. " <>
           "Run `mix plushie.build` or `mix plushie.download` to update."
       )
+    end
+  end
+
+  defp maybe_write_package_ready_file do
+    case System.get_env("PLUSHIE_PACKAGE_READY_FILE") do
+      nil ->
+        :ok
+
+      "" ->
+        :ok
+
+      path ->
+        dir = Path.dirname(path)
+
+        if dir != "." do
+          File.mkdir_p!(dir)
+        end
+
+        tmp = "#{path}.tmp.#{System.unique_integer([:positive])}"
+        File.write!(tmp, "ready\n")
+
+        if File.exists?(path) do
+          File.rm!(path)
+        end
+
+        File.rename!(tmp, path)
     end
   end
 
