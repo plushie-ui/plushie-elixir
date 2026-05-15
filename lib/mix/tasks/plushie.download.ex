@@ -94,7 +94,7 @@ defmodule Mix.Tasks.Plushie.Download do
 
   defp sync_renderer_with_tool(force?) do
     tool_path = download_tool(force?)
-    args = ["download", "--required-version", Plushie.Binary.plushie_rust_version()]
+    args = ["tools", "sync", "--required-version", Plushie.Binary.plushie_rust_version()]
     args = if force?, do: args ++ ["--force"], else: args
 
     Mix.shell().info("Syncing renderer through #{tool_path}...")
