@@ -49,6 +49,7 @@ defmodule Mix.Tasks.Plushie.Package do
     write_package_config: :boolean,
     portable: :boolean,
     portable_out: :string,
+    strict_tools: :boolean,
     load: :string
   ]
 
@@ -157,16 +158,23 @@ defmodule Mix.Tasks.Plushie.Package do
       Mix.shell().info("Wrote #{manifest_path}")
 
       if opts[:portable] do
-        Mix.PlushiePackage.run_portable_package!(manifest_path, opts[:portable_out])
+        Mix.PlushiePackage.run_portable_package!(
+          manifest_path,
+          opts[:portable_out],
+          !!opts[:strict_tools]
+        )
       else
         Mix.shell().info("Build launcher with:")
-        Mix.shell().info("  #{portable_command_text(manifest_path, opts[:portable_out])}")
+
+        Mix.shell().info(
+          "  #{portable_command_text(manifest_path, opts[:portable_out], !!opts[:strict_tools])}"
+        )
       end
     end
   end
 
-  defp portable_command_text(manifest_path, out_path) do
-    args = Mix.PlushiePackage.portable_package_args(manifest_path, out_path)
+  defp portable_command_text(manifest_path, out_path, strict_tools) do
+    args = Mix.PlushiePackage.portable_package_args(manifest_path, out_path, strict_tools)
     Enum.join([Path.join("bin", Plushie.Binary.tool_name()) | args], " ")
   end
 

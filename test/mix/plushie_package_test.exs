@@ -127,12 +127,14 @@ defmodule Mix.PlushiePackageTest do
 
     assert Mix.PlushiePackage.portable_package_args(
              "dist/plushie-package.toml",
-             "dist/app"
+             "dist/app",
+             true
            ) == [
              "package",
              "portable",
              "--manifest",
              "dist/plushie-package.toml",
+             "--strict-tools",
              "--out",
              "dist/app"
            ]
@@ -154,11 +156,12 @@ defmodule Mix.PlushiePackageTest do
              Mix.PlushiePackage.run_portable_package!(
                "dist/plushie-package.toml",
                "dist/app",
+               true,
                command
              )
 
     assert File.read!(args_log) ==
-             "package\nportable\n--manifest\ndist/plushie-package.toml\n--out\ndist/app\n"
+             "package\nportable\n--manifest\ndist/plushie-package.toml\n--strict-tools\n--out\ndist/app\n"
   end
 
   test "rejects unsafe package config start settings" do

@@ -370,6 +370,7 @@ reserved for explicit embedding and debugging flows that provide
 | `--write-package-config` | Write a package start config template and exit |
 | `--portable` | Run `bin/plushie package portable --manifest <manifest>` after writing the manifest |
 | `--portable-out PATH` | Pass `--out PATH` to the portable package command when `--portable` is set |
+| `--strict-tools` | Pass `--strict-tools` to the portable package command |
 | `--load MODULE` | Load a module before native widget discovery |
 
 `--renderer auto` uses a stock renderer when no native widgets are
@@ -390,7 +391,8 @@ points at the copied payload-relative path.
 
 By default the task prints the final portable-package handoff. Pass
 `--portable` to run that final step immediately after the manifest is
-written.
+written. Pass `--strict-tools` when building release artifacts that
+should fail on missing, stale, dirty, mixed, or mismatched native tools.
 
 ### ERTS runtime
 
