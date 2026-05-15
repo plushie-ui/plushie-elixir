@@ -111,7 +111,9 @@ defmodule Mix.Tasks.Plushie.Package do
       protocol_version: Plushie.Protocol.protocol_version(),
       renderer: renderer,
       platform: %{icon: platform_icon},
-      host_command: ["bin/connect"],
+      start_command: ["bin/connect"],
+      working_dir: ".",
+      forward_env: Mix.PlushiePackage.default_forward_env(),
       payload_archive: "payload.tar.zst",
       payload_hash: Mix.PlushiePackage.payload_hash!(archive_path),
       payload_size: Mix.PlushiePackage.payload_size!(archive_path)

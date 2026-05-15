@@ -22,16 +22,30 @@ defmodule Mix.PlushiePackage do
           protocol_version: non_neg_integer(),
           renderer: renderer(),
           platform: platform(),
-          host_command: [String.t()],
+          start_command: [String.t()],
+          working_dir: String.t(),
+          forward_env: [String.t()],
           payload_archive: String.t(),
           payload_hash: String.t(),
           payload_size: non_neg_integer()
         }
 
   @default_icon_payload_path "assets/plushie-checkbox-512x512.png"
+  @default_forward_env [
+    "PATH",
+    "HOME",
+    "LANG",
+    "LC_ALL",
+    "XDG_RUNTIME_DIR",
+    "WAYLAND_DISPLAY",
+    "DISPLAY"
+  ]
 
   @spec default_icon_payload_path() :: String.t()
   def default_icon_payload_path, do: @default_icon_payload_path
+
+  @spec default_forward_env() :: [String.t()]
+  def default_forward_env, do: @default_forward_env
 
   @spec package_target() :: String.t()
   def package_target do
@@ -194,15 +208,17 @@ defmodule Mix.PlushiePackage do
     host_sdk_version = #{toml_string(manifest.host_sdk_version)}
     plushie_rust_version = #{toml_string(manifest.plushie_rust_version)}
     protocol_version = #{manifest.protocol_version}
-    renderer_path = #{toml_string(manifest.renderer.payload_path)}
-    host_command = #{toml_array(manifest.host_command)}
-    working_dir = "."
-    exec_env = []
+
+    [start]
+    working_dir = #{toml_string(manifest.working_dir)}
+    command = #{toml_array(manifest.start_command)}
+    forward_env = #{toml_array(manifest.forward_env)}
 
     [platform]
     icon = #{toml_string(manifest.platform.icon)}
 
     [renderer]
+    path = #{toml_string(manifest.renderer.payload_path)}
     kind = #{toml_string(Atom.to_string(manifest.renderer.kind))}
     source = #{toml_string(manifest.renderer.source)}
 

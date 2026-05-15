@@ -42,7 +42,9 @@ defmodule Mix.PlushiePackageTest do
       platform: %{
         icon: "assets/app-icon.png"
       },
-      host_command: ["bin/connect"],
+      start_command: ["bin/connect"],
+      working_dir: ".",
+      forward_env: ["PATH", "HOME"],
       payload_archive: "payload.tar.zst",
       payload_hash: String.duplicate("a", 64),
       payload_size: 123
@@ -55,9 +57,11 @@ defmodule Mix.PlushiePackageTest do
     assert toml =~ ~s(host_sdk_version = "0.7.2")
     assert toml =~ ~s(plushie_rust_version = "0.7.0")
     assert toml =~ ~s(protocol_version = 1)
-    assert toml =~ ~s(renderer_path = "bin/plushie-renderer")
-    assert toml =~ ~s(host_command = ["bin/connect"])
+    assert toml =~ ~s([start]\nworking_dir = ".")
+    assert toml =~ ~s(command = ["bin/connect"])
+    assert toml =~ ~s(forward_env = ["PATH", "HOME"])
     assert toml =~ ~s([platform]\nicon = "assets/app-icon.png")
+    assert toml =~ ~s([renderer]\npath = "bin/plushie-renderer")
     assert toml =~ ~s(kind = "stock")
     assert toml =~ ~s(archive = "payload.tar.zst")
     assert toml =~ ~s(hash = "sha256:#{String.duplicate("a", 64)}")

@@ -1,11 +1,10 @@
 defmodule Plushie.Connect do
   @moduledoc """
-  Connects a Plushie application to an already-listening renderer.
+  Runs a Plushie application from a standalone entry point.
 
-  This is the release-safe counterpart to `mix plushie.connect`. It is
-  intended for renderer-parent launch, where the renderer starts the
-  host process with `--listen` and structured exec args, and provides `PLUSHIE_SOCKET` and
-  `PLUSHIE_TOKEN` in the environment.
+  When `PLUSHIE_SOCKET` is set, it connects to an already-listening
+  renderer. Otherwise it starts the renderer as a child process using
+  normal Plushie binary resolution, including `PLUSHIE_BINARY_PATH`.
   """
 
   @type option ::
@@ -17,7 +16,7 @@ defmodule Plushie.Connect do
           | {:app_opts, term()}
 
   @doc """
-  Runs `app_module` against a renderer socket and blocks until it exits.
+  Runs `app_module` and blocks until it exits.
 
   Socket resolution order:
 
@@ -38,23 +37,11 @@ defmodule Plushie.Connect do
     format = Keyword.get(opts, :format, :msgpack)
     daemon = Keyword.get(opts, :daemon, false)
 
-    with :ok <- validate_format(format),
-         {:ok, socket} <- resolve_socket(opts),
-         token <- resolve_token(opts),
-         {:ok, adapter} <- Plushie.SocketAdapter.start_link(socket, format),
-         {:ok, pid} <-
-           Plushie.start_link(app_module,
-             transport: {:iostream, adapter},
-             format: format,
-             daemon: daemon,
-             token: token,
-             name: Keyword.get(opts, :name, Plushie),
-             app_opts: Keyword.get(opts, :app_opts, [])
-           ) do
-      wait(pid)
-    else
-      {:error, {:shutdown, {:connect_failed, reason}}} -> {:error, {:connect_failed, reason}}
-      {:error, reason} -> {:error, reason}
+    with :ok <- validate_format(format) do
+      case resolve_socket(opts) do
+        {:ok, socket} -> run_socket(app_module, socket, opts, format, daemon)
+        :spawn -> run_spawn(app_module, opts, format, daemon)
+      end
     end
   end
 
@@ -90,7 +77,39 @@ defmodule Plushie.Connect do
   defp resolve_socket(opts) do
     case Keyword.get(opts, :socket) || System.get_env("PLUSHIE_SOCKET") do
       socket when is_binary(socket) and socket != "" -> {:ok, socket}
-      _ -> {:error, :missing_socket}
+      _ -> :spawn
+    end
+  end
+
+  defp run_socket(app_module, socket, opts, format, daemon) do
+    token = resolve_token(opts)
+
+    with {:ok, adapter} <- Plushie.SocketAdapter.start_link(socket, format),
+         {:ok, pid} <-
+           Plushie.start_link(app_module,
+             transport: {:iostream, adapter},
+             format: format,
+             daemon: daemon,
+             token: token,
+             name: Keyword.get(opts, :name, Plushie),
+             app_opts: Keyword.get(opts, :app_opts, [])
+           ) do
+      wait(pid)
+    else
+      {:error, {:shutdown, {:connect_failed, reason}}} -> {:error, {:connect_failed, reason}}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp run_spawn(app_module, opts, format, daemon) do
+    case Plushie.start_link(app_module,
+           format: format,
+           daemon: daemon,
+           name: Keyword.get(opts, :name, Plushie),
+           app_opts: Keyword.get(opts, :app_opts, [])
+         ) do
+      {:ok, pid} -> wait(pid)
+      {:error, reason} -> {:error, reason}
     end
   end
 
