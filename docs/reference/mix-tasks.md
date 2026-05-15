@@ -297,6 +297,17 @@ is deleted and an error is raised. There is no option to skip
 verification. This is intentional, as the binary runs as a child
 process of your application.
 
+### Release mirrors
+
+By default downloads come from GitHub releases. Set
+`PLUSHIE_RELEASE_BASE_URL` to verify the same flow against another
+release mirror. The mirror must expose assets as
+`BASE/vVERSION/ARTIFACT` with checksum sidecars at
+`BASE/vVERSION/ARTIFACT.sha256`.
+
+Remote mirrors must use HTTPS. `file://` mirrors and loopback HTTP are
+for local release verification before assets are uploaded.
+
 ### Native widget refusal
 
 If your project contains native widgets (detected via protocol
