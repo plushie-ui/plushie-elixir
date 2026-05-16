@@ -61,36 +61,7 @@ defmodule Mix.PlushiePackageTest do
     assert config.start_command == ["bin/connect"]
   end
 
-  test "Windows manifest uses bin/connect.cmd as start command" do
-    manifest = %{
-      app_id: "dev.plushie.test",
-      app_name: nil,
-      app_version: "0.1.0",
-      target: "windows-x86_64",
-      host_sdk_version: "0.7.2",
-      plushie_rust_version: "0.7.0",
-      protocol_version: 1,
-      renderer: %{
-        kind: :stock,
-        source_path: "/tmp/plushie-renderer.exe",
-        payload_path: "bin/plushie-renderer.exe"
-      },
-      platform: %{icon: nil},
-      start_command: ["bin/connect.cmd"],
-      working_dir: ".",
-      forward_env: ["PATH"],
-      payload_archive: "payload.tar.zst",
-      payload_hash: String.duplicate("c", 64),
-      payload_size: 789
-    }
-
-    toml = Mix.PlushiePackage.manifest_toml(manifest)
-
-    assert toml =~ ~s(target = "windows-x86_64")
-    assert toml =~ ~s(command = ["bin/connect.cmd"])
-  end
-
-  test "writes package manifest with SDK and protocol metadata" do
+  test "writes partial manifest with SDK and protocol metadata" do
     manifest = %{
       app_id: "dev.plushie.test",
       app_name: "Test App",
@@ -104,32 +75,26 @@ defmodule Mix.PlushiePackageTest do
         source_path: "/tmp/plushie-renderer",
         payload_path: "bin/plushie-renderer"
       },
-      platform: %{
-        icon: "assets/app-icon.png"
-      },
-      start_command: ["bin/connect"],
-      working_dir: ".",
-      forward_env: ["PATH", "HOME"],
-      payload_archive: "payload.tar.zst",
-      payload_hash: String.duplicate("a", 64),
-      payload_size: 123
+      start_command: ["bin/connect"]
     }
 
-    toml = Mix.PlushiePackage.manifest_toml(manifest)
+    toml = Mix.PlushiePackage.partial_manifest_toml(manifest)
 
-    assert toml =~ ~s(host_sdk = "elixir")
+    assert toml =~ ~s(schema_version = 1)
+    assert toml =~ ~s(app_id = "dev.plushie.test")
     assert toml =~ ~s(app_name = "Test App")
+    assert toml =~ ~s(app_version = "0.1.0")
+    assert toml =~ ~s(target = "linux-x86_64")
+    assert toml =~ ~s(host_sdk = "elixir")
     assert toml =~ ~s(host_sdk_version = "0.7.2")
     assert toml =~ ~s(plushie_rust_version = "0.7.0")
     assert toml =~ ~s(protocol_version = 1)
-    assert toml =~ ~s([start]\nworking_dir = ".")
-    assert toml =~ ~s(command = ["bin/connect"])
-    assert toml =~ ~s(forward_env = ["PATH", "HOME"])
-    assert toml =~ ~s([platform]\nicon = "assets/app-icon.png")
+    assert toml =~ ~s([start]\ncommand = ["bin/connect"])
     assert toml =~ ~s([renderer]\npath = "bin/plushie-renderer")
+    assert toml =~ ~s(kind = "stock")
   end
 
-  test "omits [platform] section when no icon is set" do
+  test "partial manifest omits app_name when nil" do
     manifest = %{
       app_id: "dev.plushie.test",
       app_name: nil,
@@ -143,67 +108,148 @@ defmodule Mix.PlushiePackageTest do
         source_path: "/tmp/plushie-renderer",
         payload_path: "bin/plushie-renderer"
       },
-      platform: %{icon: nil},
-      start_command: ["bin/connect"],
-      working_dir: ".",
-      forward_env: ["PATH"],
-      payload_archive: "payload.tar.zst",
-      payload_hash: String.duplicate("b", 64),
-      payload_size: 456
+      start_command: ["bin/connect"]
     }
 
-    toml = Mix.PlushiePackage.manifest_toml(manifest)
+    toml = Mix.PlushiePackage.partial_manifest_toml(manifest)
 
-    refute toml =~ "[platform]"
-    assert toml =~ ~s([renderer]\npath = "bin/plushie-renderer")
-    assert toml =~ ~s(kind = "stock")
-    assert toml =~ ~s(archive = "payload.tar.zst")
-    assert toml =~ ~s(hash = "sha256:#{String.duplicate("b", 64)}")
+    refute toml =~ "app_name"
+    assert toml =~ ~s(app_id = "dev.plushie.test")
   end
 
-  test "reads package config with start settings" do
+  test "partial manifest uses bin/connect.cmd for Windows targets" do
+    manifest = %{
+      app_id: "dev.plushie.test",
+      app_name: nil,
+      app_version: "0.1.0",
+      target: "windows-x86_64",
+      host_sdk_version: "0.7.2",
+      plushie_rust_version: "0.7.0",
+      protocol_version: 1,
+      renderer: %{
+        kind: :stock,
+        source_path: "/tmp/plushie-renderer.exe",
+        payload_path: "bin/plushie-renderer.exe"
+      },
+      start_command: ["bin/connect.cmd"]
+    }
+
+    toml = Mix.PlushiePackage.partial_manifest_toml(manifest)
+
+    assert toml =~ ~s(target = "windows-x86_64")
+    assert toml =~ ~s(command = ["bin/connect.cmd"])
+  end
+
+  test "partial manifest contains no [payload] section" do
+    manifest = %{
+      app_id: "dev.plushie.test",
+      app_name: nil,
+      app_version: "0.1.0",
+      target: "linux-x86_64",
+      host_sdk_version: "0.7.2",
+      plushie_rust_version: "0.7.0",
+      protocol_version: 1,
+      renderer: %{
+        kind: :custom,
+        source_path: "/tmp/my-renderer",
+        payload_path: "bin/my-renderer"
+      },
+      start_command: ["bin/connect"]
+    }
+
+    toml = Mix.PlushiePackage.partial_manifest_toml(manifest)
+
+    refute toml =~ "[payload]"
+    refute toml =~ "archive"
+    refute toml =~ "forward_env"
+    assert toml =~ ~s(kind = "custom")
+  end
+
+  test "writes partial manifest to disk" do
     dir = tmp_dir()
-    path = Path.join(dir, "plushie-package.config.toml")
+    path = Path.join(dir, "plushie-package.toml")
 
-    File.write!(path, """
-    config_version = 1
+    manifest = %{
+      app_id: "dev.plushie.test",
+      app_name: nil,
+      app_version: "0.1.0",
+      target: "linux-x86_64",
+      host_sdk_version: "0.7.2",
+      plushie_rust_version: "0.7.0",
+      protocol_version: 1,
+      renderer: %{
+        kind: :stock,
+        source_path: "/tmp/plushie-renderer",
+        payload_path: "bin/plushie-renderer"
+      },
+      start_command: ["bin/connect"]
+    }
 
-    [start]
-    working_dir = "app"
-    command = ["app/bin/connect", "--profile", "release"]
-    forward_env = [
-      "PATH",
-      "HOME",
-    ]
+    Mix.PlushiePackage.write_partial_manifest!(path, manifest)
+
+    toml = File.read!(path)
+    assert toml =~ ~s(app_id = "dev.plushie.test")
+    assert toml =~ ~s([renderer])
+  end
+
+  test "run_plushie! invokes bin/plushie with given args" do
+    dir = tmp_dir()
+    command = Path.join(dir, "plushie")
+    args_log = Path.join(dir, "args.log")
+
+    File.write!(command, """
+    #!/bin/sh
+    printf '%s\\n' "$@" > #{shell_quote(args_log)}
     """)
 
-    config = Mix.PlushiePackage.read_package_config!(path)
+    File.chmod!(command, 0o755)
 
-    assert config.working_dir == "app"
-    assert config.start_command == ["app/bin/connect", "--profile", "release"]
-    assert config.forward_env == ["PATH", "HOME"]
+    assert :ok =
+             Mix.PlushiePackage.run_plushie!(
+               [
+                 "package",
+                 "assemble",
+                 "--manifest",
+                 "dist/plushie-package.toml",
+                 "--payload-dir",
+                 "dist/payload"
+               ],
+               command
+             )
 
-    assert config.platform == %{
-             icon: nil,
-             publisher: nil,
-             copyright: nil,
-             category: nil,
-             description: nil,
-             bundle_id: nil,
-             macos: %{bundle_version: nil},
-             windows: %{install_scope: nil}
-           }
+    assert File.read!(args_log) ==
+             "package\nassemble\n--manifest\ndist/plushie-package.toml\n--payload-dir\ndist/payload\n"
   end
 
-  test "writes package config template with real start values" do
-    config = Mix.PlushiePackage.default_start_config("notes")
-    toml = Mix.PlushiePackage.package_config_toml(config)
+  test "run_plushie! forwards package-config when provided" do
+    dir = tmp_dir()
+    command = Path.join(dir, "plushie")
+    args_log = Path.join(dir, "args.log")
 
-    assert toml =~ "config_version = 1"
-    assert toml =~ "[start]"
-    assert toml =~ ~s(working_dir = ".")
-    assert toml =~ ~s(command = ["bin/connect"])
-    assert toml =~ ~s("WAYLAND_DISPLAY")
+    File.write!(command, """
+    #!/bin/sh
+    printf '%s\\n' "$@" > #{shell_quote(args_log)}
+    """)
+
+    File.chmod!(command, 0o755)
+
+    assert :ok =
+             Mix.PlushiePackage.run_plushie!(
+               [
+                 "package",
+                 "assemble",
+                 "--manifest",
+                 "dist/plushie-package.toml",
+                 "--payload-dir",
+                 "dist/payload",
+                 "--package-config",
+                 "plushie-package.config.toml"
+               ],
+               command
+             )
+
+    content = File.read!(args_log)
+    assert content =~ "--package-config\nplushie-package.config.toml\n"
   end
 
   test "requires managed package tools for renderer override packaging" do
@@ -269,322 +315,15 @@ defmodule Mix.PlushiePackageTest do
              "package\nportable\n--manifest\ndist/plushie-package.toml\n--strict-tools\n--out\ndist/app\n"
   end
 
-  test "rejects unsafe package config start settings" do
-    dir = tmp_dir()
-    path = Path.join(dir, "plushie-package.config.toml")
+  test "writes package config template with real start values" do
+    config = Mix.PlushiePackage.default_start_config("notes")
+    toml = Mix.PlushiePackage.package_config_toml(config)
 
-    for contents <- [
-          """
-          config_version = 2
-
-          [start]
-          working_dir = "."
-          command = ["bin/connect"]
-          forward_env = []
-          """,
-          """
-          config_version = 1
-
-          [start]
-          working_dir = "../app"
-          command = ["bin/connect"]
-          forward_env = []
-          """,
-          """
-          config_version = 1
-
-          [start]
-          working_dir = "."
-          command = ["/usr/bin/connect"]
-          forward_env = []
-          """,
-          """
-          config_version = 1
-
-          [start]
-          working_dir = "."
-          command = ["bin/connect"]
-          forward_env = ["PLUSHIE_PACKAGE_DIR"]
-          """,
-          """
-          config_version = 1
-
-          [start]
-          working_dir = "."
-          command = ["bin/connect"]
-          forward_env = ["PLUSHIE_PACKAGE_READY_FILE"]
-          """
-        ] do
-      File.write!(path, contents)
-      assert_raise Mix.Error, fn -> Mix.PlushiePackage.read_package_config!(path) end
-    end
-  end
-
-  test "rejects non-string package config arrays" do
-    dir = tmp_dir()
-    path = Path.join(dir, "plushie-package.config.toml")
-
-    for contents <- [
-          """
-          config_version = 1
-
-          [start]
-          working_dir = "."
-          command = ["bin/connect", 1]
-          forward_env = []
-          """,
-          """
-          config_version = 1
-
-          [start]
-          working_dir = "."
-          command = ["bin/connect"]
-          forward_env = ["PATH", 1]
-          """
-        ] do
-      File.write!(path, contents)
-      assert_raise Mix.Error, fn -> Mix.PlushiePackage.read_package_config!(path) end
-    end
-  end
-
-  test "reads package config with all platform fields" do
-    dir = tmp_dir()
-    path = Path.join(dir, "plushie-package.config.toml")
-
-    File.write!(path, """
-    config_version = 1
-
-    [start]
-    working_dir = "."
-    command = ["bin/connect"]
-    forward_env = ["PATH"]
-
-    [platform]
-    publisher = "Acme Corp"
-    copyright = "Copyright 2026 Acme Corp"
-    category = "productivity"
-    description = "A great app"
-    bundle_id = "com.acme.myapp"
-
-    [platform.macos]
-    bundle_version = "42"
-
-    [platform.windows]
-    install_scope = "perUser"
-    """)
-
-    config = Mix.PlushiePackage.read_package_config!(path)
-
-    assert config.platform == %{
-             icon: nil,
-             publisher: "Acme Corp",
-             copyright: "Copyright 2026 Acme Corp",
-             category: "productivity",
-             description: "A great app",
-             bundle_id: "com.acme.myapp",
-             macos: %{bundle_version: "42"},
-             windows: %{install_scope: "perUser"}
-           }
-  end
-
-  test "rejects invalid install_scope value" do
-    dir = tmp_dir()
-    path = Path.join(dir, "plushie-package.config.toml")
-
-    File.write!(path, """
-    config_version = 1
-
-    [start]
-    working_dir = "."
-    command = ["bin/connect"]
-    forward_env = ["PATH"]
-
-    [platform.windows]
-    install_scope = "global"
-    """)
-
-    assert_raise Mix.Error, ~r/install_scope must be one of/, fn ->
-      Mix.PlushiePackage.read_package_config!(path)
-    end
-  end
-
-  test "rejects empty platform string fields" do
-    dir = tmp_dir()
-    path = Path.join(dir, "plushie-package.config.toml")
-
-    File.write!(path, """
-    config_version = 1
-
-    [start]
-    working_dir = "."
-    command = ["bin/connect"]
-    forward_env = ["PATH"]
-
-    [platform]
-    publisher = ""
-    """)
-
-    assert_raise Mix.Error, ~r/must not be empty/, fn ->
-      Mix.PlushiePackage.read_package_config!(path)
-    end
-  end
-
-  test "emits all populated platform fields in manifest toml" do
-    manifest = %{
-      app_id: "dev.plushie.test",
-      app_name: nil,
-      app_version: "0.1.0",
-      target: "linux-x86_64",
-      host_sdk_version: "0.7.2",
-      plushie_rust_version: "0.7.0",
-      protocol_version: 1,
-      renderer: %{
-        kind: :stock,
-        source_path: "/tmp/plushie-renderer",
-        payload_path: "bin/plushie-renderer"
-      },
-      platform: %{
-        icon: "assets/app-icon.png",
-        publisher: "Acme Corp",
-        copyright: "Copyright 2026 Acme Corp",
-        category: "productivity",
-        description: "A great app",
-        bundle_id: "com.acme.myapp",
-        macos: %{bundle_version: "42"},
-        windows: %{install_scope: "perUser"}
-      },
-      start_command: ["bin/connect"],
-      working_dir: ".",
-      forward_env: ["PATH"],
-      payload_archive: "payload.tar.zst",
-      payload_hash: String.duplicate("d", 64),
-      payload_size: 999
-    }
-
-    toml = Mix.PlushiePackage.manifest_toml(manifest)
-
-    assert toml =~ ~s([platform]\nicon = "assets/app-icon.png")
-    assert toml =~ ~s(publisher = "Acme Corp")
-    assert toml =~ ~s(copyright = "Copyright 2026 Acme Corp")
-    assert toml =~ ~s(category = "productivity")
-    assert toml =~ ~s(description = "A great app")
-    assert toml =~ ~s(bundle_id = "com.acme.myapp")
-    assert toml =~ ~s([platform.macos]\nbundle_version = "42")
-    assert toml =~ ~s([platform.windows]\ninstall_scope = "perUser")
-  end
-
-  test "omits [platform] when all platform fields are nil" do
-    manifest = %{
-      app_id: "dev.plushie.test",
-      app_name: nil,
-      app_version: "0.1.0",
-      target: "linux-x86_64",
-      host_sdk_version: "0.7.2",
-      plushie_rust_version: "0.7.0",
-      protocol_version: 1,
-      renderer: %{
-        kind: :stock,
-        source_path: "/tmp/plushie-renderer",
-        payload_path: "bin/plushie-renderer"
-      },
-      platform: %{
-        icon: nil,
-        publisher: nil,
-        copyright: nil,
-        category: nil,
-        description: nil,
-        bundle_id: nil,
-        macos: %{bundle_version: nil},
-        windows: %{install_scope: nil}
-      },
-      start_command: ["bin/connect"],
-      working_dir: ".",
-      forward_env: ["PATH"],
-      payload_archive: "payload.tar.zst",
-      payload_hash: String.duplicate("e", 64),
-      payload_size: 111
-    }
-
-    toml = Mix.PlushiePackage.manifest_toml(manifest)
-
-    refute toml =~ "[platform]"
-    refute toml =~ "[platform.macos]"
-    refute toml =~ "[platform.windows]"
-  end
-
-  test "emits [platform.macos] without top-level [platform] when only macos fields present" do
-    manifest = %{
-      app_id: "dev.plushie.test",
-      app_name: nil,
-      app_version: "0.1.0",
-      target: "darwin-aarch64",
-      host_sdk_version: "0.7.2",
-      plushie_rust_version: "0.7.0",
-      protocol_version: 1,
-      renderer: %{
-        kind: :stock,
-        source_path: "/tmp/plushie-renderer",
-        payload_path: "bin/plushie-renderer"
-      },
-      platform: %{
-        icon: nil,
-        publisher: nil,
-        copyright: nil,
-        category: nil,
-        description: nil,
-        bundle_id: nil,
-        macos: %{bundle_version: "7"},
-        windows: %{install_scope: nil}
-      },
-      start_command: ["bin/connect"],
-      working_dir: ".",
-      forward_env: ["PATH"],
-      payload_archive: "payload.tar.zst",
-      payload_hash: String.duplicate("f", 64),
-      payload_size: 222
-    }
-
-    toml = Mix.PlushiePackage.manifest_toml(manifest)
-
-    refute toml =~ ~s([platform]\n)
-    assert toml =~ ~s([platform.macos]\nbundle_version = "7")
-  end
-
-  test "materializes default icons through cargo-plushie" do
-    dir = tmp_dir()
-    assets_dir = Path.join(dir, "assets")
-    args_log = Path.join(dir, "args.log")
-
-    script = """
-    printf '%s\\n' "$@" > #{shell_quote(args_log)}
-    while [ "$#" -gt 0 ]; do
-      case "$1" in
-        --out)
-          shift
-          out="$1"
-          ;;
-      esac
-      shift
-    done
-    mkdir -p "$out"
-    printf icon > "$out/default-app-icon-512.png"
-    """
-
-    assert Mix.PlushiePackage.materialize_default_icons!(assets_dir, {"sh", ["-c", script, "sh"]}) ==
-             "assets/default-app-icon-512.png"
-
-    assert File.read!(args_log) == "default-icons\n--out\n#{assets_dir}\n"
-    assert File.read!(Path.join(assets_dir, "default-app-icon-512.png")) == "icon"
-  end
-
-  test "copies an app icon into payload assets" do
-    dir = tmp_dir()
-    assets_dir = Path.join(dir, "payload/assets")
-    icon_path = Path.join(dir, "app-icon.png")
-    File.write!(icon_path, "icon")
-
-    assert Mix.PlushiePackage.copy_app_icon!(icon_path, assets_dir) == "assets/app-icon.png"
-    assert File.read!(Path.join(assets_dir, "app-icon.png")) == "icon"
+    assert toml =~ "config_version = 1"
+    assert toml =~ "[start]"
+    assert toml =~ ~s(working_dir = ".")
+    assert toml =~ ~s(command = ["bin/connect"])
+    assert toml =~ ~s("WAYLAND_DISPLAY")
   end
 
   defp tmp_dir do

@@ -1,8 +1,8 @@
 defmodule Mix.Tasks.Plushie.Package do
   @shortdoc "Build a standalone Plushie package payload"
   @moduledoc """
-  Builds a release payload archive and `plushie-package.toml` manifest
-  for a Plushie Elixir app.
+  Builds a release payload and hands off to `bin/plushie package assemble`
+  to complete the manifest, archive, hash, and optional handoff printing.
 
   The output is intended for `bin/plushie package portable`. All
   Elixir-specific release and renderer selection work stays in this task.
@@ -18,7 +18,6 @@ defmodule Mix.Tasks.Plushie.Package do
       MIX_ENV=prod mix plushie.package MyApp --app-id dev.example.my_app
       MIX_ENV=prod mix plushie.package MyApp --app-id dev.example.my_app --app-name "My App"
       MIX_ENV=prod mix plushie.package MyApp --app-id dev.example.my_app --renderer-kind custom
-      MIX_ENV=prod mix plushie.package MyApp --app-id dev.example.my_app --icon priv/app-icon.png
       mix plushie.package MyApp --write-package-config
 
   ## Options
@@ -30,8 +29,7 @@ defmodule Mix.Tasks.Plushie.Package do
   - `--renderer-kind stock|custom`: Renderer selection. When absent, auto-detects based on
     native widget presence.
   - `--renderer-path PATH`: Use an existing renderer binary.
-  - `--icon PATH`: Use an app icon instead of the default Plushie icon.
-  - `--package-config PATH`: Read or write a package config.
+  - `--package-config PATH`: Forward to `bin/plushie package assemble --package-config`.
   - `--write-package-config`: Write a package config template and exit.
   - `--load MODULE`: Ensure a module is loaded before native widget discovery.
   """
@@ -45,7 +43,6 @@ defmodule Mix.Tasks.Plushie.Package do
     output: :string,
     renderer_kind: :string,
     renderer_path: :string,
-    icon: :string,
     package_config: :string,
     write_package_config: :boolean,
     load: :string
@@ -93,14 +90,6 @@ defmodule Mix.Tasks.Plushie.Package do
       package_target = Mix.PlushiePackage.package_target()
       connect_wrapper = Mix.PlushiePackage.connect_wrapper_name(package_target)
 
-      start_config =
-        if opts[:package_config] do
-          Mix.PlushiePackage.read_package_config!(package_config_path)
-        else
-          Mix.PlushiePackage.read_default_package_config!(package_config_path) ||
-            Mix.PlushiePackage.default_start_config(release_name, package_target)
-        end
-
       renderer = resolve_renderer!(renderer_mode, opts)
 
       Mix.shell().info("Building host release...")
@@ -129,37 +118,6 @@ defmodule Mix.Tasks.Plushie.Package do
         app_module
       )
 
-      platform_icon = prepare_package_icon!(opts, payload_dir)
-
-      Mix.shell().info("Writing archive...")
-      archive_path = Path.join(output_dir, "payload.tar.zst")
-      Mix.PlushiePackage.archive_payload!(payload_dir, archive_path)
-
-      config_platform = Map.get(start_config, :platform, %{})
-
-      platform =
-        %{
-          icon: platform_icon,
-          publisher: nil,
-          copyright: nil,
-          category: nil,
-          description: nil,
-          bundle_id: nil,
-          macos: %{bundle_version: nil},
-          windows: %{install_scope: nil}
-        }
-        |> Map.merge(
-          Map.take(config_platform, [
-            :publisher,
-            :copyright,
-            :category,
-            :description,
-            :bundle_id,
-            :macos,
-            :windows
-          ])
-        )
-
       manifest = %{
         app_id: app_id,
         app_name: opts[:app_name],
@@ -169,23 +127,19 @@ defmodule Mix.Tasks.Plushie.Package do
         plushie_rust_version: plushie_rust_version(),
         protocol_version: Plushie.Protocol.protocol_version(),
         renderer: renderer,
-        platform: platform,
-        start_command: start_config.start_command,
-        working_dir: start_config.working_dir,
-        forward_env: start_config.forward_env,
-        payload_archive: "payload.tar.zst",
-        payload_hash: Mix.PlushiePackage.payload_hash!(archive_path),
-        payload_size: Mix.PlushiePackage.payload_size!(archive_path)
+        start_command: [connect_wrapper]
       }
 
       manifest_path = Path.join(output_dir, "plushie-package.toml")
-      Mix.PlushiePackage.write_manifest!(manifest_path, manifest)
+      Mix.PlushiePackage.write_partial_manifest!(manifest_path, manifest)
 
-      Mix.shell().info("Wrote #{archive_path}")
-      Mix.shell().info("Wrote #{manifest_path}")
+      Mix.shell().info("Assembling package...")
 
-      Mix.shell().info("Build launcher with:")
-      Mix.shell().info("  bin/plushie package portable --manifest #{manifest_path}")
+      assemble_args =
+        ["package", "assemble", "--manifest", manifest_path, "--payload-dir", payload_dir] ++
+          if opts[:package_config], do: ["--package-config", opts[:package_config]], else: []
+
+      Mix.PlushiePackage.run_plushie!(assemble_args)
     end
   end
 
@@ -199,18 +153,6 @@ defmodule Mix.Tasks.Plushie.Package do
       module = Module.concat([module_string])
       Code.ensure_loaded!(module)
     end)
-  end
-
-  defp prepare_package_icon!(opts, payload_dir) do
-    payload_assets_dir = Path.join(payload_dir, "assets")
-
-    case opts[:icon] do
-      nil ->
-        Mix.PlushiePackage.materialize_default_icons!(payload_assets_dir)
-
-      icon_path ->
-        Mix.PlushiePackage.copy_app_icon!(icon_path, payload_assets_dir)
-    end
   end
 
   defp resolve_renderer!(mode, opts) do

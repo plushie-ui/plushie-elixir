@@ -324,31 +324,33 @@ existing renderer widgets and do not require a custom build.
 
 ## plushie.package
 
-Builds an Elixir release payload and `plushie-package.toml` manifest
-for the shared Rust launcher.
+Builds the Elixir-specific part of a standalone package payload and
+hands off to `bin/plushie package assemble` to complete the manifest,
+archive, hash, and icon materialization.
 
 ```bash
 MIX_ENV=prod mix plushie.package MyApp --app-id dev.example.my_app
 MIX_ENV=prod mix plushie.package MyApp --app-id dev.example.my_app --app-name "My App"
-MIX_ENV=prod mix plushie.package MyApp --app-id dev.example.my_app --icon priv/app-icon.png
-# task prints the handoff command on completion:
-bin/plushie package portable --manifest dist/plushie-package.toml
+# bin/plushie package assemble prints the handoff on completion
 ```
 
-This task owns the Elixir-specific part of standalone packaging:
+This task owns the Elixir-specific work:
 
 - Builds the Mix release.
 - Copies the release into `dist/payload/`.
 - Places the selected renderer in the payload.
-- Places package icon assets in the payload.
 - Writes `bin/connect` (POSIX) or `bin/connect.cmd` (Windows), which
   starts the release and calls `Plushie.Connect.run/2`.
-- Archives the payload as `dist/payload.tar.zst`.
-- Writes `dist/plushie-package.toml` for `bin/plushie package portable`
-  or `bin/plushie package bundle`.
+- Writes a partial `dist/plushie-package.toml` with SDK identity and
+  renderer info (no `[payload]` section; no `working_dir` or
+  `forward_env` defaults; no `[platform]`).
+- Shells to `bin/plushie package assemble --manifest dist/plushie-package.toml
+  --payload-dir dist/payload`, which fills in `[payload]`, reads
+  `[start]` defaults and `[platform]` from the source config, archives,
+  hashes, materializes icons, and prints the handoff.
 
-The shared Rust package command remains language-agnostic. It consumes
-the manifest and embedded payload archive produced here.
+`bin/plushie package assemble` is provided by the managed tool set.
+Run `mix plushie.download` to install it.
 
 The shared package default is host-first. The launcher extracts the
 payload and runs the manifest's `[start].command`, usually
@@ -367,8 +369,7 @@ explicit embedding and debugging flows that provide `PLUSHIE_SOCKET`.
 | `--output DIR` | Output directory. Defaults to `dist` |
 | `--renderer-kind stock\|custom` | Renderer selection. When absent, auto-detects based on native widget presence |
 | `--renderer-path PATH` | Use an existing renderer binary |
-| `--icon PATH` | Use an app icon instead of the default Plushie icon |
-| `--package-config PATH` | Read or write a package start config |
+| `--package-config PATH` | Forward to `bin/plushie package assemble --package-config` |
 | `--write-package-config` | Write a package start config template and exit |
 | `--load MODULE` | Load a module before native widget discovery |
 
@@ -381,49 +382,10 @@ Use `--load MODULE` when a native widget module is not otherwise loaded
 before protocol consolidation. The package task loads these modules
 before native widget discovery.
 
-When `--icon` is omitted, the task asks cargo-plushie to materialize
-the default Plushie icon set under `dist/payload/assets/` and writes
-`[platform].icon` in `dist/plushie-package.toml` as
-`assets/default-app-icon-512.png`. When `--icon` is present, that
-file is copied into the same payload assets directory and the manifest
-points at the copied payload-relative path. If no icon is configured,
-the `[platform]` section is omitted from the manifest entirely.
-
-Additional platform metadata can be set in `plushie-package.config.toml`
-under a `[platform]` section. All fields are optional:
-
-| Field | Description |
-|---|---|
-| `publisher` | App publisher name |
-| `copyright` | Copyright notice string |
-| `category` | App category (e.g. `"productivity"`) |
-| `description` | Short app description |
-| `bundle_id` | Reverse-DNS bundle identifier; defaults to `app_id` on macOS |
-
-Nested tables carry platform-specific fields:
-
-`[platform.macos]`:
-
-| Field | Description |
-|---|---|
-| `bundle_version` | `CFBundleVersion` build number string |
-
-`[platform.windows]`:
-
-| Field | Description |
-|---|---|
-| `install_scope` | Installer scope: `"perUser"` or `"perMachine"` |
-
-These fields pass through unchanged to the emitted `dist/plushie-package.toml`
-manifest. The `[platform]`, `[platform.macos]`, and `[platform.windows]`
-sections are omitted entirely when empty.
-
-After writing the manifest, the task always prints the handoff command:
-
-```
-Build launcher with:
-  bin/plushie package portable --manifest <path>
-```
+Icon materialization and platform metadata are handled by
+`bin/plushie package assemble`, which reads them from
+`plushie-package.config.toml` in the output directory. If `--package-config`
+is passed, that path is forwarded to the assemble command instead.
 
 Run `MIX_ENV=prod` for production packaging.
 
