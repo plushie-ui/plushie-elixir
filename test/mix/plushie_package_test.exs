@@ -41,7 +41,6 @@ defmodule Mix.PlushiePackageTest do
       protocol_version: 1,
       renderer: %{
         kind: :stock,
-        source: "local-resolve",
         source_path: "/tmp/plushie-renderer",
         payload_path: "bin/plushie-renderer"
       },

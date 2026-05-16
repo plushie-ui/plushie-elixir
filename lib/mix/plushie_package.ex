@@ -3,7 +3,6 @@ defmodule Mix.PlushiePackage do
 
   @type renderer :: %{
           kind: :stock | :custom,
-          source: String.t(),
           source_path: String.t(),
           payload_path: String.t()
         }
@@ -364,7 +363,6 @@ defmodule Mix.PlushiePackage do
     [renderer]
     path = #{toml_string(manifest.renderer.payload_path)}
     kind = #{toml_string(Atom.to_string(manifest.renderer.kind))}
-    source = #{toml_string(manifest.renderer.source)}
 
     [payload]
     archive = #{toml_string(manifest.payload_archive)}
