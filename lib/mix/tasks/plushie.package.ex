@@ -57,6 +57,8 @@ defmodule Mix.Tasks.Plushie.Package do
   def run(args) do
     {opts, argv} = OptionParser.parse!(args, strict: @switches)
 
+    Mix.PlushiePackage.package_target() |> Mix.PlushiePackage.validate_package_target!()
+
     app_module =
       case argv do
         [module_str] -> Module.concat([module_str])
@@ -133,8 +135,7 @@ defmodule Mix.Tasks.Plushie.Package do
       archive_path = Path.join(output_dir, "payload.tar.zst")
       Mix.PlushiePackage.archive_payload!(payload_dir, archive_path)
 
-      package_target =
-        Mix.PlushiePackage.package_target() |> Mix.PlushiePackage.validate_package_target!()
+      package_target = Mix.PlushiePackage.package_target()
 
       manifest = %{
         app_id: app_id,
@@ -283,25 +284,39 @@ defmodule Mix.Tasks.Plushie.Package do
       Mix.raise("PLUSHIE_RUST_SOURCE_PATH does not contain Cargo.toml: #{source_path}")
     end
 
-    Mix.shell().info("Building stock plushie renderer from #{source_path}...")
-    target_dir = Path.join(Mix.Project.build_path(), "plushie-package-renderer-target")
+    Mix.shell().info("Syncing stock renderer tools from #{source_path}...")
+    version = plushie_rust_version()
 
-    case System.cmd(
-           "cargo",
-           ["build", "--release", "-p", "plushie-renderer", "--target-dir", target_dir],
-           cd: source_path,
-           stderr_to_stdout: true
-         ) do
+    args = [
+      "run",
+      "--manifest-path",
+      manifest,
+      "-p",
+      "cargo-plushie",
+      "--bin",
+      "plushie",
+      "--release",
+      "--quiet",
+      "--",
+      "tools",
+      "sync",
+      "--required-version",
+      version
+    ]
+
+    case System.cmd("cargo", args, stderr_to_stdout: true) do
       {_output, 0} ->
-        Path.join([
-          target_dir,
-          "release",
-          renderer_executable_name("plushie-renderer")
-        ])
+        renderer = Path.join(Plushie.Binary.download_dir(), Plushie.Binary.download_name())
+
+        unless File.regular?(renderer) do
+          Mix.raise("tools sync exited 0 but renderer not found at #{renderer}")
+        end
+
+        renderer
 
       {output, status} ->
         Mix.shell().error(output)
-        Mix.raise("cargo build failed with exit status #{status}")
+        Mix.raise("cargo-plushie tools sync failed with exit status #{status}")
     end
   end
 
