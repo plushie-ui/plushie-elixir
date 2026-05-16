@@ -67,9 +67,38 @@ defmodule Mix.PlushiePackageTest do
     assert toml =~ ~s(forward_env = ["PATH", "HOME"])
     assert toml =~ ~s([platform]\nicon = "assets/app-icon.png")
     assert toml =~ ~s([renderer]\npath = "bin/plushie-renderer")
+  end
+
+  test "omits [platform] section when no icon is set" do
+    manifest = %{
+      app_id: "dev.plushie.test",
+      app_name: nil,
+      app_version: "0.1.0",
+      target: "linux-x86_64",
+      host_sdk_version: "0.7.2",
+      plushie_rust_version: "0.7.0",
+      protocol_version: 1,
+      renderer: %{
+        kind: :stock,
+        source_path: "/tmp/plushie-renderer",
+        payload_path: "bin/plushie-renderer"
+      },
+      platform: %{icon: nil},
+      start_command: ["bin/connect"],
+      working_dir: ".",
+      forward_env: ["PATH"],
+      payload_archive: "payload.tar.zst",
+      payload_hash: String.duplicate("b", 64),
+      payload_size: 456
+    }
+
+    toml = Mix.PlushiePackage.manifest_toml(manifest)
+
+    refute toml =~ "[platform]"
+    assert toml =~ ~s([renderer]\npath = "bin/plushie-renderer")
     assert toml =~ ~s(kind = "stock")
     assert toml =~ ~s(archive = "payload.tar.zst")
-    assert toml =~ ~s(hash = "sha256:#{String.duplicate("a", 64)}")
+    assert toml =~ ~s(hash = "sha256:#{String.duplicate("b", 64)}")
   end
 
   test "reads package config with start settings" do
@@ -264,14 +293,14 @@ defmodule Mix.PlushiePackageTest do
       shift
     done
     mkdir -p "$out"
-    printf icon > "$out/plushie-checkbox-512x512.png"
+    printf icon > "$out/default-app-icon-512.png"
     """
 
     assert Mix.PlushiePackage.materialize_default_icons!(assets_dir, {"sh", ["-c", script, "sh"]}) ==
-             "assets/plushie-checkbox-512x512.png"
+             "assets/default-app-icon-512.png"
 
     assert File.read!(args_log) == "default-icons\n--out\n#{assets_dir}\n"
-    assert File.read!(Path.join(assets_dir, "plushie-checkbox-512x512.png")) == "icon"
+    assert File.read!(Path.join(assets_dir, "default-app-icon-512.png")) == "icon"
   end
 
   test "copies an app icon into payload assets" do

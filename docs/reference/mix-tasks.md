@@ -384,9 +384,10 @@ before native widget discovery.
 When `--icon` is omitted, the task asks cargo-plushie to materialize
 the default Plushie icon set under `dist/payload/assets/` and writes
 `[platform].icon` in `dist/plushie-package.toml` as
-`assets/plushie-checkbox-512x512.png`. When `--icon` is present, that
+`assets/default-app-icon-512.png`. When `--icon` is present, that
 file is copied into the same payload assets directory and the manifest
-points at the copied payload-relative path.
+points at the copied payload-relative path. If no icon is configured,
+the `[platform]` section is omitted from the manifest entirely.
 
 After writing the manifest, the task always prints the handoff command:
 

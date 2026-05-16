@@ -8,7 +8,7 @@ defmodule Mix.PlushiePackage do
         }
 
   @type platform :: %{
-          icon: String.t()
+          icon: String.t() | nil
         }
 
   @type manifest :: %{
@@ -29,7 +29,7 @@ defmodule Mix.PlushiePackage do
           payload_size: non_neg_integer()
         }
 
-  @default_icon_payload_path "assets/plushie-checkbox-512x512.png"
+  @default_icon_payload_path "assets/default-app-icon-512.png"
   @package_config_file "plushie-package.config.toml"
   @default_forward_env [
     "PATH",
@@ -357,10 +357,7 @@ defmodule Mix.PlushiePackage do
     command = #{toml_array(manifest.start_command)}
     forward_env = #{toml_array(manifest.forward_env)}
 
-    [platform]
-    icon = #{toml_string(manifest.platform.icon)}
-
-    [renderer]
+    #{platform_toml(manifest.platform)}[renderer]
     path = #{toml_string(manifest.renderer.payload_path)}
     kind = #{toml_string(Atom.to_string(manifest.renderer.kind))}
 
@@ -373,6 +370,16 @@ defmodule Mix.PlushiePackage do
 
   defp app_name_toml(nil), do: ""
   defp app_name_toml(app_name), do: "app_name = #{toml_string(app_name)}\n"
+
+  defp platform_toml(%{icon: nil}), do: ""
+
+  defp platform_toml(%{icon: icon}) do
+    """
+    [platform]
+    icon = #{toml_string(icon)}
+
+    """
+  end
 
   defp parse_package_config!(text) do
     config_version =
