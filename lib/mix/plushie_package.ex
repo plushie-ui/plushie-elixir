@@ -510,9 +510,25 @@ defmodule Mix.PlushiePackage do
   end
 
   defp strip_comment(line) do
-    line
-    |> String.split("#", parts: 2)
-    |> hd()
+    strip_comment_chars(String.graphemes(line), false, [])
+  end
+
+  defp strip_comment_chars([], _in_string, acc), do: acc |> Enum.reverse() |> Enum.join()
+
+  defp strip_comment_chars(["\\" | [next | rest]], true, acc) do
+    strip_comment_chars(rest, true, [next, "\\" | acc])
+  end
+
+  defp strip_comment_chars(["\"" | rest], in_string, acc) do
+    strip_comment_chars(rest, not in_string, ["\"" | acc])
+  end
+
+  defp strip_comment_chars(["#" | _rest], false, acc) do
+    acc |> Enum.reverse() |> Enum.join()
+  end
+
+  defp strip_comment_chars([char | rest], in_string, acc) do
+    strip_comment_chars(rest, in_string, [char | acc])
   end
 
   defp comment?(line), do: line |> String.trim() |> String.starts_with?("#")
@@ -563,9 +579,9 @@ defmodule Mix.PlushiePackage do
   end
 
   defp validate_payload_archive_inputs!(payload_dir) do
-    payload_dir
-    |> File.ls!()
-    |> Enum.each(fn _ -> :ok end)
+    if File.ls!(payload_dir) == [] do
+      raise "payload directory is empty: #{payload_dir}"
+    end
 
     payload_dir
     |> Path.join("**/*")
