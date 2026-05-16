@@ -21,11 +21,14 @@ defmodule Mix.Tasks.Preflight do
 
   Tests exercise the real renderer binary, so a stale binary hides real
   bugs and surfaces phantom ones. When `PLUSHIE_RUST_SOURCE_PATH` is set
-  to a plushie-rust checkout, the first preflight step rebuilds
-  `plushie-renderer` from source via `cargo build --release -p plushie-renderer`
-  and exports `PLUSHIE_BINARY_PATH` so the test runs use the fresh binary.
-  Without `PLUSHIE_RUST_SOURCE_PATH` the existing binary resolution
-  (env -> config -> custom build -> downloaded) is used unchanged.
+  to a plushie-rust checkout, the first preflight step runs
+  `cargo-plushie tools sync` from the checkout, which builds and installs
+  all three managed tool files (`bin/plushie`, `bin/plushie-renderer`,
+  `bin/plushie-launcher`). `PLUSHIE_BINARY_PATH` is then set to the
+  project-local `bin/plushie-renderer` so all subsequent steps run against
+  the fresh binary. Without `PLUSHIE_RUST_SOURCE_PATH` the existing
+  binary resolution (env -> config -> custom build -> downloaded) is
+  used unchanged.
   """
 
   use Mix.Task
@@ -40,7 +43,7 @@ defmodule Mix.Tasks.Preflight do
     rebuild_step =
       case Mix.PlushieHelpers.source_path() do
         nil -> []
-        source -> [{"cargo build -p plushie-renderer", fn -> rebuild_renderer(source) end}]
+        source -> [{"cargo-plushie tools sync", fn -> rebuild_renderer(source) end}]
       end
 
     steps =
@@ -71,12 +74,11 @@ defmodule Mix.Tasks.Preflight do
     Mix.shell().info([:green, "\nAll checks passed.", :reset])
   end
 
-  # Rebuilds plushie-renderer from a local source checkout and exports
-  # PLUSHIE_BINARY_PATH so the rest of preflight runs against the fresh
-  # binary. The release profile mirrors what users actually ship. Cargo
-  # is invoked with CWD set to the plushie-rust workspace so its
-  # `.cargo/config.toml` (which carries the local plushie-iced
-  # `[patch.crates-io]` overrides) is picked up.
+  # Syncs all managed tools from a local source checkout via cargo-plushie
+  # and exports PLUSHIE_BINARY_PATH to bin/plushie-renderer so the rest of
+  # preflight runs against the fresh binary. cargo-plushie picks up
+  # `.cargo/config.toml` from the workspace, which carries the local
+  # plushie-iced `[patch.crates-io]` overrides.
   @spec rebuild_renderer(String.t()) :: step_result()
   defp rebuild_renderer(source) do
     expanded = Path.expand(source)
@@ -92,32 +94,50 @@ defmodule Mix.Tasks.Preflight do
 
   @spec run_cargo_build(String.t()) :: step_result()
   defp run_cargo_build(workspace) do
-    args = ["build", "--release", "-p", "plushie-renderer"]
+    manifest = Path.join(workspace, "Cargo.toml")
+    version = Plushie.Binary.plushie_rust_version()
 
-    case stream_cmd("cargo", args, cd: workspace) do
-      0 -> install_built_binary(workspace)
+    args = [
+      "run",
+      "--manifest-path",
+      manifest,
+      "-p",
+      "cargo-plushie",
+      "--bin",
+      "plushie",
+      "--release",
+      "--quiet",
+      "--",
+      "tools",
+      "sync",
+      "--required-version",
+      version
+    ]
+
+    case stream_cmd("cargo", args) do
+      0 -> verify_and_export_managed_tools()
       code -> {:error, code}
     end
   end
 
-  @spec install_built_binary(String.t()) :: step_result()
-  defp install_built_binary(workspace) do
-    binary = Path.join([workspace, "target", "release", binary_name()])
+  @spec verify_and_export_managed_tools() :: step_result()
+  defp verify_and_export_managed_tools do
+    dir = Plushie.Binary.download_dir()
+    renderer = Path.join(dir, Plushie.Binary.download_name())
+    tool = Path.join(dir, Plushie.Binary.tool_name())
+    launcher = Path.join(dir, Mix.PlushiePackage.launcher_name())
 
-    if File.exists?(binary) do
-      System.put_env("PLUSHIE_BINARY_PATH", binary)
-      :ok
-    else
-      Mix.shell().error("    cargo build succeeded but #{binary} is missing")
+    missing = Enum.reject([tool, renderer, launcher], &File.regular?/1)
+
+    if missing != [] do
+      Enum.each(missing, fn path ->
+        Mix.shell().error("    tools sync succeeded but #{path} is missing")
+      end)
+
       {:error, 1}
-    end
-  end
-
-  @spec binary_name() :: String.t()
-  defp binary_name do
-    case :os.type() do
-      {:win32, _} -> "plushie-renderer.exe"
-      _ -> "plushie-renderer"
+    else
+      System.put_env("PLUSHIE_BINARY_PATH", renderer)
+      :ok
     end
   end
 
