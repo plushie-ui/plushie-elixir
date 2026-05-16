@@ -1,38 +1,49 @@
 # Packaging and Distribution
 
 `mix plushie.package` turns a Plushie app into a self-contained
-artifact you can hand to someone who does not have Elixir, Erlang, or
-the Plushie renderer installed. The output is either a single-file
-portable executable or an OS-native installer (AppImage, `.dmg`,
-`.msi`). They double-click; the app runs.
+artifact that ships with its own Erlang runtime and Plushie renderer.
+The output is either a portable single-file executable or an OS-native
+installer (AppImage, `.dmg`, `.msi`). The recipient does not need
+Elixir, Erlang, or anything else installed.
 
-Plushie packages launch host-first. When the user opens the artifact,
-the launcher extracts the payload and starts your Elixir app, and
-your app starts its renderer from inside the payload. The flow is the
-same as `mix plushie.gui`, just running out of an extracted directory
-instead of your project.
+When the artifact runs, the launcher extracts the payload, starts your
+Elixir app, and the app starts its renderer from inside the payload.
+The flow is the same as `mix plushie.gui`, just running from an
+extracted directory instead of your project.
+
+| Section | Topic |
+|---|---|
+| [Quickstart](#quickstart) | Three commands from a working app to a portable artifact |
+| [The packaging pipeline](#the-packaging-pipeline) | How the SDK, cargo-plushie, and the launcher hand off |
+| [mix plushie.package](#mix-plushiepackage) | Task flags and what the task owns |
+| [The payload](#the-payload) | What goes in `dist/payload/` |
+| [Source layout](#source-layout) | What to commit and what to gitignore |
+| [Renderer selection](#renderer-selection) | Stock versus custom |
+| [Bundled assets](#bundled-assets) | Icons, fonts, and other payload files |
+| [The Mix release and ERTS](#the-mix-release-and-erts) | Release config and runtime slimming |
+| [The managed tool set](#the-managed-tool-set) | `bin/plushie`, renderer, launcher |
+| [The partial manifest](#the-partial-manifest) | TOML the SDK writes |
+| [Package config](#package-config) | `plushie-package.config.toml` schema |
+| [Forwarded environment](#forwarded-environment) | Host process environment policy |
+| [Building artifacts](#building-artifacts) | Portable executable and OS installers |
+| [Distribution](#distribution) | Release asset layout |
+| [Continuous integration](#continuous-integration) | GitHub Actions workflow |
+| [Signing](#signing) | Developer-driven signing hooks |
+| [Updates](#updates) | `[updates]` schema |
+| [Host-first versus renderer-parent](#host-first-versus-renderer-parent) | Default launch model and the alternative |
 
 ## Quickstart
 
 Three commands take a working app to a portable artifact:
 
 ```bash
-mix plushie.download
-MIX_ENV=prod mix plushie.package PlushiePad --app-id dev.example.plushie_pad
-bin/plushie package portable --manifest dist/plushie-package.toml
+mix plushie.download                                                         # install Plushie tool set
+MIX_ENV=prod mix plushie.package PlushiePad --app-id dev.example.plushie_pad # build payload + manifest
+bin/plushie package portable --manifest dist/plushie-package.toml            # produce the artifact
 ```
 
-The first installs the Plushie tool set under `bin/`: the `plushie`
-orchestration tool, the renderer, and the shared launcher. The second
-builds the Mix release, copies it and a renderer into `dist/payload/`,
-writes a partial manifest, and hands off to
-`bin/plushie package assemble` to complete the manifest. The third
-turns the payload and manifest into a self-extracting executable
-under `target/plushie/package/`.
-
-`--app-id` is the only required flag. Everything else has a default,
-and the rest of this reference documents how to change those defaults
-when you need to.
+Output lands under `target/plushie/package/`. `--app-id` is the only
+required flag.
 
 ## The packaging pipeline
 
@@ -121,6 +132,38 @@ resolution path. The packaged app never reaches out to the system
 `PATH` or a download cache; everything it needs is inside the
 extracted payload.
 
+## Source layout
+
+Packaging adds project-owned files that belong in version control and
+generated files that do not. Knowing which is which avoids accidentally
+committing platform-specific binaries or losing project-owned config.
+
+| Path | What it is | Commit or gitignore |
+|---|---|---|
+| `plushie-package.config.toml` | Package config: start command, forward_env, platform metadata. Like `mix.exs`. | Commit. |
+| `package_assets/` | Project-owned icon, fonts, and other files copied verbatim into the payload. | Commit. |
+| `PLUSHIE_RUST_VERSION` | Renderer version pin. The SDK reads it to fetch the matching tool set. | Already committed. |
+| `bin/` | Plushie tool set installed by `mix plushie.download`: `plushie`, `plushie-renderer`, `plushie-launcher`. Platform-specific binaries. | Gitignore. |
+| `dist/` | Package output: payload directory and manifest. Rebuilt by every `mix plushie.package` run. | Gitignore. |
+| `target/plushie/` | Portable and bundle artifacts produced by `bin/plushie package portable` / `bundle`. | Gitignore. |
+| `_build/` | Standard Mix build output. | Already in default `.gitignore`. |
+
+A minimum `.gitignore` for a packaging-enabled project looks like:
+
+```
+/_build/
+/deps/
+/bin/
+/dist/
+/target/
+```
+
+`mix plushie.download`, `mix plushie.package`, and
+`bin/plushie package portable` each check whether their output path is
+gitignored when run inside a git repository. If it is not, they print a
+one-paragraph warning naming the directory and the line to add. The
+command still succeeds; the warning is just a nudge.
+
 ## Renderer selection
 
 The task picks a renderer based on whether your project declares
@@ -145,7 +188,7 @@ either way: `bin/plushie-renderer` for stock, `bin/<build-name>` for
 custom (where `<build-name>` matches `config :plushie, :build_name`).
 
 `--load MODULE` ensures a module is loaded before native widget
-discovery runs. Use it when a widget module would not otherwise be
+discovery runs. Useful when a widget module would not otherwise be
 loaded by Mix at task time, for example a widget defined in a
 dependency that is loaded only at runtime.
 
@@ -230,11 +273,8 @@ icon = "icon.png"               # payload-relative; resolves to payload/icon.png
                                 # after package_assets/icon.png is copied
 ```
 
-Hand-crafted multi-size sources and pre-built `.icns`/`.ico` overrides
-are not in the current schema. They will land later as
-`[platform].icons = [...]` and `[platform.macos].icon` /
-`[platform.windows].icon`. The single-source path covers the common
-case until then.
+The schema accepts a single icon path. Multi-size sources and
+per-platform `.icns`/`.ico` overrides are not yet supported.
 
 ## The Mix release and ERTS
 
@@ -623,27 +663,24 @@ exposes the assets at `BASE/vVERSION/ARTIFACT` plus
 
 ## Signing
 
-`plushie-package.toml` carries a `[[signing.hooks]]` block for
-developer-driven signing commands (macOS notarization, Windows code
-signing, Linux checksum attestation). Each hook is a structured argv
-that runs after the artifact is built when `package portable` or
-`package bundle` is invoked with `--run-signing-hooks`. Hooks are
-opt-in so that release builds run them and local experimentation
-does not.
+`plushie-package.toml` carries a `[[signing.hooks]]` block: a list of
+commands that run after the artifact is built. Pass
+`--run-signing-hooks` to `package portable` or `package bundle` to
+invoke them. Hooks are opt-in so release builds run them and local
+experimentation does not.
 
-Signing keys and credentials remain the developer's responsibility.
-Plushie does not hold or rotate them, and platform-specific recipes
-(notarization workflow, certificate stores) live in the developer's
-own CI configuration.
+Each hook is a structured argv. Use them for macOS notarization,
+Windows code signing, Linux checksum attestation, or whatever else the
+target platform needs. Plushie does not hold signing keys; the hook
+commands do.
 
 ## Updates
 
 `plushie-package.toml` reserves an `[updates]` block for update
-channel metadata. The planned integration uses
-[cargo-packager-updater](https://github.com/crabnebula-dev/cargo-packager)
-against `cargo-packager` bundles, with platform-specific updaters
-(AppImageUpdate, Sparkle, WinSparkle) as later follow-ups. The
-schema is in place; the consumer is not yet wired up.
+channel metadata. The schema is in place. The runtime side that
+consumes it, planned around
+[cargo-packager-updater](https://github.com/crabnebula-dev/cargo-packager),
+is not yet shipped.
 
 ## Host-first versus renderer-parent
 
@@ -671,39 +708,6 @@ so driving a packaged app from an external renderer is possible but
 requires adding `PLUSHIE_SOCKET` to `[start].forward_env` so the
 launcher passes the variable through. This is not a default-on
 configuration.
-
-## Source layout
-
-Packaging adds project-owned files that belong in version control and
-generated files that do not. Knowing which is which avoids
-accidentally committing platform-specific binaries or losing
-project-owned config.
-
-| Path | What it is | Commit or gitignore |
-|---|---|---|
-| `plushie-package.config.toml` | Package config: start command, forward_env, platform metadata. Like `mix.exs`. | Commit. |
-| `package_assets/` | Project-owned icon, fonts, and other files copied verbatim into the payload. | Commit. |
-| `PLUSHIE_RUST_VERSION` | Renderer version pin. The SDK reads it to fetch the matching tool set. | Already committed. |
-| `bin/` | Plushie tool set installed by `mix plushie.download`: `plushie`, `plushie-renderer`, `plushie-launcher`. Platform-specific binaries. | Gitignore. |
-| `dist/` | Package output: payload directory and manifest. Rebuilt by every `mix plushie.package` run. | Gitignore. |
-| `target/plushie/` | Portable and bundle artifacts produced by `bin/plushie package portable` / `bundle`. | Gitignore. |
-| `_build/` | Standard Mix build output. | Already in default `.gitignore`. |
-
-A minimum `.gitignore` for a packaging-enabled project looks like:
-
-```
-/_build/
-/deps/
-/bin/
-/dist/
-/target/
-```
-
-`mix plushie.download`, `mix plushie.package`, and
-`bin/plushie package portable` each check whether their output path
-is gitignored when run inside a git repository. If it is not, they
-print a one-paragraph warning naming the directory and the line to
-add. The command still succeeds; the warning is just a nudge.
 
 ## See also
 
