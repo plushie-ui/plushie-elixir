@@ -176,14 +176,21 @@ event path, no Phoenix.PubSub, library not OTP application.
 
 ## Before committing
 
-Run `mix preflight`. It mirrors CI: format, compile (warnings as
+Run `just preflight`. It mirrors CI: format, compile (warnings as
 errors), credo, test, dialyzer.
 
-When `PLUSHIE_RUST_SOURCE_PATH` is set, preflight first rebuilds
-`plushie-renderer` from that checkout via plain
-`cargo build --release -p plushie-renderer` and exports
-`PLUSHIE_BINARY_PATH` for the rest of the run. This guarantees tests
-exercise the current source rather than a stale `_build/` artifact.
+`just preflight` fetches deps and runs `mix preflight`. The renderer
+source is controlled by `PLUSHIE_RUST_SOURCE_PATH`:
+
+- Unset (default): auto-detected from `../plushie-rust` if it exists;
+  otherwise the existing binary resolution chain is used unchanged.
+- Set to a path: plushie-renderer is rebuilt from that checkout via
+  `cargo build --release -p plushie-renderer` and `PLUSHIE_BINARY_PATH`
+  is exported so all subsequent steps use the fresh binary. Guarantees
+  tests run against current source rather than a stale artifact.
+- Set to `""`: suppresses auto-detection; uses the existing binary
+  resolution chain (PLUSHIE_BINARY_PATH, downloaded binary, etc.).
+
 The cargo-plushie workspace machinery (used by `mix plushie.build`
 for native widgets) is not needed here because the SDK's own tests
 do not declare native widgets.
@@ -300,12 +307,15 @@ build).
 ## Quick reference
 
 ```
-mix preflight                   # run all CI checks locally
-mix test                        # run tests (mock backend)
-mix format                      # auto-format
-mix format --check-formatted    # check formatting (CI mode)
-mix credo --strict              # lint
-mix dialyzer                    # type checking
+just preflight                                           # run all CI checks locally
+PLUSHIE_RUST_SOURCE_PATH=../plushie-rust just preflight  # explicit renderer source (rebuilds from checkout)
+PLUSHIE_RUST_SOURCE_PATH="" just preflight               # force non-local (use downloaded binary)
+just test                       # run tests (mock backend)
+just fmt                        # auto-format
+just fmt-check                  # check formatting (CI mode)
+just lint                       # credo --strict
+just dialyzer                   # type checking
+just clean                      # remove gitignored build artifacts
 mix plushie.gui MyApp             # run a plushie app
 mix plushie.gui MyApp --build     # build binary first, then run
 mix plushie.gui MyApp --watch     # enable hot reload (or config :plushie, code_reloader: true)
