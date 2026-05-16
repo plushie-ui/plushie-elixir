@@ -38,10 +38,10 @@ defmodule Plushie.RendererEnv do
     * **Font** - `FONTCONFIG_*`, `XDG_DATA_DIRS`, `XDG_DATA_HOME`
     * **Renderer** - `RUST_LOG`, `RUST_BACKTRACE`
     * **Home** - `HOME`, `USER`
-    * **Plushie toggles** - any variable starting with `PLUSHIE_` (debug
-      and diagnostic toggles read by the renderer itself, e.g.
-      `PLUSHIE_NO_CATCH_UNWIND`). The prefix is plushie-reserved; no
-      legitimate secret should use it.
+    * **Plushie toggles** - `PLUSHIE_NO_CATCH_UNWIND` (the only variable
+      the renderer subprocess reads from inherited env in spawn mode). All
+      other `PLUSHIE_*` names are host-side, launcher-set, or secrets
+      (e.g. `PLUSHIE_TOKEN`) that must not leak across the process boundary.
   """
 
   @typedoc "A single entry for the `:env` option of `Port.open/2`."
@@ -72,6 +72,12 @@ defmodule Plushie.RendererEnv do
     USER
   ])
 
+  # Exact Plushie variables forwarded to the renderer subprocess.
+  # The renderer subprocess in spawn mode reads at most PLUSHIE_NO_CATCH_UNWIND
+  # from inherited env. Other PLUSHIE_* names are host-side, launcher-set, or
+  # secrets (e.g. PLUSHIE_TOKEN) that must not leak across the process boundary.
+  @plushie_names MapSet.new(~w[PLUSHIE_NO_CATCH_UNWIND])
+
   # Prefixes: any variable starting with one of these is forwarded.
   @prefixes ~w[
     LC_
@@ -82,7 +88,6 @@ defmodule Plushie.RendererEnv do
     GALLIUM_
     AT_SPI_
     FONTCONFIG_
-    PLUSHIE_
   ]
 
   @doc """
@@ -152,6 +157,7 @@ defmodule Plushie.RendererEnv do
   @spec whitelisted?(String.t()) :: boolean()
   def whitelisted?(name) do
     MapSet.member?(@exact_names, name) or
+      MapSet.member?(@plushie_names, name) or
       Enum.any?(@prefixes, &String.starts_with?(name, &1))
   end
 end
