@@ -88,7 +88,7 @@ defmodule Mix.Tasks.Plushie.Package do
       output_dir = opts[:output] || "dist"
       payload_dir = Path.join(output_dir, "payload")
       package_target = Mix.PlushiePackage.package_target()
-      connect_wrapper = Mix.PlushiePackage.connect_wrapper_name(package_target)
+      start_host_wrapper = Mix.PlushiePackage.start_host_wrapper_name(package_target)
 
       renderer = resolve_renderer!(renderer_mode, opts)
 
@@ -112,8 +112,8 @@ defmodule Mix.Tasks.Plushie.Package do
       File.cp!(renderer.source_path, renderer_dest)
       File.chmod!(renderer_dest, 0o755)
 
-      Mix.PlushiePackage.write_connect_wrapper!(
-        Path.join(payload_dir, connect_wrapper),
+      Mix.PlushiePackage.write_start_host_wrapper!(
+        Path.join(payload_dir, start_host_wrapper),
         release_name,
         app_module
       )
@@ -127,7 +127,7 @@ defmodule Mix.Tasks.Plushie.Package do
         plushie_rust_version: plushie_rust_version(),
         protocol_version: Plushie.Protocol.protocol_version(),
         renderer: renderer,
-        start_command: [connect_wrapper]
+        start_command: [start_host_wrapper]
       }
 
       manifest_path = Path.join(output_dir, "plushie-package.toml")

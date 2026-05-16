@@ -17,18 +17,18 @@ defmodule Mix.PlushiePackageTest do
     assert Mix.PlushiePackage.validate_package_target!("windows-aarch64") == "windows-aarch64"
   end
 
-  test "connect_wrapper_name returns .cmd for Windows targets" do
-    assert Mix.PlushiePackage.connect_wrapper_name("windows-x86_64") == "bin/connect.cmd"
-    assert Mix.PlushiePackage.connect_wrapper_name("windows-aarch64") == "bin/connect.cmd"
-    assert Mix.PlushiePackage.connect_wrapper_name("linux-x86_64") == "bin/connect"
-    assert Mix.PlushiePackage.connect_wrapper_name("darwin-aarch64") == "bin/connect"
+  test "start_host_wrapper_name returns .cmd for Windows targets" do
+    assert Mix.PlushiePackage.start_host_wrapper_name("windows-x86_64") == "bin/start_host.cmd"
+    assert Mix.PlushiePackage.start_host_wrapper_name("windows-aarch64") == "bin/start_host.cmd"
+    assert Mix.PlushiePackage.start_host_wrapper_name("linux-x86_64") == "bin/start_host"
+    assert Mix.PlushiePackage.start_host_wrapper_name("darwin-aarch64") == "bin/start_host"
   end
 
-  test "writes POSIX connect wrapper through Plushie.Connect.run" do
+  test "writes POSIX start_host wrapper through Plushie.Connect.run" do
     dir = tmp_dir()
-    path = Path.join(dir, "connect")
+    path = Path.join(dir, "start_host")
 
-    Mix.PlushiePackage.write_connect_wrapper!(path, "notes", Notes.App)
+    Mix.PlushiePackage.write_start_host_wrapper!(path, "notes", Notes.App)
 
     assert Bitwise.band(File.stat!(path).mode, 0o111) != 0
 
@@ -36,11 +36,11 @@ defmodule Mix.PlushiePackageTest do
              "case Plushie.Connect.run(Notes.App, []) do :ok -> :ok; {:error, reason} -> raise RuntimeError"
   end
 
-  test "writes Windows connect.cmd wrapper invoking the Mix release .bat entrypoint" do
+  test "writes Windows start_host.cmd wrapper invoking the Mix release .bat entrypoint" do
     dir = tmp_dir()
-    path = Path.join(dir, "connect.cmd")
+    path = Path.join(dir, "start_host.cmd")
 
-    Mix.PlushiePackage.write_connect_wrapper!(path, "notes", Notes.App)
+    Mix.PlushiePackage.write_start_host_wrapper!(path, "notes", Notes.App)
 
     content = File.read!(path)
     assert content =~ "@echo off"
@@ -48,17 +48,17 @@ defmodule Mix.PlushiePackageTest do
     assert content =~ "Plushie.Connect.run(Notes.App, [])"
   end
 
-  test "default_start_config uses bin/connect.cmd for Windows targets" do
+  test "default_start_config uses bin/start_host.cmd for Windows targets" do
     config = Mix.PlushiePackage.default_start_config("notes", "windows-x86_64")
-    assert config.start_command == ["bin/connect.cmd"]
+    assert config.start_command == ["bin/start_host.cmd"]
   end
 
-  test "default_start_config uses bin/connect for non-Windows targets" do
+  test "default_start_config uses bin/start_host for non-Windows targets" do
     config = Mix.PlushiePackage.default_start_config("notes", "linux-x86_64")
-    assert config.start_command == ["bin/connect"]
+    assert config.start_command == ["bin/start_host"]
 
     config = Mix.PlushiePackage.default_start_config("notes")
-    assert config.start_command == ["bin/connect"]
+    assert config.start_command == ["bin/start_host"]
   end
 
   test "writes partial manifest with SDK and protocol metadata" do
@@ -75,7 +75,7 @@ defmodule Mix.PlushiePackageTest do
         source_path: "/tmp/plushie-renderer",
         payload_path: "bin/plushie-renderer"
       },
-      start_command: ["bin/connect"]
+      start_command: ["bin/start_host"]
     }
 
     toml = Mix.PlushiePackage.partial_manifest_toml(manifest)
@@ -89,7 +89,7 @@ defmodule Mix.PlushiePackageTest do
     assert toml =~ ~s(host_sdk_version = "0.7.2")
     assert toml =~ ~s(plushie_rust_version = "0.7.0")
     assert toml =~ ~s(protocol_version = 1)
-    assert toml =~ ~s([start]\ncommand = ["bin/connect"])
+    assert toml =~ ~s([start]\ncommand = ["bin/start_host"])
     assert toml =~ ~s([renderer]\npath = "bin/plushie-renderer")
     assert toml =~ ~s(kind = "stock")
   end
@@ -108,7 +108,7 @@ defmodule Mix.PlushiePackageTest do
         source_path: "/tmp/plushie-renderer",
         payload_path: "bin/plushie-renderer"
       },
-      start_command: ["bin/connect"]
+      start_command: ["bin/start_host"]
     }
 
     toml = Mix.PlushiePackage.partial_manifest_toml(manifest)
@@ -117,7 +117,7 @@ defmodule Mix.PlushiePackageTest do
     assert toml =~ ~s(app_id = "dev.plushie.test")
   end
 
-  test "partial manifest uses bin/connect.cmd for Windows targets" do
+  test "partial manifest uses bin/start_host.cmd for Windows targets" do
     manifest = %{
       app_id: "dev.plushie.test",
       app_name: nil,
@@ -131,13 +131,13 @@ defmodule Mix.PlushiePackageTest do
         source_path: "/tmp/plushie-renderer.exe",
         payload_path: "bin/plushie-renderer.exe"
       },
-      start_command: ["bin/connect.cmd"]
+      start_command: ["bin/start_host.cmd"]
     }
 
     toml = Mix.PlushiePackage.partial_manifest_toml(manifest)
 
     assert toml =~ ~s(target = "windows-x86_64")
-    assert toml =~ ~s(command = ["bin/connect.cmd"])
+    assert toml =~ ~s(command = ["bin/start_host.cmd"])
   end
 
   test "partial manifest contains no [payload] section" do
@@ -154,7 +154,7 @@ defmodule Mix.PlushiePackageTest do
         source_path: "/tmp/my-renderer",
         payload_path: "bin/my-renderer"
       },
-      start_command: ["bin/connect"]
+      start_command: ["bin/start_host"]
     }
 
     toml = Mix.PlushiePackage.partial_manifest_toml(manifest)
@@ -182,7 +182,7 @@ defmodule Mix.PlushiePackageTest do
         source_path: "/tmp/plushie-renderer",
         payload_path: "bin/plushie-renderer"
       },
-      start_command: ["bin/connect"]
+      start_command: ["bin/start_host"]
     }
 
     Mix.PlushiePackage.write_partial_manifest!(path, manifest)
@@ -322,7 +322,7 @@ defmodule Mix.PlushiePackageTest do
     assert toml =~ "config_version = 1"
     assert toml =~ "[start]"
     assert toml =~ ~s(working_dir = ".")
-    assert toml =~ ~s(command = ["bin/connect"])
+    assert toml =~ ~s(command = ["bin/start_host"])
     assert toml =~ ~s("WAYLAND_DISPLAY")
     assert toml =~ "# [assets]"
     assert toml =~ ~s(# dir = "package_assets")

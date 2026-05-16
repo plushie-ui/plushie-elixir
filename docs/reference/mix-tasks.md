@@ -339,7 +339,7 @@ This task owns the Elixir-specific work:
 - Builds the Mix release.
 - Copies the release into `dist/payload/`.
 - Places the selected renderer in the payload.
-- Writes `bin/connect` (POSIX) or `bin/connect.cmd` (Windows), which
+- Writes `bin/start_host` (POSIX) or `bin/start_host.cmd` (Windows), which
   starts the release and calls `Plushie.Connect.run/2`.
 - Writes a partial `dist/plushie-package.toml` with SDK identity and
   renderer info (no `[payload]` section; no `working_dir` or
@@ -354,7 +354,7 @@ Run `mix plushie.download` to install it.
 
 The shared package default is host-first. The launcher extracts the
 payload and runs the manifest's `[start].command`, usually
-`bin/connect` (or `bin/connect.cmd` on Windows targets).
+`bin/start_host` (or `bin/start_host.cmd` on Windows targets).
 `Plushie.Connect.run/2` then starts the payload-local renderer through
 normal binary resolution. Renderer-parent startup is reserved for
 explicit embedding and debugging flows that provide `PLUSHIE_SOCKET`.

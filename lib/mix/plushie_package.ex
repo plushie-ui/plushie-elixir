@@ -112,16 +112,16 @@ defmodule Mix.PlushiePackage do
     end
   end
 
-  @spec connect_wrapper_name(target :: String.t()) :: String.t()
-  def connect_wrapper_name("windows-" <> _), do: "bin/connect.cmd"
-  def connect_wrapper_name(_target), do: "bin/connect"
+  @spec start_host_wrapper_name(target :: String.t()) :: String.t()
+  def start_host_wrapper_name("windows-" <> _), do: "bin/start_host.cmd"
+  def start_host_wrapper_name(_target), do: "bin/start_host"
 
   @spec default_start_config(release_name :: String.t()) :: map()
   @spec default_start_config(release_name :: String.t(), target :: String.t()) :: map()
   def default_start_config(_release_name, target \\ "posix") do
     %{
       working_dir: ".",
-      start_command: [connect_wrapper_name(target)],
+      start_command: [start_host_wrapper_name(target)],
       forward_env: default_forward_env()
     }
   end
@@ -144,8 +144,8 @@ defmodule Mix.PlushiePackage do
     # Relative to the extracted app package.
     working_dir = #{toml_string(config.working_dir)}
     # Structured argv. The first item is the packaged host executable.
-    # bin/connect is the POSIX entry point.
-    # On windows-* targets the SDK automatically uses bin/connect.cmd.
+    # bin/start_host is the POSIX entry point.
+    # On windows-* targets the SDK automatically uses bin/start_host.cmd.
     command = #{toml_array(config.start_command)}
     # Environment variable names copied from the parent process.
     forward_env = [
@@ -209,13 +209,13 @@ defmodule Mix.PlushiePackage do
     "#{os}-#{arch}"
   end
 
-  @spec write_connect_wrapper!(
+  @spec write_start_host_wrapper!(
           path :: String.t(),
           release_name :: String.t(),
           app_module :: module()
         ) ::
           :ok
-  def write_connect_wrapper!(path, release_name, app_module) do
+  def write_start_host_wrapper!(path, release_name, app_module) do
     if String.ends_with?(path, ".cmd") do
       content = """
       @echo off
