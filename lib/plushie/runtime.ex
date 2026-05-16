@@ -1764,11 +1764,13 @@ defmodule Plushie.Runtime do
         tmp = "#{path}.tmp.#{System.unique_integer([:positive])}"
         File.write!(tmp, "ready\n")
 
-        if File.exists?(path) do
-          File.rm!(path)
+        try do
+          File.rename!(tmp, path)
+        rescue
+          e ->
+            File.rm(tmp)
+            reraise e, __STACKTRACE__
         end
-
-        File.rename!(tmp, path)
     end
   end
 
