@@ -12,13 +12,19 @@ defmodule Mix.PlushiePackageTest do
              "windows-x86_64"
   end
 
-  test "rejects Windows package targets until a Windows wrapper exists" do
-    assert_raise Mix.Error, ~r/Windows standalone packaging is not supported/, fn ->
-      Mix.PlushiePackage.validate_package_target!("windows-x86_64")
-    end
+  test "accepts Windows package targets" do
+    assert Mix.PlushiePackage.validate_package_target!("windows-x86_64") == "windows-x86_64"
+    assert Mix.PlushiePackage.validate_package_target!("windows-aarch64") == "windows-aarch64"
   end
 
-  test "writes connect wrapper through Plushie.Connect.run" do
+  test "connect_wrapper_name returns .cmd for Windows targets" do
+    assert Mix.PlushiePackage.connect_wrapper_name("windows-x86_64") == "bin/connect.cmd"
+    assert Mix.PlushiePackage.connect_wrapper_name("windows-aarch64") == "bin/connect.cmd"
+    assert Mix.PlushiePackage.connect_wrapper_name("linux-x86_64") == "bin/connect"
+    assert Mix.PlushiePackage.connect_wrapper_name("darwin-aarch64") == "bin/connect"
+  end
+
+  test "writes POSIX connect wrapper through Plushie.Connect.run" do
     dir = tmp_dir()
     path = Path.join(dir, "connect")
 
@@ -28,6 +34,60 @@ defmodule Mix.PlushiePackageTest do
 
     assert File.read!(path) =~
              "case Plushie.Connect.run(Notes.App, []) do :ok -> :ok; {:error, reason} -> raise RuntimeError"
+  end
+
+  test "writes Windows connect.cmd wrapper invoking the Mix release .bat entrypoint" do
+    dir = tmp_dir()
+    path = Path.join(dir, "connect.cmd")
+
+    Mix.PlushiePackage.write_connect_wrapper!(path, "notes", Notes.App)
+
+    content = File.read!(path)
+    assert content =~ "@echo off"
+    assert content =~ ~r/notes\\bin\\notes\.bat/
+    assert content =~ "Plushie.Connect.run(Notes.App, [])"
+  end
+
+  test "default_start_config uses bin/connect.cmd for Windows targets" do
+    config = Mix.PlushiePackage.default_start_config("notes", "windows-x86_64")
+    assert config.start_command == ["bin/connect.cmd"]
+  end
+
+  test "default_start_config uses bin/connect for non-Windows targets" do
+    config = Mix.PlushiePackage.default_start_config("notes", "linux-x86_64")
+    assert config.start_command == ["bin/connect"]
+
+    config = Mix.PlushiePackage.default_start_config("notes")
+    assert config.start_command == ["bin/connect"]
+  end
+
+  test "Windows manifest uses bin/connect.cmd as start command" do
+    manifest = %{
+      app_id: "dev.plushie.test",
+      app_name: nil,
+      app_version: "0.1.0",
+      target: "windows-x86_64",
+      host_sdk_version: "0.7.2",
+      plushie_rust_version: "0.7.0",
+      protocol_version: 1,
+      renderer: %{
+        kind: :stock,
+        source_path: "/tmp/plushie-renderer.exe",
+        payload_path: "bin/plushie-renderer.exe"
+      },
+      platform: %{icon: nil},
+      start_command: ["bin/connect.cmd"],
+      working_dir: ".",
+      forward_env: ["PATH"],
+      payload_archive: "payload.tar.zst",
+      payload_hash: String.duplicate("c", 64),
+      payload_size: 789
+    }
+
+    toml = Mix.PlushiePackage.manifest_toml(manifest)
+
+    assert toml =~ ~s(target = "windows-x86_64")
+    assert toml =~ ~s(command = ["bin/connect.cmd"])
   end
 
   test "writes package manifest with SDK and protocol metadata" do

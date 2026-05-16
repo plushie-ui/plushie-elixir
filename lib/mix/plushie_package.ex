@@ -122,11 +122,16 @@ defmodule Mix.PlushiePackage do
     end
   end
 
+  @spec connect_wrapper_name(target :: String.t()) :: String.t()
+  def connect_wrapper_name("windows-" <> _), do: "bin/connect.cmd"
+  def connect_wrapper_name(_target), do: "bin/connect"
+
   @spec default_start_config(release_name :: String.t()) :: map()
-  def default_start_config(_release_name) do
+  @spec default_start_config(release_name :: String.t(), target :: String.t()) :: map()
+  def default_start_config(_release_name, target \\ "posix") do
     %{
       working_dir: ".",
-      start_command: ["bin/connect"],
+      start_command: [connect_wrapper_name(target)],
       forward_env: default_forward_env()
     }
   end
@@ -166,6 +171,8 @@ defmodule Mix.PlushiePackage do
     # Relative to the extracted app package.
     working_dir = #{toml_string(config.working_dir)}
     # Structured argv. The first item is the packaged host executable.
+    # bin/connect is the POSIX entry point.
+    # On windows-* targets the SDK automatically uses bin/connect.cmd.
     command = #{toml_array(config.start_command)}
     # Environment variable names copied from the parent process.
     forward_env = [
@@ -180,14 +187,6 @@ defmodule Mix.PlushiePackage do
   end
 
   @spec validate_package_target!(target :: String.t()) :: String.t()
-  def validate_package_target!("windows-" <> _ = target) do
-    Mix.raise("""
-    Windows standalone packaging is not supported by the Elixir SDK yet.
-    The current package flow writes a Unix bin/connect wrapper. Add a
-    Windows-specific host command before producing #{target} packages.
-    """)
-  end
-
   def validate_package_target!(target), do: target
 
   @spec normalize_package_target({atom(), atom()}, charlist() | String.t()) :: String.t()
@@ -224,15 +223,25 @@ defmodule Mix.PlushiePackage do
         ) ::
           :ok
   def write_connect_wrapper!(path, release_name, app_module) do
-    content = """
-    #!/bin/sh
-    set -eu
-    DIR="$(CDPATH= cd "$(dirname "$0")/.." && pwd)"
-    exec "$DIR/rel/#{release_name}/bin/#{release_name}" eval '#{connect_expression(app_module)}'
-    """
+    if String.ends_with?(path, ".cmd") do
+      content = """
+      @echo off
+      set DIR=%~dp0..
+      "%DIR%\\rel\\#{release_name}\\bin\\#{release_name}.bat" eval "#{connect_expression(app_module)}"
+      """
 
-    File.write!(path, content)
-    File.chmod!(path, 0o755)
+      File.write!(path, content)
+    else
+      content = """
+      #!/bin/sh
+      set -eu
+      DIR="$(CDPATH= cd "$(dirname "$0")/.." && pwd)"
+      exec "$DIR/rel/#{release_name}/bin/#{release_name}" eval '#{connect_expression(app_module)}'
+      """
+
+      File.write!(path, content)
+      File.chmod!(path, 0o755)
+    end
   end
 
   @spec materialize_default_icons!(payload_assets_dir :: String.t()) :: String.t()

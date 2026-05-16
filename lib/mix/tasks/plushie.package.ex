@@ -90,13 +90,15 @@ defmodule Mix.Tasks.Plushie.Package do
 
       output_dir = opts[:output] || "dist"
       payload_dir = Path.join(output_dir, "payload")
+      package_target = Mix.PlushiePackage.package_target()
+      connect_wrapper = Mix.PlushiePackage.connect_wrapper_name(package_target)
 
       start_config =
         if opts[:package_config] do
           Mix.PlushiePackage.read_package_config!(package_config_path)
         else
           Mix.PlushiePackage.read_default_package_config!(package_config_path) ||
-            Mix.PlushiePackage.default_start_config(release_name)
+            Mix.PlushiePackage.default_start_config(release_name, package_target)
         end
 
       renderer = resolve_renderer!(renderer_mode, opts)
@@ -122,7 +124,7 @@ defmodule Mix.Tasks.Plushie.Package do
       File.chmod!(renderer_dest, 0o755)
 
       Mix.PlushiePackage.write_connect_wrapper!(
-        Path.join(payload_dir, "bin/connect"),
+        Path.join(payload_dir, connect_wrapper),
         release_name,
         app_module
       )
@@ -132,8 +134,6 @@ defmodule Mix.Tasks.Plushie.Package do
       Mix.shell().info("Writing archive...")
       archive_path = Path.join(output_dir, "payload.tar.zst")
       Mix.PlushiePackage.archive_payload!(payload_dir, archive_path)
-
-      package_target = Mix.PlushiePackage.package_target()
 
       manifest = %{
         app_id: app_id,

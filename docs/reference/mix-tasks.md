@@ -341,8 +341,8 @@ This task owns the Elixir-specific part of standalone packaging:
 - Copies the release into `dist/payload/`.
 - Places the selected renderer in the payload.
 - Places package icon assets in the payload.
-- Writes `bin/connect`, which starts the release and calls
-  `Plushie.Connect.run/2`.
+- Writes `bin/connect` (POSIX) or `bin/connect.cmd` (Windows), which
+  starts the release and calls `Plushie.Connect.run/2`.
 - Archives the payload as `dist/payload.tar.zst`.
 - Writes `dist/plushie-package.toml` for `bin/plushie package portable`
   or `bin/plushie package bundle`.
@@ -352,10 +352,10 @@ the manifest and embedded payload archive produced here.
 
 The shared package default is host-first. The launcher extracts the
 payload and runs the manifest's `[start].command`, usually
-`bin/connect`. `Plushie.Connect.run/2` then starts the payload-local
-renderer through normal binary resolution. Renderer-parent startup is
-reserved for explicit embedding and debugging flows that provide
-`PLUSHIE_SOCKET`.
+`bin/connect` (or `bin/connect.cmd` on Windows targets).
+`Plushie.Connect.run/2` then starts the payload-local renderer through
+normal binary resolution. Renderer-parent startup is reserved for
+explicit embedding and debugging flows that provide `PLUSHIE_SOCKET`.
 
 ### Flags
 
