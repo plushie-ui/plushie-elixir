@@ -110,6 +110,56 @@ defmodule Mix.PlushieHelpersTest do
     end
   end
 
+  describe "source_path/0" do
+    setup do
+      previous_source = System.get_env("PLUSHIE_RUST_SOURCE_PATH")
+      previous_config = Application.get_env(:plushie, :source_path)
+      System.delete_env("PLUSHIE_RUST_SOURCE_PATH")
+      Application.delete_env(:plushie, :source_path)
+
+      on_exit(fn ->
+        if previous_source do
+          System.put_env("PLUSHIE_RUST_SOURCE_PATH", previous_source)
+        else
+          System.delete_env("PLUSHIE_RUST_SOURCE_PATH")
+        end
+
+        if previous_config do
+          Application.put_env(:plushie, :source_path, previous_config)
+        else
+          Application.delete_env(:plushie, :source_path)
+        end
+      end)
+
+      :ok
+    end
+
+    test "returns nil when nothing is set" do
+      assert PlushieHelpers.source_path() == nil
+    end
+
+    test "returns the env var when set to a path" do
+      System.put_env("PLUSHIE_RUST_SOURCE_PATH", "/some/path")
+      assert PlushieHelpers.source_path() == "/some/path"
+    end
+
+    test "returns nil when the env var is explicitly empty" do
+      System.put_env("PLUSHIE_RUST_SOURCE_PATH", "")
+      assert PlushieHelpers.source_path() == nil
+    end
+
+    test "falls back to application config when env var is unset" do
+      Application.put_env(:plushie, :source_path, "/from/config")
+      assert PlushieHelpers.source_path() == "/from/config"
+    end
+
+    test "empty env var suppresses application config fallback" do
+      Application.put_env(:plushie, :source_path, "/from/config")
+      System.put_env("PLUSHIE_RUST_SOURCE_PATH", "")
+      assert PlushieHelpers.source_path() == nil
+    end
+  end
+
   describe "validate_module!/1" do
     test "raises a clear error for non-atom input" do
       assert_raise Mix.Error, ~r/Module name must be an atom/, fn ->

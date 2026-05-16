@@ -7,11 +7,17 @@ defmodule Mix.PlushieHelpers do
   Checked in order:
   1. `PLUSHIE_RUST_SOURCE_PATH` environment variable
   2. `config :plushie, :source_path`
+
+  Returns nil when the environment variable is set to an empty string,
+  matching the documented "suppress auto-detection" behaviour.
   """
   @spec source_path() :: String.t() | nil
   def source_path do
-    System.get_env("PLUSHIE_RUST_SOURCE_PATH") ||
-      Application.get_env(:plushie, :source_path)
+    case System.get_env("PLUSHIE_RUST_SOURCE_PATH") do
+      nil -> Application.get_env(:plushie, :source_path)
+      "" -> nil
+      value -> value
+    end
   end
 
   @doc """
