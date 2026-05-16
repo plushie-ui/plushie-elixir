@@ -38,6 +38,7 @@ Lookup material organized by topic. Each page is self-contained.
 - [DSL](reference/dsl.md) - macro internals, block forms, canvas scope, container scope
 - [Events](reference/events.md) - event types, fields, bubbling, scoped ID matching
 - [Mix Tasks](reference/mix-tasks.md) - build, download, gui, inspect, script, replay
+- [Packaging and Distribution](reference/packaging-and-distribution.md) - standalone packaging, bundled assets, ERTS, signing, release workflows
 - [Scoped IDs](reference/scoped-ids.md) - ID scoping rules, scope matching, command paths
 - [Subscriptions](reference/subscriptions.md) - timer, keyboard, mouse, window, custom subscriptions
 - [Testing](reference/testing.md) - test case setup, helpers, backends, screenshots, CI

@@ -72,6 +72,7 @@ defmodule Plushie.MixProject do
         "docs/reference/events.md",
         "docs/reference/windows-and-layout.md",
         "docs/reference/mix-tasks.md",
+        "docs/reference/packaging-and-distribution.md",
         "docs/reference/composition-patterns.md",
         "docs/reference/scoped-ids.md",
         "docs/reference/themes-and-styling.md",

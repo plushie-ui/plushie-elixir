@@ -325,86 +325,25 @@ existing renderer widgets and do not require a custom build.
 ## plushie.package
 
 Builds the Elixir-specific part of a standalone package payload and
-hands off to `bin/plushie package assemble` to complete the manifest,
-archive, hash, and icon materialization.
+hands off to `bin/plushie package assemble` to complete the manifest.
 
 ```bash
 MIX_ENV=prod mix plushie.package MyApp --app-id dev.example.my_app
-MIX_ENV=prod mix plushie.package MyApp --app-id dev.example.my_app --app-name "My App"
-# bin/plushie package assemble prints the handoff on completion
 ```
 
-This task owns the Elixir-specific work:
+`--app-id` is required; everything else has a default. The task
+builds the Mix release, copies it and a renderer into
+`dist/payload/`, writes a `bin/start_host` wrapper, emits a partial
+`dist/plushie-package.toml`, and shells to `bin/plushie package
+assemble` to complete the manifest. The shared package launcher
+then turns the payload and manifest into a portable executable or
+OS-native bundle.
 
-- Builds the Mix release.
-- Copies the release into `dist/payload/`.
-- Places the selected renderer in the payload.
-- Writes `bin/start_host` (POSIX) or `bin/start_host.cmd` (Windows), which
-  starts the release and calls `Plushie.Connect.run/2`.
-- Writes a partial `dist/plushie-package.toml` with SDK identity and
-  renderer info (no `[payload]` section; no `working_dir` or
-  `forward_env` defaults; no `[platform]`).
-- Shells to `bin/plushie package assemble --manifest dist/plushie-package.toml
-  --payload-dir dist/payload`, which fills in `[payload]`, reads
-  `[start]` defaults and `[platform]` from the source config, archives,
-  hashes, materializes icons, and prints the handoff.
-
-`bin/plushie package assemble` is provided by the managed tool set.
-Run `mix plushie.download` to install it.
-
-The shared package default is host-first. The launcher extracts the
-payload and runs the manifest's `[start].command`, usually
-`bin/start_host` (or `bin/start_host.cmd` on Windows targets).
-`Plushie.Connect.run/2` then starts the payload-local renderer through
-normal binary resolution. Renderer-parent startup is reserved for
-explicit embedding and debugging flows that provide `PLUSHIE_SOCKET`.
-
-### Flags
-
-| Flag | Description |
-|---|---|
-| `--app-id ID` | Package app identifier. Required |
-| `--app-name NAME` | Display app name |
-| `--release NAME` | Mix release name. Defaults to the current Mix app |
-| `--output DIR` | Output directory. Defaults to `dist` |
-| `--renderer-kind stock\|custom` | Renderer selection. When absent, auto-detects based on native widget presence |
-| `--renderer-path PATH` | Use an existing renderer binary |
-| `--package-config PATH` | Forward to `bin/plushie package assemble --package-config` |
-| `--write-package-config` | Write a package start config template and exit |
-| `--load MODULE` | Load a module before native widget discovery |
-
-When `--renderer-kind` is absent, the task auto-detects: stock renderer
-when no native widgets are present, custom renderer when they are.
-Requesting `--renderer-kind stock` for an app with native widgets fails
-fast, because a stock renderer cannot include those widget crates.
-
-Use `--load MODULE` when a native widget module is not otherwise loaded
-before protocol consolidation. The package task loads these modules
-before native widget discovery.
-
-Icon materialization and platform metadata are handled by
-`bin/plushie package assemble`, which reads them from
-`plushie-package.config.toml` in the output directory. If `--package-config`
-is passed, that path is forwarded to the assemble command instead.
-
-Run `MIX_ENV=prod` for production packaging.
-
-### ERTS runtime
-
-`mix plushie.package` delegates ERTS bundling to the Mix release it
-copies into the payload. Configure this in your release config with
-`include_erts`. Runtime roots are OS and architecture specific, so
-release builds should run on matching target runners until cross-target
-runtime downloads are proven.
-
-Common provider shapes:
-
-- Local provider: `include_erts: true` copies the ERTS from the Erlang
-  runtime that builds the release.
-- Path provider: `include_erts: "/path/to/erlang/root"` copies an
-  explicit extracted Erlang runtime root.
-- mise provider: run `mise install` in CI, get the runtime root with
-  `mise where erlang@VERSION`, and pass that path to `include_erts`.
+See the [Packaging and Distribution reference](packaging-and-distribution.md)
+for the full pipeline, including the flag reference, payload
+structure, package config schema, bundled-asset injection,
+ERTS-slimming options, distribution layout, and a copy-pasteable
+GitHub release workflow.
 
 ## plushie.inspect
 
