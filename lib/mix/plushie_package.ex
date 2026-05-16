@@ -7,8 +7,23 @@ defmodule Mix.PlushiePackage do
           payload_path: String.t()
         }
 
+  @type platform_macos :: %{
+          bundle_version: String.t() | nil
+        }
+
+  @type platform_windows :: %{
+          install_scope: String.t() | nil
+        }
+
   @type platform :: %{
-          icon: String.t() | nil
+          icon: String.t() | nil,
+          publisher: String.t() | nil,
+          copyright: String.t() | nil,
+          category: String.t() | nil,
+          description: String.t() | nil,
+          bundle_id: String.t() | nil,
+          macos: platform_macos(),
+          windows: platform_windows()
         }
 
   @type manifest :: %{
@@ -178,6 +193,19 @@ defmodule Mix.PlushiePackage do
     forward_env = [
     #{Enum.map_join(config.forward_env, "\n", &("  " <> toml_string(&1) <> ","))}
     ]
+
+    # [platform]
+    # publisher = "Your Name"
+    # copyright = "Copyright 2026 Your Name"
+    # category = "productivity"
+    # description = "Short app description"
+    # bundle_id = "com.example.app"  # defaults to app_id on macOS
+
+    # [platform.macos]
+    # bundle_version = "1"  # CFBundleVersion build number
+
+    # [platform.windows]
+    # install_scope = "perUser"  # or "perMachine"
     """
   end
 
@@ -380,15 +408,44 @@ defmodule Mix.PlushiePackage do
   defp app_name_toml(nil), do: ""
   defp app_name_toml(app_name), do: "app_name = #{toml_string(app_name)}\n"
 
-  defp platform_toml(%{icon: nil}), do: ""
+  defp platform_toml(platform) do
+    parts =
+      [
+        platform_top_section(platform),
+        platform_macos_section(platform[:macos]),
+        platform_windows_section(platform[:windows])
+      ]
+      |> Enum.reject(&is_nil/1)
 
-  defp platform_toml(%{icon: icon}) do
-    """
-    [platform]
-    icon = #{toml_string(icon)}
-
-    """
+    if parts == [], do: "", else: Enum.join(parts, "\n") <> "\n\n"
   end
+
+  defp platform_top_section(platform) do
+    fields =
+      [
+        if(platform.icon, do: "icon = #{toml_string(platform.icon)}"),
+        if(platform[:publisher], do: "publisher = #{toml_string(platform.publisher)}"),
+        if(platform[:copyright], do: "copyright = #{toml_string(platform.copyright)}"),
+        if(platform[:category], do: "category = #{toml_string(platform.category)}"),
+        if(platform[:description], do: "description = #{toml_string(platform.description)}"),
+        if(platform[:bundle_id], do: "bundle_id = #{toml_string(platform.bundle_id)}")
+      ]
+      |> Enum.reject(&is_nil/1)
+
+    if fields == [], do: nil, else: "[platform]\n" <> Enum.join(fields, "\n")
+  end
+
+  defp platform_macos_section(%{bundle_version: bv}) when is_binary(bv) do
+    "[platform.macos]\nbundle_version = #{toml_string(bv)}"
+  end
+
+  defp platform_macos_section(_), do: nil
+
+  defp platform_windows_section(%{install_scope: scope}) when is_binary(scope) do
+    "[platform.windows]\ninstall_scope = #{toml_string(scope)}"
+  end
+
+  defp platform_windows_section(_), do: nil
 
   defp parse_package_config!(text) do
     config_version =
@@ -408,7 +465,92 @@ defmodule Mix.PlushiePackage do
     }
 
     validate_start_config!(config)
-    Map.drop(config, [:config_version])
+    config = Map.drop(config, [:config_version])
+
+    platform = parse_platform_config!(text)
+    Map.put(config, :platform, platform)
+  end
+
+  @valid_install_scopes ["perUser", "perMachine"]
+
+  defp parse_platform_config!(text) do
+    platform_body = optional_section(text, "platform")
+
+    {icon, publisher, copyright, category, description, bundle_id} =
+      if platform_body do
+        icon = optional_string_field(platform_body, "icon")
+        publisher = optional_string_field(platform_body, "publisher")
+        copyright = optional_string_field(platform_body, "copyright")
+        category = optional_string_field(platform_body, "category")
+        description = optional_string_field(platform_body, "description")
+        bundle_id = optional_string_field(platform_body, "bundle_id")
+
+        validate_platform_string!("platform.icon", icon)
+        validate_platform_string!("platform.publisher", publisher)
+        validate_platform_string!("platform.copyright", copyright)
+        validate_platform_string!("platform.category", category)
+        validate_platform_string!("platform.description", description)
+        validate_platform_string!("platform.bundle_id", bundle_id)
+
+        {icon, publisher, copyright, category, description, bundle_id}
+      else
+        {nil, nil, nil, nil, nil, nil}
+      end
+
+    macos = parse_platform_macos_config!(text)
+    windows = parse_platform_windows_config!(text)
+
+    %{
+      icon: icon,
+      publisher: publisher,
+      copyright: copyright,
+      category: category,
+      description: description,
+      bundle_id: bundle_id,
+      macos: macos,
+      windows: windows
+    }
+  end
+
+  defp parse_platform_macos_config!(text) do
+    case optional_section(text, "platform.macos") do
+      nil ->
+        %{bundle_version: nil}
+
+      macos_body ->
+        bundle_version = optional_string_field(macos_body, "bundle_version")
+        validate_platform_string!("platform.macos.bundle_version", bundle_version)
+        %{bundle_version: bundle_version}
+    end
+  end
+
+  defp parse_platform_windows_config!(text) do
+    case optional_section(text, "platform.windows") do
+      nil ->
+        %{install_scope: nil}
+
+      windows_body ->
+        install_scope = optional_string_field(windows_body, "install_scope")
+
+        if install_scope != nil and install_scope not in @valid_install_scopes do
+          Mix.raise(
+            "Package config platform.windows.install_scope must be one of: " <>
+              Enum.join(@valid_install_scopes, ", ")
+          )
+        end
+
+        %{install_scope: install_scope}
+    end
+  end
+
+  defp validate_platform_string!(_name, nil), do: :ok
+
+  defp validate_platform_string!(name, value) when is_binary(value) do
+    if String.trim(value) == "" do
+      Mix.raise("Package config #{name} must not be empty when present")
+    end
+
+    :ok
   end
 
   defp section!(text, name) do
@@ -416,6 +558,33 @@ defmodule Mix.PlushiePackage do
       [_, body] -> body
       nil -> Mix.raise("Package config must include [#{name}]")
     end
+  end
+
+  defp optional_section(text, name) do
+    case Regex.run(~r/^\s*\[#{Regex.escape(name)}\]\s*$(.*?)(?=^\s*\[|\z)/ms, text) do
+      [_, body] -> body
+      nil -> nil
+    end
+  end
+
+  defp optional_string_field(section, name) do
+    lines = section |> String.split("\n") |> Enum.map(&String.trim/1)
+    prefix = name <> " ="
+
+    case collect_field(lines, prefix, []) do
+      nil ->
+        nil
+
+      raw ->
+        raw
+        |> Jason.decode!()
+        |> case do
+          value when is_binary(value) -> value
+          _ -> Mix.raise("Package config #{name} must be a string")
+        end
+    end
+  rescue
+    Jason.DecodeError -> Mix.raise("Package config #{name} must be a TOML basic string")
   end
 
   defp string_field!(section, name) do

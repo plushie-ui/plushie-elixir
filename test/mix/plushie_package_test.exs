@@ -177,10 +177,21 @@ defmodule Mix.PlushiePackageTest do
     ]
     """)
 
-    assert Mix.PlushiePackage.read_package_config!(path) == %{
-             working_dir: "app",
-             start_command: ["app/bin/connect", "--profile", "release"],
-             forward_env: ["PATH", "HOME"]
+    config = Mix.PlushiePackage.read_package_config!(path)
+
+    assert config.working_dir == "app"
+    assert config.start_command == ["app/bin/connect", "--profile", "release"]
+    assert config.forward_env == ["PATH", "HOME"]
+
+    assert config.platform == %{
+             icon: nil,
+             publisher: nil,
+             copyright: nil,
+             category: nil,
+             description: nil,
+             bundle_id: nil,
+             macos: %{bundle_version: nil},
+             windows: %{install_scope: nil}
            }
   end
 
@@ -334,6 +345,209 @@ defmodule Mix.PlushiePackageTest do
       File.write!(path, contents)
       assert_raise Mix.Error, fn -> Mix.PlushiePackage.read_package_config!(path) end
     end
+  end
+
+  test "reads package config with all platform fields" do
+    dir = tmp_dir()
+    path = Path.join(dir, "plushie-package.config.toml")
+
+    File.write!(path, """
+    config_version = 1
+
+    [start]
+    working_dir = "."
+    command = ["bin/connect"]
+    forward_env = ["PATH"]
+
+    [platform]
+    publisher = "Acme Corp"
+    copyright = "Copyright 2026 Acme Corp"
+    category = "productivity"
+    description = "A great app"
+    bundle_id = "com.acme.myapp"
+
+    [platform.macos]
+    bundle_version = "42"
+
+    [platform.windows]
+    install_scope = "perUser"
+    """)
+
+    config = Mix.PlushiePackage.read_package_config!(path)
+
+    assert config.platform == %{
+             icon: nil,
+             publisher: "Acme Corp",
+             copyright: "Copyright 2026 Acme Corp",
+             category: "productivity",
+             description: "A great app",
+             bundle_id: "com.acme.myapp",
+             macos: %{bundle_version: "42"},
+             windows: %{install_scope: "perUser"}
+           }
+  end
+
+  test "rejects invalid install_scope value" do
+    dir = tmp_dir()
+    path = Path.join(dir, "plushie-package.config.toml")
+
+    File.write!(path, """
+    config_version = 1
+
+    [start]
+    working_dir = "."
+    command = ["bin/connect"]
+    forward_env = ["PATH"]
+
+    [platform.windows]
+    install_scope = "global"
+    """)
+
+    assert_raise Mix.Error, ~r/install_scope must be one of/, fn ->
+      Mix.PlushiePackage.read_package_config!(path)
+    end
+  end
+
+  test "rejects empty platform string fields" do
+    dir = tmp_dir()
+    path = Path.join(dir, "plushie-package.config.toml")
+
+    File.write!(path, """
+    config_version = 1
+
+    [start]
+    working_dir = "."
+    command = ["bin/connect"]
+    forward_env = ["PATH"]
+
+    [platform]
+    publisher = ""
+    """)
+
+    assert_raise Mix.Error, ~r/must not be empty/, fn ->
+      Mix.PlushiePackage.read_package_config!(path)
+    end
+  end
+
+  test "emits all populated platform fields in manifest toml" do
+    manifest = %{
+      app_id: "dev.plushie.test",
+      app_name: nil,
+      app_version: "0.1.0",
+      target: "linux-x86_64",
+      host_sdk_version: "0.7.2",
+      plushie_rust_version: "0.7.0",
+      protocol_version: 1,
+      renderer: %{
+        kind: :stock,
+        source_path: "/tmp/plushie-renderer",
+        payload_path: "bin/plushie-renderer"
+      },
+      platform: %{
+        icon: "assets/app-icon.png",
+        publisher: "Acme Corp",
+        copyright: "Copyright 2026 Acme Corp",
+        category: "productivity",
+        description: "A great app",
+        bundle_id: "com.acme.myapp",
+        macos: %{bundle_version: "42"},
+        windows: %{install_scope: "perUser"}
+      },
+      start_command: ["bin/connect"],
+      working_dir: ".",
+      forward_env: ["PATH"],
+      payload_archive: "payload.tar.zst",
+      payload_hash: String.duplicate("d", 64),
+      payload_size: 999
+    }
+
+    toml = Mix.PlushiePackage.manifest_toml(manifest)
+
+    assert toml =~ ~s([platform]\nicon = "assets/app-icon.png")
+    assert toml =~ ~s(publisher = "Acme Corp")
+    assert toml =~ ~s(copyright = "Copyright 2026 Acme Corp")
+    assert toml =~ ~s(category = "productivity")
+    assert toml =~ ~s(description = "A great app")
+    assert toml =~ ~s(bundle_id = "com.acme.myapp")
+    assert toml =~ ~s([platform.macos]\nbundle_version = "42")
+    assert toml =~ ~s([platform.windows]\ninstall_scope = "perUser")
+  end
+
+  test "omits [platform] when all platform fields are nil" do
+    manifest = %{
+      app_id: "dev.plushie.test",
+      app_name: nil,
+      app_version: "0.1.0",
+      target: "linux-x86_64",
+      host_sdk_version: "0.7.2",
+      plushie_rust_version: "0.7.0",
+      protocol_version: 1,
+      renderer: %{
+        kind: :stock,
+        source_path: "/tmp/plushie-renderer",
+        payload_path: "bin/plushie-renderer"
+      },
+      platform: %{
+        icon: nil,
+        publisher: nil,
+        copyright: nil,
+        category: nil,
+        description: nil,
+        bundle_id: nil,
+        macos: %{bundle_version: nil},
+        windows: %{install_scope: nil}
+      },
+      start_command: ["bin/connect"],
+      working_dir: ".",
+      forward_env: ["PATH"],
+      payload_archive: "payload.tar.zst",
+      payload_hash: String.duplicate("e", 64),
+      payload_size: 111
+    }
+
+    toml = Mix.PlushiePackage.manifest_toml(manifest)
+
+    refute toml =~ "[platform]"
+    refute toml =~ "[platform.macos]"
+    refute toml =~ "[platform.windows]"
+  end
+
+  test "emits [platform.macos] without top-level [platform] when only macos fields present" do
+    manifest = %{
+      app_id: "dev.plushie.test",
+      app_name: nil,
+      app_version: "0.1.0",
+      target: "darwin-aarch64",
+      host_sdk_version: "0.7.2",
+      plushie_rust_version: "0.7.0",
+      protocol_version: 1,
+      renderer: %{
+        kind: :stock,
+        source_path: "/tmp/plushie-renderer",
+        payload_path: "bin/plushie-renderer"
+      },
+      platform: %{
+        icon: nil,
+        publisher: nil,
+        copyright: nil,
+        category: nil,
+        description: nil,
+        bundle_id: nil,
+        macos: %{bundle_version: "7"},
+        windows: %{install_scope: nil}
+      },
+      start_command: ["bin/connect"],
+      working_dir: ".",
+      forward_env: ["PATH"],
+      payload_archive: "payload.tar.zst",
+      payload_hash: String.duplicate("f", 64),
+      payload_size: 222
+    }
+
+    toml = Mix.PlushiePackage.manifest_toml(manifest)
+
+    refute toml =~ ~s([platform]\n)
+    assert toml =~ ~s([platform.macos]\nbundle_version = "7")
   end
 
   test "materializes default icons through cargo-plushie" do

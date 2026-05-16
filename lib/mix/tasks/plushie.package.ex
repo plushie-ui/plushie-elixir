@@ -135,6 +135,31 @@ defmodule Mix.Tasks.Plushie.Package do
       archive_path = Path.join(output_dir, "payload.tar.zst")
       Mix.PlushiePackage.archive_payload!(payload_dir, archive_path)
 
+      config_platform = Map.get(start_config, :platform, %{})
+
+      platform =
+        %{
+          icon: platform_icon,
+          publisher: nil,
+          copyright: nil,
+          category: nil,
+          description: nil,
+          bundle_id: nil,
+          macos: %{bundle_version: nil},
+          windows: %{install_scope: nil}
+        }
+        |> Map.merge(
+          Map.take(config_platform, [
+            :publisher,
+            :copyright,
+            :category,
+            :description,
+            :bundle_id,
+            :macos,
+            :windows
+          ])
+        )
+
       manifest = %{
         app_id: app_id,
         app_name: opts[:app_name],
@@ -144,7 +169,7 @@ defmodule Mix.Tasks.Plushie.Package do
         plushie_rust_version: plushie_rust_version(),
         protocol_version: Plushie.Protocol.protocol_version(),
         renderer: renderer,
-        platform: %{icon: platform_icon},
+        platform: platform,
         start_command: start_config.start_command,
         working_dir: start_config.working_dir,
         forward_env: start_config.forward_env,

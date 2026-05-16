@@ -389,6 +389,35 @@ file is copied into the same payload assets directory and the manifest
 points at the copied payload-relative path. If no icon is configured,
 the `[platform]` section is omitted from the manifest entirely.
 
+Additional platform metadata can be set in `plushie-package.config.toml`
+under a `[platform]` section. All fields are optional:
+
+| Field | Description |
+|---|---|
+| `publisher` | App publisher name |
+| `copyright` | Copyright notice string |
+| `category` | App category (e.g. `"productivity"`) |
+| `description` | Short app description |
+| `bundle_id` | Reverse-DNS bundle identifier; defaults to `app_id` on macOS |
+
+Nested tables carry platform-specific fields:
+
+`[platform.macos]`:
+
+| Field | Description |
+|---|---|
+| `bundle_version` | `CFBundleVersion` build number string |
+
+`[platform.windows]`:
+
+| Field | Description |
+|---|---|
+| `install_scope` | Installer scope: `"perUser"` or `"perMachine"` |
+
+These fields pass through unchanged to the emitted `dist/plushie-package.toml`
+manifest. The `[platform]`, `[platform.macos]`, and `[platform.windows]`
+sections are omitted entirely when empty.
+
 After writing the manifest, the task always prints the handoff command:
 
 ```
