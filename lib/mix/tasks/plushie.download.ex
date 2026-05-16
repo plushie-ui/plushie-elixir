@@ -103,6 +103,7 @@ defmodule Mix.Tasks.Plushie.Download do
     case System.cmd(tool_path, prefix_args ++ args, stderr_to_stdout: true) do
       {output, 0} ->
         if output != "", do: Mix.shell().info(String.trim_trailing(output))
+        verify_managed_tools!()
 
         Mix.shell().info(
           "Installed native binary to #{Path.join(Plushie.Binary.download_dir(), Plushie.Binary.download_name())}"
@@ -113,6 +114,26 @@ defmodule Mix.Tasks.Plushie.Download do
         Renderer sync failed with status #{status}:
         #{output}
         """)
+    end
+  end
+
+  defp verify_managed_tools! do
+    dir = Plushie.Binary.download_dir()
+
+    expected = [
+      Path.join(dir, Plushie.Binary.tool_name()),
+      Path.join(dir, Plushie.Binary.download_name()),
+      Path.join(dir, Mix.PlushiePackage.launcher_name())
+    ]
+
+    missing = Enum.reject(expected, &File.regular?/1)
+
+    if missing != [] do
+      Mix.raise("""
+      tools sync exited 0 but expected files are missing:
+      #{Enum.map_join(missing, "\n", &"  #{&1}")}
+      Check disk space and directory permissions.
+      """)
     end
   end
 
