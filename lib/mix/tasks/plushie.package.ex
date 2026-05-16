@@ -4,18 +4,20 @@ defmodule Mix.Tasks.Plushie.Package do
   Builds a release payload archive and `plushie-package.toml` manifest
   for a Plushie Elixir app.
 
-  The output is intended for `bin/plushie package portable`, while all
-  Elixir-specific release and renderer selection work stays in the SDK.
+  The output is intended for `bin/plushie package portable`. All
+  Elixir-specific release and renderer selection work stays in this task.
   The shared package launcher uses host-first startup: it runs the
   manifest's `[start].command`, and `Plushie.Connect.run/2` starts the
   payload-local renderer unless an explicit embedding flow provides
   `PLUSHIE_SOCKET`.
 
+  Run with `MIX_ENV=prod` for production packaging.
+
   ## Usage
 
       MIX_ENV=prod mix plushie.package MyApp --app-id dev.example.my_app
       MIX_ENV=prod mix plushie.package MyApp --app-id dev.example.my_app --app-name "My App"
-      MIX_ENV=prod mix plushie.package MyApp --app-id dev.example.my_app --renderer custom
+      MIX_ENV=prod mix plushie.package MyApp --app-id dev.example.my_app --renderer-kind custom
       MIX_ENV=prod mix plushie.package MyApp --app-id dev.example.my_app --icon priv/app-icon.png
       mix plushie.package MyApp --write-package-config
 
@@ -25,13 +27,12 @@ defmodule Mix.Tasks.Plushie.Package do
   - `--app-name NAME`: Display app name.
   - `--release NAME`: Mix release name. Defaults to the current Mix app.
   - `--output DIR`: Output directory. Defaults to `dist`.
-  - `--renderer stock|custom|auto`: Renderer selection. Defaults to `auto`.
-  - `--renderer-bin PATH`: Use an existing renderer binary.
+  - `--renderer-kind stock|custom`: Renderer selection. When absent, auto-detects based on
+    native widget presence.
+  - `--renderer-path PATH`: Use an existing renderer binary.
   - `--icon PATH`: Use an app icon instead of the default Plushie icon.
   - `--package-config PATH`: Read or write a package config.
   - `--write-package-config`: Write a package config template and exit.
-  - `--portable`: Build the final portable executable after writing the manifest.
-  - `--portable-out PATH`: Output path for `bin/plushie package portable`.
   - `--load MODULE`: Ensure a module is loaded before native widget discovery.
   """
 
@@ -42,14 +43,11 @@ defmodule Mix.Tasks.Plushie.Package do
     app_name: :string,
     release: :string,
     output: :string,
-    renderer: :string,
-    renderer_bin: :string,
+    renderer_kind: :string,
+    renderer_path: :string,
     icon: :string,
     package_config: :string,
     write_package_config: :boolean,
-    portable: :boolean,
-    portable_out: :string,
-    strict_tools: :boolean,
     load: :string
   ]
 
@@ -77,7 +75,7 @@ defmodule Mix.Tasks.Plushie.Package do
       Mix.shell().info("Wrote #{package_config_path}")
     else
       app_id = opts[:app_id] || Mix.raise("--app-id is required")
-      renderer_mode = parse_renderer_mode(opts[:renderer] || "auto")
+      renderer_mode = parse_renderer_mode(opts[:renderer_kind])
 
       Mix.env() == :prod ||
         Mix.shell().info(
@@ -161,31 +159,15 @@ defmodule Mix.Tasks.Plushie.Package do
       Mix.shell().info("Wrote #{archive_path}")
       Mix.shell().info("Wrote #{manifest_path}")
 
-      if opts[:portable] do
-        Mix.PlushiePackage.run_portable_package!(
-          manifest_path,
-          opts[:portable_out],
-          !!opts[:strict_tools]
-        )
-      else
-        Mix.shell().info("Build launcher with:")
-
-        Mix.shell().info(
-          "  #{portable_command_text(manifest_path, opts[:portable_out], !!opts[:strict_tools])}"
-        )
-      end
+      Mix.shell().info("Build launcher with:")
+      Mix.shell().info("  bin/plushie package portable --manifest #{manifest_path}")
     end
   end
 
-  defp portable_command_text(manifest_path, out_path, strict_tools) do
-    args = Mix.PlushiePackage.portable_package_args(manifest_path, out_path, strict_tools)
-    Enum.join([Path.join("bin", Plushie.Binary.tool_name()) | args], " ")
-  end
-
-  defp parse_renderer_mode("auto"), do: :auto
+  defp parse_renderer_mode(nil), do: :auto
   defp parse_renderer_mode("stock"), do: :stock
   defp parse_renderer_mode("custom"), do: :custom
-  defp parse_renderer_mode(other), do: Mix.raise("Invalid --renderer value: #{other}")
+  defp parse_renderer_mode(other), do: Mix.raise("Invalid --renderer-kind value: #{other}")
 
   defp load_modules!(module_strings) do
     Enum.each(module_strings, fn module_string ->
@@ -217,7 +199,7 @@ defmodule Mix.Tasks.Plushie.Package do
       end
 
     if kind == :stock and native != [] do
-      Mix.raise("Native widget packaging requires a custom renderer. Use --renderer custom.")
+      Mix.raise("Native widget packaging requires a custom renderer. Use --renderer-kind custom.")
     end
 
     case kind do
@@ -229,7 +211,7 @@ defmodule Mix.Tasks.Plushie.Package do
   defp resolve_stock_renderer!(opts) do
     source_path =
       cond do
-        bin = opts[:renderer_bin] ->
+        bin = opts[:renderer_path] ->
           Mix.PlushiePackage.ensure_package_tools_available!()
           bin
 
@@ -257,10 +239,10 @@ defmodule Mix.Tasks.Plushie.Package do
       Mix.shell().info("No native widgets were discovered, building a custom renderer anyway.")
 
     source_path =
-      opts[:renderer_bin] ||
+      opts[:renderer_path] ||
         Path.join([Mix.Project.build_path(), "plushie-package", Plushie.Binary.build_name()])
 
-    unless opts[:renderer_bin] do
+    unless opts[:renderer_path] do
       Mix.Task.rerun("plushie.build", ["--release", "--bin-file", source_path])
     end
 

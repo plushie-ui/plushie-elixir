@@ -331,6 +331,7 @@ for the shared Rust launcher.
 MIX_ENV=prod mix plushie.package MyApp --app-id dev.example.my_app
 MIX_ENV=prod mix plushie.package MyApp --app-id dev.example.my_app --app-name "My App"
 MIX_ENV=prod mix plushie.package MyApp --app-id dev.example.my_app --icon priv/app-icon.png
+# task prints the handoff command on completion:
 bin/plushie package portable --manifest dist/plushie-package.toml
 ```
 
@@ -364,19 +365,16 @@ reserved for explicit embedding and debugging flows that provide
 | `--app-name NAME` | Display app name |
 | `--release NAME` | Mix release name. Defaults to the current Mix app |
 | `--output DIR` | Output directory. Defaults to `dist` |
-| `--renderer auto|stock|custom` | Renderer selection. Defaults to `auto` |
-| `--renderer-bin PATH` | Use an existing renderer binary |
+| `--renderer-kind stock\|custom` | Renderer selection. When absent, auto-detects based on native widget presence |
+| `--renderer-path PATH` | Use an existing renderer binary |
 | `--icon PATH` | Use an app icon instead of the default Plushie icon |
 | `--package-config PATH` | Read or write a package start config |
 | `--write-package-config` | Write a package start config template and exit |
-| `--portable` | Run `bin/plushie package portable --manifest <manifest>` after writing the manifest |
-| `--portable-out PATH` | Pass `--out PATH` to the portable package command when `--portable` is set |
-| `--strict-tools` | Pass `--strict-tools` to the portable package command |
 | `--load MODULE` | Load a module before native widget discovery |
 
-`--renderer auto` uses a stock renderer when no native widgets are
-discovered and builds a custom renderer when native widgets are present.
-Requesting `--renderer stock` for an app with native widgets fails
+When `--renderer-kind` is absent, the task auto-detects: stock renderer
+when no native widgets are present, custom renderer when they are.
+Requesting `--renderer-kind stock` for an app with native widgets fails
 fast, because a stock renderer cannot include those widget crates.
 
 Use `--load MODULE` when a native widget module is not otherwise loaded
@@ -390,10 +388,14 @@ the default Plushie icon set under `dist/payload/assets/` and writes
 file is copied into the same payload assets directory and the manifest
 points at the copied payload-relative path.
 
-By default the task prints the final portable-package handoff. Pass
-`--portable` to run that final step immediately after the manifest is
-written. Pass `--strict-tools` when building release artifacts that
-should fail on missing, stale, dirty, mixed, or mismatched native tools.
+After writing the manifest, the task always prints the handoff command:
+
+```
+Build launcher with:
+  bin/plushie package portable --manifest <path>
+```
+
+Run `MIX_ENV=prod` for production packaging.
 
 ### ERTS runtime
 
