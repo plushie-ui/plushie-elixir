@@ -10,6 +10,10 @@ defmodule Plushie.RendererEnv do
   on the whitelist are actively unset (set to `false` in Erlang port terms)
   so the child process receives only what it needs.
 
+  The exact names and prefix classes mirror the canonical list in
+  `plushie-rust/crates/plushie/src/runner/env.rs`, which is the shared
+  reference for all host SDKs.
+
   ## Usage
 
       env = Plushie.RendererEnv.build(rust_log: "plushie=error")
@@ -26,18 +30,20 @@ defmodule Plushie.RendererEnv do
 
   The whitelist covers:
 
-    * **Display** - `DISPLAY`, `WAYLAND_DISPLAY`, `WAYLAND_SOCKET`,
+    * **Display servers** - `DISPLAY`, `WAYLAND_DISPLAY`, `WAYLAND_SOCKET`,
       `WINIT_UNIX_BACKEND`, `XDG_RUNTIME_DIR`
-    * **Rendering** - `WGPU_BACKEND`, `MESA_*`, `LIBGL_*`, `__GLX_*`,
-      `VK_*`, `GALLIUM_*`
-    * **Library loading** - `PATH`, `LD_LIBRARY_PATH`, `DYLD_LIBRARY_PATH`,
-      `DYLD_FALLBACK_LIBRARY_PATH`
+    * **PATH / shared library resolution** - `PATH`, `LD_LIBRARY_PATH`,
+      `DYLD_LIBRARY_PATH`, `DYLD_FALLBACK_LIBRARY_PATH`
     * **Locale** - `LANG`, `LANGUAGE`, `LC_*`
-    * **Accessibility** - `DBUS_SESSION_BUS_ADDRESS`, `AT_SPI_*`,
-      `GTK_MODULES`, `NO_AT_BRIDGE`
-    * **Font** - `FONTCONFIG_*`, `XDG_DATA_DIRS`, `XDG_DATA_HOME`
-    * **Renderer** - `RUST_LOG`, `RUST_BACKTRACE`
-    * **Home** - `HOME`, `USER`
+    * **Desktop integration** - `DBUS_SESSION_BUS_ADDRESS`, `GTK_MODULES`,
+      `NO_AT_BRIDGE`, `XDG_DATA_DIRS`, `XDG_DATA_HOME`
+    * **Renderer + log controls** - `WGPU_BACKEND`, `RUST_LOG`,
+      `RUST_BACKTRACE`, `MESA_*`, `LIBGL_*`, `__GLX_*`, `VK_*`,
+      `GALLIUM_*`, `FONTCONFIG_*`, `AT_SPI_*`
+    * **Identity** - `HOME`, `USER`
+    * **Windows** - `SystemRoot`, `WINDIR`, `PATHEXT`, `TEMP`, `TMP`
+      (required for DLL loader, child process resolution, and tempdir;
+      harmless on other platforms where they are absent from the env)
     * **Plushie toggles** - `PLUSHIE_NO_CATCH_UNWIND` (the only variable
       the renderer subprocess reads from inherited env in spawn mode). All
       other `PLUSHIE_*` names are host-side, launcher-set, or secrets
@@ -47,7 +53,8 @@ defmodule Plushie.RendererEnv do
   @typedoc "A single entry for the `:env` option of `Port.open/2`."
   @type env_entry :: {charlist(), charlist()} | {charlist(), false}
 
-  # Exact variable names to forward.
+  # Exact variable names to forward. Mirrors the EXACT list in
+  # plushie-rust/crates/plushie/src/runner/env.rs (canonical source).
   @exact_names MapSet.new(~w[
     DISPLAY
     WAYLAND_DISPLAY
@@ -70,6 +77,11 @@ defmodule Plushie.RendererEnv do
     RUST_BACKTRACE
     HOME
     USER
+    SystemRoot
+    WINDIR
+    PATHEXT
+    TEMP
+    TMP
   ])
 
   # Exact Plushie variables forwarded to the renderer subprocess.

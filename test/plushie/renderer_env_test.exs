@@ -21,6 +21,14 @@ defmodule Plushie.RendererEnvTest do
       assert RendererEnv.whitelisted?("AT_SPI_BUS_ADDRESS")
     end
 
+    test "Windows vars are allowed" do
+      assert RendererEnv.whitelisted?("SystemRoot")
+      assert RendererEnv.whitelisted?("WINDIR")
+      assert RendererEnv.whitelisted?("PATHEXT")
+      assert RendererEnv.whitelisted?("TEMP")
+      assert RendererEnv.whitelisted?("TMP")
+    end
+
     test "PLUSHIE_NO_CATCH_UNWIND is allowed" do
       assert RendererEnv.whitelisted?("PLUSHIE_NO_CATCH_UNWIND")
     end
