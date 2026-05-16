@@ -183,9 +183,15 @@ widget crates.
 
 Use `--renderer-path PATH` to package a specific binary. This skips
 the download or build step and copies the file you point at directly
-into the payload. The payload-local path follows the same convention
-either way: `bin/plushie-renderer` for stock, `bin/<build-name>` for
-custom (where `<build-name>` matches `config :plushie, :build_name`).
+into the payload. The payload-local path depends on the renderer kind
+and how the source binary is selected:
+
+- Stock: always `bin/plushie-renderer`.
+- Custom without `--renderer-path`: `bin/<build-name>`, where
+  `<build-name>` matches `config :plushie, :build_name` (the file
+  `mix plushie.build` produces).
+- Custom with `--renderer-path PATH`: `bin/<basename of PATH>`, so the
+  packaged file keeps the name of the binary you pointed at.
 
 `--load MODULE` ensures a module is loaded before native widget
 discovery runs. Useful when a widget module would not otherwise be
@@ -398,8 +404,10 @@ manifest adds:
   format.
 - `[start].working_dir` and `[start].forward_env` defaults from the
   package config.
-- A `[platform]` block if one is set in the package config.
-- An `[icon]` entry pointing at the materialized icon image.
+- A `[platform]` block if one is set in the package config, with
+  `[platform].icon` pointing at the materialized icon image (the icon
+  is stored on the platform block; there is no separate `[icon]`
+  table).
 
 The split exists so that cargo-plushie owns the cross-SDK schema
 once. Every Plushie SDK writes a partial manifest in this shape and
@@ -514,15 +522,18 @@ the extraction.
 ### OS-native installers
 
 ```bash
-bin/plushie package bundle --manifest dist/plushie-package.toml --formats appimage
-bin/plushie package bundle --manifest dist/plushie-package.toml --formats dmg,app
-bin/plushie package bundle --manifest dist/plushie-package.toml --formats nsis
+bin/plushie package bundle --manifest dist/plushie-package.toml --format appimage
+bin/plushie package bundle --manifest dist/plushie-package.toml --format dmg --format app
+bin/plushie package bundle --manifest dist/plushie-package.toml --format nsis
 ```
 
+`--format` is repeatable; pass it once per format you want produced.
+
 Delegates to [cargo-packager](https://github.com/crabnebula-dev/cargo-packager)
-for AppImage (Linux), `.app` and `.dmg` (macOS), and `.nsis` and
-`.wix` (Windows). Format availability depends on the runner: Apple
-formats need a macOS runner, Windows formats need a Windows runner.
+for AppImage (Linux), `.app` and `.dmg` (macOS), and `.msi` and `.exe`
+(Windows, via the `wix` and `nsis` cargo-packager formats). Format
+availability depends on the runner: Apple formats need a macOS runner,
+Windows formats need a Windows runner.
 
 Both commands default to a strict-tools check: they verify that the
 launcher, renderer, and `plushie` itself match the SDK-pinned
@@ -651,7 +662,7 @@ Lines to tweak for your project:
   `body` (or `body_path`) if you write release notes by hand.
 
 To also build OS-native installers, add a second matrix entry that
-calls `bin/plushie package bundle --formats <list>` instead of
+calls `bin/plushie package bundle --format <name>` (repeat per format) instead of
 `package portable`, and adjust the upload glob accordingly. Apple
 formats need a macOS runner with valid signing identities; Windows
 formats need a Windows runner with the appropriate SDKs.
@@ -692,7 +703,7 @@ hosts. The renderer starts first, binds a Unix socket, and spawns
 the Elixir command with `PLUSHIE_SOCKET` pointing at it:
 
 ```bash
-plushie --listen \
+plushie-renderer --listen \
   --exec-bin mix \
   --exec-arg plushie.connect \
   --exec-arg PlushiePad

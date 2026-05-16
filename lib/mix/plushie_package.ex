@@ -51,18 +51,10 @@ defmodule Mix.PlushiePackage do
 
   @spec portable_package_args(
           manifest_path :: String.t(),
-          out_path :: String.t() | nil,
-          strict_tools :: boolean()
+          out_path :: String.t() | nil
         ) :: [String.t()]
-  def portable_package_args(manifest_path, out_path \\ nil, strict_tools \\ false) do
+  def portable_package_args(manifest_path, out_path \\ nil) do
     args = ["package", "portable", "--manifest", manifest_path]
-
-    args =
-      if strict_tools do
-        args ++ ["--strict-tools"]
-      else
-        args
-      end
 
     if out_path do
       args ++ ["--out", out_path]
@@ -74,16 +66,14 @@ defmodule Mix.PlushiePackage do
   @spec run_portable_package!(
           manifest_path :: String.t(),
           out_path :: String.t() | nil,
-          strict_tools :: boolean(),
           command :: String.t()
         ) :: :ok
   def run_portable_package!(
         manifest_path,
         out_path \\ nil,
-        strict_tools \\ false,
         command \\ Path.join(Plushie.Binary.download_dir(), Plushie.Binary.tool_name())
       ) do
-    args = portable_package_args(manifest_path, out_path, strict_tools)
+    args = portable_package_args(manifest_path, out_path)
 
     case System.cmd(command, args, stderr_to_stdout: true) do
       {output, 0} ->
