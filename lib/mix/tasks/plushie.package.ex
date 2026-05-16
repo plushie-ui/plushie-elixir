@@ -140,6 +140,8 @@ defmodule Mix.Tasks.Plushie.Package do
           if opts[:package_config], do: ["--package-config", opts[:package_config]], else: []
 
       Mix.PlushiePackage.run_plushie!(assemble_args)
+
+      Mix.PlushieHelpers.warn_if_not_gitignored(output_dir)
     end
   end
 

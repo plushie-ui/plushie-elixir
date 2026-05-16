@@ -257,6 +257,54 @@ defmodule Mix.PlushieHelpers do
   end
 
   @doc """
+  Warns when `path` is not gitignored inside the current git work tree.
+
+  Silent when not in a git repo or when the path is already ignored.
+  Intended for output paths that hold generated artifacts (`bin/`,
+  `dist/`) so users don't accidentally commit them.
+  """
+  @spec warn_if_not_gitignored(path :: String.t()) :: :ok
+  def warn_if_not_gitignored(path) do
+    relative = path |> Path.relative_to_cwd() |> String.trim_trailing("/")
+
+    if in_git_work_tree?() and not gitignored?(relative) do
+      Mix.shell().info("""
+      warning: #{relative}/ is not in .gitignore.
+        Recommended: add the following line so generated artifacts don't end
+        up committed:
+
+            /#{relative}/
+      """)
+    end
+
+    :ok
+  end
+
+  defp in_git_work_tree? do
+    # Merge stderr into the captured output so "fatal: not a git
+    # repository" doesn't leak to the user's terminal.
+    case System.cmd("git", ["rev-parse", "--is-inside-work-tree"], stderr_to_stdout: true) do
+      {output, 0} -> String.trim(output) == "true"
+      _ -> false
+    end
+  rescue
+    ErlangError -> false
+  end
+
+  defp gitignored?(path) do
+    # Pass the path with a trailing slash so directory-style ignore
+    # patterns (e.g. `/bin/`) match. check-ignore's exit code is the
+    # source of truth: 0 = ignored, 1 = not ignored, anything else =
+    # error (treat as not ignored).
+    case System.cmd("git", ["check-ignore", "-q", path <> "/"], stderr_to_stdout: true) do
+      {_, 0} -> true
+      _ -> false
+    end
+  rescue
+    ErlangError -> false
+  end
+
+  @doc """
   Warns if no plushie configuration is detected.
 
   Shows recommended config blocks for each environment.

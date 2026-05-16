@@ -117,4 +117,66 @@ defmodule Mix.PlushieHelpersTest do
       end
     end
   end
+
+  describe "warn_if_not_gitignored/1" do
+    setup do
+      tmp_dir =
+        Path.join(System.tmp_dir!(), "plushie-helpers-test-#{System.unique_integer([:positive])}")
+
+      File.mkdir_p!(tmp_dir)
+      previous_cwd = File.cwd!()
+      File.cd!(tmp_dir)
+
+      on_exit(fn ->
+        File.cd!(previous_cwd)
+        File.rm_rf!(tmp_dir)
+      end)
+
+      {:ok, tmp_dir: tmp_dir}
+    end
+
+    test "stays silent when not inside a git work tree" do
+      output =
+        ExUnit.CaptureIO.capture_io(fn ->
+          assert :ok = PlushieHelpers.warn_if_not_gitignored("bin")
+        end)
+
+      assert output == ""
+    end
+
+    test "stays silent when the path is already gitignored" do
+      git!(["init", "--quiet"])
+      File.write!(".gitignore", "/bin/\n")
+
+      output =
+        ExUnit.CaptureIO.capture_io(fn ->
+          assert :ok = PlushieHelpers.warn_if_not_gitignored("bin")
+        end)
+
+      assert output == ""
+    end
+
+    test "warns when inside a git work tree but the path is not gitignored" do
+      git!(["init", "--quiet"])
+
+      output =
+        ExUnit.CaptureIO.capture_io(fn ->
+          assert :ok = PlushieHelpers.warn_if_not_gitignored("bin")
+        end)
+
+      assert output =~ "warning: bin/ is not in .gitignore."
+      assert output =~ "/bin/"
+    end
+  end
+
+  defp git!(args) do
+    {_, 0} =
+      System.cmd("git", args,
+        stderr_to_stdout: true,
+        env: [
+          {"GIT_CONFIG_GLOBAL", "/dev/null"},
+          {"GIT_CONFIG_SYSTEM", "/dev/null"}
+        ]
+      )
+  end
 end

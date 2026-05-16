@@ -324,6 +324,8 @@ defmodule Mix.PlushiePackageTest do
     assert toml =~ ~s(working_dir = ".")
     assert toml =~ ~s(command = ["bin/connect"])
     assert toml =~ ~s("WAYLAND_DISPLAY")
+    assert toml =~ "# [assets]"
+    assert toml =~ ~s(# dir = "package_assets")
   end
 
   defp tmp_dir do

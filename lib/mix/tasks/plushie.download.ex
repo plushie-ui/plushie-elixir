@@ -57,6 +57,8 @@ defmodule Mix.Tasks.Plushie.Download do
 
     if want_bin?, do: download_bin(opts, force?)
     if want_wasm?, do: download_wasm(opts, force?)
+
+    if want_bin?, do: Mix.PlushieHelpers.warn_if_not_gitignored(Plushie.Binary.download_dir())
   end
 
   # Refuse to download a precompiled binary when native widgets are

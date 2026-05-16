@@ -152,6 +152,13 @@ defmodule Mix.PlushiePackage do
     #{Enum.map_join(config.forward_env, "\n", &("  " <> toml_string(&1) <> ","))}
     ]
 
+    # [assets]
+    # # Project-relative directory copied verbatim into the payload root
+    # # during package assembly. When this section is absent, a directory
+    # # named `package_assets/` next to this config file is used by
+    # # convention if it exists.
+    # dir = "package_assets"
+
     # [platform]
     # publisher = "Your Name"
     # copyright = "Copyright 2026 Your Name"
